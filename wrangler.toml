@@ -9,7 +9,12 @@ compatibility_date = "2025-01-04"
 # [assets]
 # directory = "./public"
 [assets]
+# The following configuration unconditionally invokes the Worker script at
+# `src/index.ts`, which can programatically fetch assets via the ASSETS binding
 directory = "public"
+binding = "ASSETS"
+experimental_serve_directly = false
+# https://developers.cloudflare.com/workers/static-assets/binding/#experimental_serve_directly
 
 # [vars]
 # MY_VAR = "my-variable"
