@@ -3,16 +3,23 @@
 	"module": "src/index.ts",
 	"type": "module",
 	"scripts": {
-		"dev": "bun run src/index.ts",
+		"deploy": "wrangler deploy --minify",
+		"dev": "wrangler dev --port 8788",
 		"check": "biome check",
 		"lint": "biome lint",
-		"format": "biome check --write"
+		"format": "biome check --write",
+		"test": "bun test"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "1.9.4",
-		"@types/bun": "latest"
+		"@cloudflare/workers-types": "^4.20241230.0",
+		"@types/bun": "latest",
+		"wrangler": "^3.99.0"
 	},
 	"peerDependencies": {
 		"typescript": "^5.0.0"
+	},
+	"dependencies": {
+		"hono": "^4.6.15"
 	}
 }

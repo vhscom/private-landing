@@ -1,15 +1,23 @@
-# learn-auth
+# Learn Auth
 
-To install dependencies:
+Authentication experiment using Hono + Cloudflare Workers.
 
-```bash
-bun install
-```
-
-To run:
+## Development
 
 ```bash
-bun run index.ts
+# Start development server
+bun run dev       # Runs on port 8788
+
+# Run tests
+bun test
+
+# Format code
+bun run format    # Biome formatter
+
+# Check code
+bun run check     # Biome linter + formatter check
 ```
 
-This project was created using `bun init` in bun v1.1.36. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+## License
+
+LGPL - Open source with required code sharing.

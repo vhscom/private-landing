@@ -1,0 +1,35 @@
+name = "learn-auth"
+main = "src/index.ts"
+compatibility_date = "2025-01-04"
+
+# compatibility_flags = [ "nodejs_compat" ]
+
+# Bind static asset directory. Allows resource fetching from Worker scripts.
+# Docs: https://developers.cloudflare.com/workers/static-assets/binding/
+# [assets]
+# directory = "./public"
+[assets]
+directory = "public"
+
+# [vars]
+# MY_VAR = "my-variable"
+
+# [[kv_namespaces]]
+# binding = "MY_KV_NAMESPACE"
+# id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# [[r2_buckets]]
+# binding = "MY_BUCKET"
+# bucket_name = "my-bucket"
+
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "my-database"
+# database_id = ""
+
+# [ai]
+# binding = "AI"
+
+# [observability]
+# enabled = true
+# head_sampling_rate = 1
