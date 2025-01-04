@@ -19,6 +19,13 @@ experimental_serve_directly = false
 # [vars]
 # MY_VAR = "my-variable"
 
+#[vars]
+# Turso secrets made available via native Cloudflare integration.
+# Docs: https://developers.cloudflare.com/workers/databases/native-integrations/turso/#set-up-an-integration-with-turso
+#TURSO_URL = "libsql://auth-db-username.turso.io"
+#TURSO_AUTH_TOKEN = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# Defined via .dev.vars file copied from .dev.vars.example
+
 # [[kv_namespaces]]
 # binding = "MY_KV_NAMESPACE"
 # id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
