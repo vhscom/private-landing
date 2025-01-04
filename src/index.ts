@@ -43,6 +43,4 @@ app.use("/users", async (ctx, _next) => {
 	}
 });
 
-console.log("Hello via index!");
-
 export default app;
