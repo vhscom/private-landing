@@ -32,13 +32,6 @@ function serveStatic(opts: ServeStaticOptions) {
 
 app.use("*", serveStatic({ cache: "key" }));
 
-app.get("/", (ctx) => {
-	return ctx.text("Hello via index route handler!");
-	// return ctx.json({
-	//   data: 'Hello from the JSON response!',
-	// });
-});
-
 console.log("Hello via index!");
 
 export default app;
