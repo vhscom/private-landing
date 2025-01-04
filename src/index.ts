@@ -1,7 +1,7 @@
 import type { Fetcher } from "@cloudflare/workers-types";
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
-import "./db.ts";
+import { createDbClient } from "./db.ts";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -31,6 +31,17 @@ function serveStatic(opts: ServeStaticOptions) {
 }
 
 app.use("*", serveStatic({ cache: "key" }));
+
+app.use("/users", async (ctx, _next) => {
+	const dbClient = createDbClient(ctx.env);
+	try {
+		const result = await dbClient.execute("SELECT sqlite_version();");
+		return ctx.json(result);
+	} catch (err) {
+		console.error("Database error:", err);
+		return ctx.json({ error: "Internal Server Error" }, 500);
+	}
+});
 
 console.log("Hello via index!");
 
