@@ -32,7 +32,16 @@ function serveStatic(opts: ServeStaticOptions) {
 
 app.use("*", serveStatic({ cache: "key" }));
 
-app.use("/users", async (ctx, _next) => {
+app.post("/api/register", async (ctx) => {
+	const body = await ctx.req.json();
+	console.log("Received registration request:", body);
+	return ctx.json({
+		email: body.email,
+		success: true,
+	});
+});
+
+app.use("/users", async (ctx) => {
 	const dbClient = createDbClient(ctx.env);
 	try {
 		const result = await dbClient.execute("SELECT sqlite_version();");

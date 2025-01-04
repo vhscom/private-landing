@@ -54,14 +54,25 @@
 <script>
     {
         const form = document.getElementById("registration");
-        form.addEventListener('submit', (evt) => {
+        form.addEventListener('submit', async (evt) => {
             evt.preventDefault();
             const values = Object.fromEntries(
                 Object.values(form)
                     .filter(({name}) => name)
                     .map(({name, value}) => [name, value])
             );
-            console.log('values', values)
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    body: JSON.stringify(values),
+                    headers: {
+                        'Content-Type': 'application/json; charset=UTF-8'
+                    }
+                })
+            } catch (err) {
+                console.error(err);
+                throw Error('Failed to fetch.')
+            }
         })
     }
 </script>
