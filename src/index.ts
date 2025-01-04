@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import "./db.ts";
 
-const app = new Hono();
+const app = new Hono<{ Bindings: Env }>();
 
 app.get("/", (c) => {
 	return c.text("Hello via index route handler!");

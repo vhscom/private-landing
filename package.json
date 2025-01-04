@@ -8,7 +8,8 @@
 		"check": "biome check",
 		"lint": "biome lint",
 		"format": "biome check --write",
-		"test": "bun test"
+		"test": "bun test",
+		"typegen": "wrangler types"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "1.9.4",
