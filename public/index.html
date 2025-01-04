@@ -39,6 +39,32 @@
 
 <body>
 <h1>Learn Auth</h1>
+<h3>Registration</h3>
+<form id="registration">
+    <label>
+        Email:
+        <input type="email" name="email" autocomplete="autocomplete">
+    </label>
+    <label>
+        Password:
+        <input type="password" name="password">
+    </label>
+    <button type="submit">Register</button>
+</form>
+<script>
+    {
+        const form = document.getElementById("registration");
+        form.addEventListener('submit', (evt) => {
+            evt.preventDefault();
+            const values = Object.fromEntries(
+                Object.values(form)
+                    .filter(({name}) => name)
+                    .map(({name, value}) => [name, value])
+            );
+            console.log('values', values)
+        })
+    }
+</script>
 </body>
 
 </html>
