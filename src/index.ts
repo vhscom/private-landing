@@ -1,7 +1,7 @@
 import type { Fetcher } from "@cloudflare/workers-types";
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
-import { handleRegistration } from "./accounts/handler.ts";
+import { handleLogin, handleRegistration } from "./accounts/handler.ts";
 import { createDbClient } from "./db.ts";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -32,7 +32,10 @@ function serveStatic(opts: ServeStaticOptions) {
 }
 
 app.use("*", serveStatic({ cache: "key" }));
+
 app.post("/api/register", handleRegistration);
+app.post("/api/login", handleLogin);
+
 app.use("/ping", async (ctx) => {
 	const dbClient = createDbClient(ctx.env);
 	const result = await dbClient.execute("SELECT sqlite_version();");

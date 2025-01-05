@@ -1,7 +1,29 @@
 import type { Context } from "hono";
-import { accountService } from "./services.ts";
+import { accountService } from "./services";
 
-export const handleRegistration = async (ctx: Context) => {
+export async function handleLogin(ctx: Context) {
+	try {
+		const body = await ctx.req.parseBody();
+		const { email, password } = body;
+
+		const authenticated = await accountService.authenticate(
+			email as string,
+			password as string,
+			ctx.env,
+		);
+
+		if (!authenticated) {
+			return ctx.redirect("/?error=Invalid email or password");
+		}
+
+		return ctx.redirect("/?authenticated=true");
+	} catch (error) {
+		console.error("Authentication error:", error);
+		return ctx.redirect("/?error=Authentication failed. Please try again.");
+	}
+}
+
+export async function handleRegistration(ctx: Context) {
 	try {
 		const body = await ctx.req.parseBody();
 		const { email, password } = body;
@@ -25,4 +47,4 @@ export const handleRegistration = async (ctx: Context) => {
 		console.error("Registration error:", error);
 		return ctx.redirect("/?error=Registration failed. Please try again.");
 	}
-};
+}

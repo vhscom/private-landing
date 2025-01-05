@@ -82,6 +82,7 @@ interface AccountService {
 		password: string,
 		env: Env,
 	) => Promise<ResultSet>;
+	authenticate: (email: string, password: string, env: Env) => Promise<boolean>;
 }
 
 export const accountService: AccountService = {
@@ -99,6 +100,21 @@ export const accountService: AccountService = {
 			sql: "INSERT INTO account (email, password_data) VALUES (?, ?)",
 			args: [email, passwordData],
 		});
+	},
+
+	authenticate: async (email: string, password: string, env: Env) => {
+		const dbClient = createDbClient(env);
+		const result = await dbClient.execute({
+			sql: "SELECT password_data FROM account WHERE email = ?",
+			args: [email],
+		});
+
+		if (result.rows.length === 0) {
+			return false;
+		}
+
+		const storedPasswordData = result.rows[0].password_data as string;
+		return await verifyPassword(password, storedPasswordData);
 	},
 };
 
@@ -161,7 +177,7 @@ async function hashPassword(password: string) {
 	);
 
 	// Generate main hash
-	const hashBuffer = await crypto.subtle.deriveBits(
+	const hashBuffer: ArrayBuffer = await crypto.subtle.deriveBits(
 		{
 			name: passwordConfig.algorithm,
 			salt,
@@ -173,7 +189,7 @@ async function hashPassword(password: string) {
 	);
 
 	// Generate additional digest
-	const digestBuffer = await crypto.subtle.digest(
+	const digestBuffer: ArrayBuffer = await crypto.subtle.digest(
 		`SHA-${passwordConfig.bits}`,
 		hashBuffer,
 	);
@@ -191,4 +207,91 @@ async function hashPassword(password: string) {
 		hash: hashBase64,
 		digest: digestBase64,
 	});
+}
+
+/**
+ * Parse stored password data string into components.
+ * @param passwordData - Formatted password string
+ * @returns Parsed components or null if invalid format
+ */
+function parsePasswordString(passwordData: string): null | {
+	algorithm: string;
+	version: number;
+	iterations: number;
+	salt: string;
+	hash: string;
+	digest: string;
+} {
+	const parts = passwordData.split("$");
+	if (parts.length !== 7) return null;
+
+	const [, algorithmFull, versionStr, iterationsStr, salt, hash, digest] =
+		parts;
+	const version = Number.parseInt(versionStr.slice(1));
+	const iterations = Number.parseInt(iterationsStr);
+
+	if (Number.isNaN(version) || Number.isNaN(iterations)) return null;
+
+	return {
+		algorithm: algorithmFull,
+		version,
+		iterations,
+		salt,
+		hash,
+		digest,
+	};
+}
+/**
+ * Verify a password against stored hash data.
+ * @param password - Password to verify
+ * @param storedPasswordData - Stored password data string
+ * @returns True if password matches
+ */
+async function verifyPassword(
+	password: string,
+	storedPasswordData: string,
+): Promise<boolean> {
+	const parsed = parsePasswordString(storedPasswordData);
+
+	if (!parsed) return false;
+
+	const { iterations, salt, hash } = parsed;
+	const saltBytes = Uint8Array.from(atob(salt), (c) => c.charCodeAt(0));
+	const passwordAsBytes = new TextEncoder().encode(password);
+
+	// Import key for PBKDF2
+	const keyMaterial: CryptoKey = await crypto.subtle.importKey(
+		"raw",
+		passwordAsBytes,
+		passwordConfig.algorithm,
+		false,
+		["deriveBits"],
+	);
+
+	// Generate hash with same parameters
+	const hashBuffer: ArrayBuffer = await crypto.subtle.deriveBits(
+		{
+			name: passwordConfig.algorithm,
+			salt: saltBytes,
+			iterations,
+			hash: `SHA-${passwordConfig.bits}`,
+		},
+		keyMaterial,
+		passwordConfig.bits,
+	);
+
+	// Generate digest for additional verification
+	const digestBuffer: ArrayBuffer = await crypto.subtle.digest(
+		`SHA-${passwordConfig.bits}`,
+		hashBuffer,
+	);
+
+	// Convert to base64 for comparison
+	const hashArray = Array.from(new Uint8Array(hashBuffer));
+	const digestArray = Array.from(new Uint8Array(digestBuffer));
+	const computedHash = btoa(String.fromCharCode(...hashArray));
+	const computedDigest = btoa(String.fromCharCode(...digestArray));
+
+	// Compare both hash and digest
+	return computedHash === hash && computedDigest === parsed.digest;
 }

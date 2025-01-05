@@ -128,39 +128,62 @@
 
 <body>
 <h1>Learn Auth</h1>
-<h3>Registration</h3>
-<form id="registration" method="post" action="/api/register">
-    <label>
-        Email:
-        <input type="email" name="email" autocomplete="email" required>
-    </label>
-    <label>
-        Password:
-        <input type="password" name="password" autocomplete="new-password" required>
-    </label>
-    <button type="submit">Register</button>
-</form>
+
+<section>
+    <h3>Registration</h3>
+    <form id="registration" method="post" action="/api/register">
+        <label>
+            Email:
+            <input type="email" name="email" autocomplete="email" required>
+        </label>
+        <label>
+            Password:
+            <input type="password" name="password" autocomplete="new-password" required>
+        </label>
+        <button type="submit">Register</button>
+    </form>
+</section>
+
+<section>
+    <h3>Log In</h3>
+    <form id="login" method="post" action="/api/login">
+        <label>
+            Email:
+            <input type="email" name="email" autocomplete="email" required>
+        </label>
+        <label>
+            Password:
+            <input type="password" name="password" autocomplete="current-password" required>
+        </label>
+        <button type="submit">Log In</button>
+    </form>
+</section>
+
 <div id="message" class="message"></div>
+
 <script>
     const params = new URLSearchParams(window.location.search);
+    const message = document.getElementById('message');
+
     if (params.has('error')) {
-        const message = document.getElementById('message');
         message.textContent = decodeURIComponent(params.get('error'));
         message.classList.add('visible', 'error');
     }
     if (params.has('registered')) {
-        // Show registration success
-        const message = document.getElementById('message');
         message.textContent = 'Registration successful!';
         requestAnimationFrame(() => {
             message.classList.add('visible');
         });
-        // Disable all form controls
         const form = document.getElementById('registration');
         const controls = form.querySelectorAll('input, button');
         controls.forEach(control => control.disabled = true);
     }
+    if (params.has('authenticated')) {
+        message.textContent = 'Login successful!';
+        requestAnimationFrame(() => {
+            message.classList.add('visible');
+        });
+    }
 </script>
 </body>
-
 </html>
