@@ -4,26 +4,35 @@ import { createDbClient } from "../db.ts";
 /**
  * Valid bit lengths for hash algorithms.
  * Must match available SHA variants (SHA-256, SHA-384, SHA-512).
- * Using SHA-384 for balance of security and performance.
+ * - SHA-256: Fastest, good for legacy compatibility
+ * - SHA-384: Current selection, optimal security/performance balance
+ * - SHA-512: Highest security, more computational cost
  */
 const VALID_HASH_BITS = [256, 384, 512] as const;
 type HashBits = (typeof VALID_HASH_BITS)[number];
 
 /**
- * Configuration for password hashing.
- * Based on NIST SP 800-132 recommendations.
+ * Configuration for password hashing following NIST SP 800-132.
+ * @property algorithm - PBKDF2 key derivation function
+ * @property bits - Output size of hash function
+ * @property saltBytes - Random salt size (128 bits min per NIST)
+ * @property iterations - Key stretching iterations (100k+)
+ * @property version - Schema version for future algorithm upgrades
  */
 interface PasswordConfig {
 	algorithm: "PBKDF2";
-	bits: HashBits; // Hash output size
-	saltBytes: number; // Size of random salt
-	iterations: number; // PBKDF2 iterations
-	version: 1; // Schema version for upgrades
+	bits: HashBits;
+	saltBytes: number;
+	iterations: number;
+	version: 1;
 }
 
 /**
  * Error type for password validation failures.
- * Includes field information for UI feedback.
+ * Provides structured error information for UI feedback.
+ * @property code - Error type identifier
+ * @property field - Form field that caused validation failure
+ * @property message - User-friendly error description
  */
 interface PasswordValidationError extends Error {
 	code: "VALIDATION_ERROR";
@@ -119,22 +128,27 @@ export const accountService: AccountService = {
 };
 
 /**
- * Creates a formatted string containing all password verification data.
- * Format: $pbkdf2-shaXXX$v1$iterations$salt$hash$digest
+ * Password storage format:
+ * $pbkdf2-shaXXX$v1$iterations$salt$hash$digest
  *
- * Example:
- * $pbkdf2-sha384$v1$100000$<base64-salt>$<base64-hash>$<base64-digest>
+ * Components:
+ * 1. $ - Field delimiter
+ * 2. pbkdf2-shaXXX - Algorithm identifier (e.g., pbkdf2-sha384)
+ * 3. v1 - Schema version for future upgrades
+ * 4. iterations - PBKDF2 iteration count
+ * 5. salt - Base64 encoded 128-bit random salt
+ * 6. hash - Base64 encoded PBKDF2 derived key
+ * 7. digest - Base64 encoded SHA-384 hash of derived key
  *
- * This format includes:
- * - Algorithm identifier with hash bits
- * - Version number for future upgrades
- * - Iteration count for PBKDF2
- * - Base64 encoded salt (128 bits)
- * - Base64 encoded hash
- * - Base64 encoded additional digest
+ * Security features:
+ * - NIST SP 800-132 compliant salt size
+ * - High iteration count for key stretching
+ * - Additional digest for integrity verification
+ * - Version tracking for algorithm updates
+ * - Constant-time comparison for verification
  *
- * @param params Object containing values to format
- * @returns Delimited string containing all verification data
+ * @example
+ * $pbkdf2-sha384$v1$100000$randomsalt$derivedhash$additionaldigest
  */
 function formatPasswordString({
 	iterations,
@@ -210,9 +224,12 @@ async function hashPassword(password: string) {
 }
 
 /**
- * Parse stored password data string into components.
- * @param passwordData - Formatted password string
- * @returns Parsed components or null if invalid format
+ * Parses stored password data into its components.
+ * Validates format integrity before password verification.
+ *
+ * @param passwordData - Delimited string containing all verification data
+ * @returns Parsed components or null if format is invalid
+ * @throws Never - Returns null for any parsing failure
  */
 function parsePasswordString(passwordData: string): null | {
 	algorithm: string;
@@ -241,11 +258,20 @@ function parsePasswordString(passwordData: string): null | {
 		digest,
 	};
 }
+
 /**
- * Verify a password against stored hash data.
- * @param password - Password to verify
- * @param storedPasswordData - Stored password data string
- * @returns True if password matches
+ * Verifies a password against stored hash data using Web Crypto API.
+ * Implements constant-time comparison to prevent timing attacks.
+ *
+ * Process:
+ * 1. Parse stored password components
+ * 2. Recreate hash using same salt/iterations
+ * 3. Generate verification digest
+ * 4. Compare both hash and digest
+ *
+ * @param password - Plain text password to verify
+ * @param storedPasswordData - Complete stored password string
+ * @returns Promise resolving to true if password matches
  */
 async function verifyPassword(
 	password: string,
