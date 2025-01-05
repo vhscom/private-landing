@@ -1,5 +1,5 @@
-import { createDbClient } from "../db.ts";
 import type { ResultSet } from "@libsql/client";
+import { createDbClient } from "../db.ts";
 
 /**
  * Valid bit lengths for hash algorithms.
@@ -7,6 +7,17 @@ import type { ResultSet } from "@libsql/client";
  */
 const VALID_HASH_BITS = [256, 384, 512] as const;
 type HashBits = (typeof VALID_HASH_BITS)[number];
+
+/**
+ * Configuration for password hashing.
+ */
+interface PasswordConfig {
+	algorithm: "PBKDF2";
+	bits: HashBits;
+	saltBytes: number;
+	iterations: number;
+	version: 1;
+}
 
 /**
  * Type guard to ensure hash bit length is valid.
@@ -18,11 +29,21 @@ function isValidHashBits(bits: number): bits is HashBits {
 }
 
 /**
- * Hash bit length for password hashing.
- * Uses SHA-384 for a balance of security and performance.
+ * Password hashing configuration.
+ * - SHA-384 for balance of security and performance
+ * - 12 bytes of salt (96 bits)
+ * - 100k iterations for key stretching
+ * - Version 1 of the hashing scheme
  */
-const HASH_BITS = 384;
-if (!isValidHashBits(HASH_BITS)) {
+const passwordConfig: PasswordConfig = {
+	algorithm: "PBKDF2",
+	bits: 384,
+	saltBytes: 12,
+	iterations: 100000,
+	version: 1,
+};
+
+if (!isValidHashBits(passwordConfig.bits)) {
 	throw new Error("Invalid hash bits - must be 256, 384, or 512");
 }
 
@@ -39,42 +60,83 @@ interface AccountService {
 
 export const accountService: AccountService = {
 	createAccount: async (email: string, password: string, env: Env) => {
-		const { hash, salt } = await hashPassword(password);
+		const passwordData = await hashPassword(password);
 		const dbClient = createDbClient(env);
 		return dbClient.execute({
-			sql: "INSERT INTO accounts (email, password_hash, salt) VALUES (?, ?, ?)",
-			args: [email, hash, salt],
+			sql: "INSERT INTO accounts (email, password_data) VALUES (?, ?)",
+			args: [email, passwordData],
 		});
 	},
 };
 
 /**
- * Securely hash a password using PBKDF2.
+ * Creates a formatted string containing all password verification data.
+ * Format: $pbkdf2-shaXXX$v1$iterations$salt$hash$digest
+ * @param params - Object containing formatted values
+ * @returns Delimited string of password data
+ */
+function formatPasswordString({
+	iterations,
+	salt,
+	hash,
+	digest,
+}: {
+	iterations: number;
+	salt: string;
+	hash: string;
+	digest: string;
+}): string {
+	return `$pbkdf2-sha${passwordConfig.bits}$v${passwordConfig.version}$${iterations}$${salt}$${hash}$${digest}`;
+}
+
+/**
+ * Securely hash a password using PBKDF2 with additional digest.
+ * Returns a formatted string containing all verification data.
  * @param password - The plain text password to hash
- * @returns Object containing base64 encoded hash and salt
+ * @returns Formatted string containing algorithm, iterations, salt, hash, and digest
  */
 async function hashPassword(password: string) {
-	const salt = crypto.getRandomValues(new Uint8Array(16));
+	const salt = crypto.getRandomValues(new Uint8Array(passwordConfig.saltBytes));
 	const passwordAsBytes = new TextEncoder().encode(password);
-	const passwordKey: CryptoKey = await crypto.subtle.importKey(
+
+	// Import key for PBKDF2
+	const keyMaterial: CryptoKey = await crypto.subtle.importKey(
 		"raw",
 		passwordAsBytes,
-		"PBKDF2",
+		passwordConfig.algorithm,
 		false,
 		["deriveBits"],
 	);
+
+	// Generate main hash
 	const hashBuffer = await crypto.subtle.deriveBits(
 		{
-			name: "PBKDF2",
+			name: passwordConfig.algorithm,
 			salt,
-			iterations: 100000,
-			hash: `SHA-${HASH_BITS}`,
+			iterations: passwordConfig.iterations,
+			hash: `SHA-${passwordConfig.bits}`,
 		},
-		passwordKey,
-		HASH_BITS,
+		keyMaterial,
+		passwordConfig.bits,
 	);
+
+	// Generate additional digest
+	const digestBuffer = await crypto.subtle.digest(
+		`SHA-${passwordConfig.bits}`,
+		hashBuffer,
+	);
+
+	// Convert to base64
 	const hashArray = Array.from(new Uint8Array(hashBuffer));
+	const digestArray = Array.from(new Uint8Array(digestBuffer));
 	const hashBase64 = btoa(String.fromCharCode(...hashArray));
 	const saltBase64 = btoa(String.fromCharCode(...salt));
-	return { hash: hashBase64, salt: saltBase64 };
+	const digestBase64 = btoa(String.fromCharCode(...digestArray));
+
+	return formatPasswordString({
+		iterations: passwordConfig.iterations,
+		salt: saltBase64,
+		hash: hashBase64,
+		digest: digestBase64,
+	});
 }

@@ -1,6 +1,6 @@
-import { describe, expect, test, mock, spyOn } from "bun:test";
-import { accountService } from "./services";
+import { describe, expect, mock, spyOn, test } from "bun:test";
 import type { ResultSet } from "@libsql/client";
+import { accountService } from "./services";
 
 const mockResultSet: Partial<ResultSet> = {
 	rowsAffected: 1,

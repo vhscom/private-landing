@@ -3,11 +3,13 @@
 	"module": "src/index.ts",
 	"type": "module",
 	"scripts": {
+		"check": "biome check",
 		"deploy": "wrangler deploy --minify",
 		"dev": "wrangler dev --port 8788",
-		"check": "biome check",
-		"lint": "biome lint",
+		"db:migrate": "turso db shell auth-db < src/db/migration.sql",
+		"db:reset": "turso db shell auth-db < src/db/reset.sql && turso db shell auth-db < src/db/schema.sql",
 		"format": "biome check --write",
+		"lint": "biome lint",
 		"test": "bun test",
 		"typegen": "wrangler types"
 	},
