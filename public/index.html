@@ -119,6 +119,10 @@
             opacity: 1;
             transform: translateY(0);
         }
+
+        .message.error {
+            background: #dc2626;
+        }
     </style>
 </head>
 
@@ -139,6 +143,11 @@
 <div id="message" class="message"></div>
 <script>
     const params = new URLSearchParams(window.location.search);
+    if (params.has('error')) {
+        const message = document.getElementById('message');
+        message.textContent = decodeURIComponent(params.get('error'));
+        message.classList.add('visible', 'error');
+    }
     if (params.has('registered')) {
         // Show registration success
         const message = document.getElementById('message');

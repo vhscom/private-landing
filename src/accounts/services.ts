@@ -4,19 +4,45 @@ import { createDbClient } from "../db.ts";
 /**
  * Valid bit lengths for hash algorithms.
  * Must match available SHA variants (SHA-256, SHA-384, SHA-512).
+ * Using SHA-384 for balance of security and performance.
  */
 const VALID_HASH_BITS = [256, 384, 512] as const;
 type HashBits = (typeof VALID_HASH_BITS)[number];
 
 /**
  * Configuration for password hashing.
+ * Based on NIST SP 800-132 recommendations.
  */
 interface PasswordConfig {
 	algorithm: "PBKDF2";
-	bits: HashBits;
-	saltBytes: number;
-	iterations: number;
-	version: 1;
+	bits: HashBits; // Hash output size
+	saltBytes: number; // Size of random salt
+	iterations: number; // PBKDF2 iterations
+	version: 1; // Schema version for upgrades
+}
+
+/**
+ * Error type for password validation failures.
+ * Includes field information for UI feedback.
+ */
+interface PasswordValidationError extends Error {
+	code: "VALIDATION_ERROR";
+	field: string;
+}
+
+/**
+ * Creates a typed validation error.
+ * @param message - User-friendly error message
+ * @param field - Form field that failed validation
+ */
+function createValidationError(
+	message: string,
+	field: string,
+): PasswordValidationError {
+	const error = new Error(message) as PasswordValidationError;
+	error.code = "VALIDATION_ERROR";
+	error.field = field;
+	return error;
 }
 
 /**
@@ -29,16 +55,16 @@ function isValidHashBits(bits: number): bits is HashBits {
 }
 
 /**
- * Password hashing configuration.
+ * Password hashing configuration following security best practices:
  * - SHA-384 for balance of security and performance
- * - 12 bytes of salt (96 bits)
- * - 100k iterations for key stretching
- * - Version 1 of the hashing scheme
+ * - 16 bytes of salt (128 bits) per NIST SP 800-132
+ * - 100k iterations for key stretching (PBKDF2)
+ * - Version tracking for future algorithm updates
  */
 const passwordConfig: PasswordConfig = {
 	algorithm: "PBKDF2",
 	bits: 384,
-	saltBytes: 12,
+	saltBytes: 16, // NIST recommended minimum (128 bits)
 	iterations: 100000,
 	version: 1,
 };
@@ -60,6 +86,13 @@ interface AccountService {
 
 export const accountService: AccountService = {
 	createAccount: async (email: string, password: string, env: Env) => {
+		// Minimum of 8 character passwords per NIST SP 800-63-3
+		if (password.length < 8) {
+			throw createValidationError(
+				"Password must be at least 8 characters long",
+				"password",
+			);
+		}
 		const passwordData = await hashPassword(password);
 		const dbClient = createDbClient(env);
 		return dbClient.execute({
@@ -72,8 +105,20 @@ export const accountService: AccountService = {
 /**
  * Creates a formatted string containing all password verification data.
  * Format: $pbkdf2-shaXXX$v1$iterations$salt$hash$digest
- * @param params - Object containing formatted values
- * @returns Delimited string of password data
+ *
+ * Example:
+ * $pbkdf2-sha384$v1$100000$<base64-salt>$<base64-hash>$<base64-digest>
+ *
+ * This format includes:
+ * - Algorithm identifier with hash bits
+ * - Version number for future upgrades
+ * - Iteration count for PBKDF2
+ * - Base64 encoded salt (128 bits)
+ * - Base64 encoded hash
+ * - Base64 encoded additional digest
+ *
+ * @param params Object containing values to format
+ * @returns Delimited string containing all verification data
  */
 function formatPasswordString({
 	iterations,
@@ -91,9 +136,16 @@ function formatPasswordString({
 
 /**
  * Securely hash a password using PBKDF2 with additional digest.
- * Returns a formatted string containing all verification data.
+ * Implements NIST SP 800-132 recommendations for:
+ * - Salt size (128 bits)
+ * - Strong hash function (SHA-384)
+ * - Key stretching (100k iterations)
+ *
+ * Also includes an additional SHA-384 digest of the hash
+ * for extra verification capability.
+ *
  * @param password - The plain text password to hash
- * @returns Formatted string containing algorithm, iterations, salt, hash, and digest
+ * @returns Formatted string containing all verification data
  */
 async function hashPassword(password: string) {
 	const salt = crypto.getRandomValues(new Uint8Array(passwordConfig.saltBytes));
