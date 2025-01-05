@@ -1,6 +1,7 @@
 import type { Fetcher } from "@cloudflare/workers-types";
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
+import { handleRegistration } from "./accounts/handler.ts";
 import { createDbClient } from "./db.ts";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -31,26 +32,15 @@ function serveStatic(opts: ServeStaticOptions) {
 }
 
 app.use("*", serveStatic({ cache: "key" }));
-
-app.post("/api/register", async (ctx) => {
-	const body = await ctx.req.parseBody();
-	console.log("Received registration request:", body);
-	return ctx.redirect('/?registered=true');
-	// return ctx.json({
-	// 	email: body.email,
-	// 	success: true,
-	// });
-});
-
-app.use("/users", async (ctx) => {
+app.post("/api/register", handleRegistration);
+app.use("/ping", async (ctx) => {
 	const dbClient = createDbClient(ctx.env);
-	try {
-		const result = await dbClient.execute("SELECT sqlite_version();");
-		return ctx.json(result);
-	} catch (err) {
-		console.error("Database error:", err);
-		return ctx.json({ error: "Internal Server Error" }, 500);
+	const result = await dbClient.execute("SELECT sqlite_version();");
+	if (ctx.error) {
+		console.error("Database error:", ctx.error.name);
+		return ctx.json({ error: ctx.error });
 	}
+	return ctx.json(result);
 });
 
 export default app;
