@@ -96,7 +96,7 @@ export const accountService: AccountService = {
 		const passwordData = await hashPassword(password);
 		const dbClient = createDbClient(env);
 		return dbClient.execute({
-			sql: "INSERT INTO accounts (email, password_data) VALUES (?, ?)",
+			sql: "INSERT INTO account (email, password_data) VALUES (?, ?)",
 			args: [email, passwordData],
 		});
 	},

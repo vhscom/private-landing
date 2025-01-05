@@ -43,23 +43,42 @@ turso db shell auth-db < src/db/migration.sql
 turso db shell auth-db "select name from sqlite_master where type='table'"
 
 # Check table structure
-turso db shell auth-db ".schema accounts"
+turso db shell auth-db ".schema account"
 ```
+
+## Database Schema
+
+User accounts and password data are stored in the `account` table:
+
+```mermaid
+erDiagram
+    account {
+        integer id PK
+        text email UK "not null"
+        text password_data "not null, see format below"
+        text created_at "default current_timestamp"
+    }
+```
+
+Passwords are stored salted and hashed as described in the data format below.
 
 ## Password Data Format
 
-Passwords are stored in a combined format:
+Passwords are stored in a combined format using industry standard algorithms and NIST SP 800-132 recommendations:
+
 ```
 $pbkdf2-sha384$v1$iterations$salt$hash$digest
 ```
 
-This format includes:
-- Algorithm identifier (pbkdf2-sha384)
-- Version number (v1)
-- Iteration count
-- Base64 encoded salt
-- Base64 encoded hash
-- Base64 encoded digest
+Field details:
+- Algorithm: PBKDF2 with SHA-384 (balance of security/performance)
+- Version: Schema version for future algorithm updates
+- Iterations: Key stretching count (100,000)
+- Salt: 128-bit random value (NIST recommended minimum)
+- Hash: PBKDF2-derived key
+- Digest: Additional SHA-384 hash for verification
+
+All binary data (salt, hash, digest) is stored as Base64. The format allows for future algorithm changes while maintaining backward compatibility.
 
 ## Environment Setup
 
@@ -100,7 +119,7 @@ turso db shell auth-db < backup.sql
 turso db shell auth-db
 
 # Quick table data check
-turso db shell auth-db "select email, substr(password_data, 0, 30) || '...' from accounts"
+turso db shell auth-db "select email, substr(password_data, 0, 30) || '...' from account"
 ```
 
 ## License

@@ -1,6 +1,6 @@
 -- Migration to combine password fields
 -- First create temporary table with new structure
-create table accounts_new
+create table account_new
 (
     id            integer primary key,
     email         text unique not null,
@@ -11,10 +11,10 @@ create table accounts_new
 -- If we had existing data, we'd migrate it here
 -- insert into accounts_new (id, email, password_data, created_at)
 -- select id, email, '$pbkdf2-sha384$v1$100000$' || salt || '$' || password_hash, created_at
--- from accounts;
+-- from account;
 
 -- Drop old table
-drop table if exists accounts;
+drop table if exists account;
 
--- Rename new table to accounts
-alter table accounts_new rename to accounts;
+-- Rename new table to account
+alter table account_new rename to account;

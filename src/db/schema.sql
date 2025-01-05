@@ -3,7 +3,7 @@
 -- - Unique email constraint
 -- - Combined password data field storing format: $algorithm$version$iterations$salt$hash$digest
 -- - Automatic timestamp on creation
-create table if not exists accounts (
+create table if not exists account (
     id integer primary key,
     email text unique not null,
     -- Combined field for all password verification data
