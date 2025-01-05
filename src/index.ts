@@ -10,7 +10,7 @@ type ServeStaticOptions = {
 };
 
 function serveStatic(opts: ServeStaticOptions) {
-	return createMiddleware(async (ctx, next) => {
+	return createMiddleware<{ Bindings: Env }>(async (ctx, next) => {
 		const binding = ctx.env.ASSETS as Fetcher;
 		const response = await binding.fetch(
 			ctx.req.url,
