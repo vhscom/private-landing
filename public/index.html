@@ -6,20 +6,47 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Learn Auth</title>
     <style>
+        :root {
+            /* Colors */
+            --color-bg: #f5f5f5;
+            --color-text: #2c3e50;
+            --color-border: #ccc;
+            --color-input-bg: #fff;
+            --color-button: #3b82f6;
+            --color-button-focus: #2563eb;
+            --color-focus-ring: rgb(59 130 246 / 0.5);
+
+            /* Spacing */
+            --space-xs: 0.5rem;
+            --space-sm: 1rem;
+
+            /* Typography */
+            --font-stack: system-ui, -apple-system, BlinkMacSystemFont,
+            'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
+            'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-bg: #1a1a1a;
+                --color-text: #e0e0e0;
+                --color-border: #444;
+                --color-input-bg: #2c2c2c;
+                --color-button: #3b82f6;
+                --color-button-focus: #60a5fa;
+                --color-focus-ring: rgb(147 197 253 / 0.5);
+            }
+        }
+
         *, *::before, *::after {
             box-sizing: border-box;
         }
 
-        :root {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont,
-            'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
-            'Open Sans', 'Helvetica Neue', sans-serif;
-            line-height: 1.5;
-        }
-
         body {
-            background: #f5f5f5;
-            color: #2c3e50;
+            font-family: var(--font-stack), sans-serif;
+            line-height: 1.5;
+            background: var(--color-bg);
+            color: var(--color-text);
             max-width: 70ch;
             margin-inline: auto;
         }
@@ -28,11 +55,69 @@
             line-height: 1.2;
         }
 
-        @media (prefers-color-scheme: dark) {
-            body {
-                background: #1a1a1a;
-                color: #e0e0e0;
-            }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-sm);
+        }
+
+        label {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-xs);
+        }
+
+        input {
+            padding: var(--space-xs);
+            background: var(--color-input-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            font-size: 1rem;
+            color: var(--color-text);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--color-button);
+            box-shadow: 0 0 0 3px var(--color-focus-ring);
+        }
+
+        button {
+            padding: var(--space-xs) var(--space-sm);
+            background: var(--color-button);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        button:is(:hover, :focus) {
+            background: var(--color-button-focus);
+        }
+
+        button:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 3px var(--color-focus-ring);
+        }
+
+        .message {
+            padding: var(--space-sm);
+            margin-top: var(--space-sm);
+            background: var(--color-button);
+            color: white;
+            border-radius: 4px;
+            margin-bottom: var(--space-sm);
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .message.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
     </style>
 </head>
@@ -40,40 +125,31 @@
 <body>
 <h1>Learn Auth</h1>
 <h3>Registration</h3>
-<form id="registration">
+<form id="registration" method="post" action="/api/register">
     <label>
         Email:
-        <input type="email" name="email" autocomplete="autocomplete">
+        <input type="email" name="email" autocomplete="email" required>
     </label>
     <label>
         Password:
-        <input type="password" name="password">
+        <input type="password" name="password" autocomplete="new-password" required>
     </label>
     <button type="submit">Register</button>
 </form>
+<div id="message" class="message"></div>
 <script>
-    {
-        const form = document.getElementById("registration");
-        form.addEventListener('submit', async (evt) => {
-            evt.preventDefault();
-            const values = Object.fromEntries(
-                Object.values(form)
-                    .filter(({name}) => name)
-                    .map(({name, value}) => [name, value])
-            );
-            try {
-                const response = await fetch('/api/register', {
-                    method: 'POST',
-                    body: JSON.stringify(values),
-                    headers: {
-                        'Content-Type': 'application/json; charset=UTF-8'
-                    }
-                })
-            } catch (err) {
-                console.error(err);
-                throw Error('Failed to fetch.')
-            }
-        })
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('registered')) {
+        // Show registration success
+        const message = document.getElementById('message');
+        message.textContent = 'Registration successful!';
+        requestAnimationFrame(() => {
+            message.classList.add('visible');
+        });
+        // Disable all form controls
+        const form = document.getElementById('registration');
+        const controls = form.querySelectorAll('input, button');
+        controls.forEach(control => control.disabled = true);
     }
 </script>
 </body>

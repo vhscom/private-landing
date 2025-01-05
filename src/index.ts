@@ -33,12 +33,13 @@ function serveStatic(opts: ServeStaticOptions) {
 app.use("*", serveStatic({ cache: "key" }));
 
 app.post("/api/register", async (ctx) => {
-	const body = await ctx.req.json();
+	const body = await ctx.req.parseBody();
 	console.log("Received registration request:", body);
-	return ctx.json({
-		email: body.email,
-		success: true,
-	});
+	return ctx.redirect('/?registered=true');
+	// return ctx.json({
+	// 	email: body.email,
+	// 	success: true,
+	// });
 });
 
 app.use("/users", async (ctx) => {
