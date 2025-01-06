@@ -6,13 +6,13 @@ export async function handleLogin(ctx: Context) {
 		const body = await ctx.req.parseBody();
 		const { email, password } = body;
 
-		const authenticated = await accountService.authenticate(
+		const authResult = await accountService.authenticate(
 			email as string,
 			password as string,
 			ctx.env,
 		);
 
-		if (!authenticated) {
+		if (!authResult.authenticated) {
 			return ctx.redirect("/?error=Invalid email or password");
 		}
 
@@ -33,7 +33,7 @@ export async function handleRegistration(ctx: Context) {
 			ctx.env,
 		);
 		return ctx.redirect("/?registered=true");
-	} catch (error) {
+	} catch (error: unknown) {
 		if (
 			error &&
 			typeof error === "object" &&
@@ -41,6 +41,7 @@ export async function handleRegistration(ctx: Context) {
 			error.code === "VALIDATION_ERROR"
 		) {
 			// Return validation errors with 400 status
+			// @ts-expect-error Custom errors have custom error messages
 			return ctx.redirect(`/?error=${encodeURIComponent(error.message)}`);
 		}
 		// Log unexpected errors and return generic message

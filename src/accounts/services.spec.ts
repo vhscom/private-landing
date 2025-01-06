@@ -29,7 +29,7 @@ describe("Account Service", () => {
 		test("rejects passwords shorter than 8 characters", async () => {
 			expect(
 				accountService.createAccount("test@example.com", "short", mockEnv),
-			).rejects.toThrow("Password must be at least 8 characters long");
+			).rejects.toThrow(/Password must be at least 8 characters long/i);
 		});
 
 		test("successfully creates account with valid password", async () => {
@@ -56,7 +56,7 @@ describe("Account Service", () => {
 				"anypassword",
 				mockEnv,
 			);
-			expect(result).toBe(false);
+			expect(result).toEqual({ authenticated: false });
 		});
 
 		test.skip("verifies correct password", async () => {
@@ -76,7 +76,7 @@ describe("Account Service", () => {
 				mockEnv,
 			);
 
-			expect(storedPasswordData).toBe(true);
+			expect(storedPasswordData).toEqual({ authenticated: true });
 		});
 
 		test("rejects incorrect password", async () => {
@@ -103,7 +103,7 @@ describe("Account Service", () => {
 				"wrongpassword",
 				mockEnv,
 			);
-			expect(result).toBe(false);
+			expect(result).toEqual({ authenticated: false });
 		});
 	});
 

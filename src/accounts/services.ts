@@ -40,6 +40,16 @@ interface PasswordValidationError extends Error {
 }
 
 /**
+ * Result of an authentication attempt.
+ * @property authenticated - Whether the credentials were valid
+ * @property userId - The user's ID if authentication succeeded
+ */
+interface AuthResult {
+	authenticated: boolean;
+	userId?: string;
+}
+
+/**
  * Creates a typed validation error.
  * @param message - User-friendly error message
  * @param field - Form field that failed validation
@@ -86,12 +96,44 @@ if (!isValidHashBits(passwordConfig.bits)) {
  * Service interface for account management operations.
  */
 interface AccountService {
+	/**
+	 * Creates a new user account with secure password storage.
+	 * Implements NIST SP 800-63-3 password requirements and
+	 * NIST SP 800-132 password hashing recommendations.
+	 *
+	 * Process:
+	 * 1. Validates password meets minimum requirements
+	 * 2. Generates cryptographically secure salt
+	 * 3. Applies PBKDF2 key derivation with SHA-384
+	 * 4. Generates additional integrity digest
+	 * 5. Stores combined password data in database
+	 *
+	 * @param email - User's email address (unique identifier)
+	 * @param password - Plain text password to hash and store
+	 * @param env - Environment containing database connection
+	 * @returns Database result with affected rows and insert ID
+	 * @throws PasswordValidationError if password requirements not met
+	 */
 	createAccount: (
 		email: string,
 		password: string,
 		env: Env,
 	) => Promise<ResultSet>;
-	authenticate: (email: string, password: string, env: Env) => Promise<boolean>;
+
+	/**
+	 * Authenticates a user with email and password.
+	 * Performs constant-time password verification to prevent timing attacks.
+	 *
+	 * @param email - User's email address
+	 * @param password - Plain text password to verify
+	 * @param env - Environment containing database connection
+	 * @returns Authentication result containing success status and user ID
+	 */
+	authenticate: (
+		email: string,
+		password: string,
+		env: Env,
+	) => Promise<AuthResult>;
 }
 
 export const accountService: AccountService = {
@@ -119,11 +161,18 @@ export const accountService: AccountService = {
 		});
 
 		if (result.rows.length === 0) {
-			return false;
+			return { authenticated: false };
 		}
 
-		const storedPasswordData = result.rows[0].password_data as string;
-		return await verifyPassword(password, storedPasswordData);
+		const [row] = result.rows;
+		const storedPasswordData = row.password_data as string;
+		const isValid = await verifyPassword(password, storedPasswordData);
+
+		if (!isValid) {
+			return { authenticated: false };
+		}
+
+		return { authenticated: true, userId: row.id as string };
 	},
 };
 
