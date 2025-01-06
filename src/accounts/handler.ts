@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import { accountService } from "./services";
+import { createSession } from "./session.ts";
 
 export async function handleLogin(ctx: Context) {
 	try {
@@ -14,6 +15,10 @@ export async function handleLogin(ctx: Context) {
 
 		if (!authResult.authenticated) {
 			return ctx.redirect("/?error=Invalid email or password");
+		}
+
+		if (authResult.userId) {
+			await createSession(authResult.userId, ctx);
 		}
 
 		return ctx.redirect("/?authenticated=true");

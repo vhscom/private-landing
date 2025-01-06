@@ -46,7 +46,7 @@ interface PasswordValidationError extends Error {
  */
 interface AuthResult {
 	authenticated: boolean;
-	userId?: string;
+	userId?: number;
 }
 
 /**
@@ -156,7 +156,7 @@ export const accountService: AccountService = {
 	authenticate: async (email: string, password: string, env: Env) => {
 		const dbClient = createDbClient(env);
 		const result = await dbClient.execute({
-			sql: "SELECT password_data FROM account WHERE email = ?",
+			sql: "SELECT password_data, id FROM account WHERE email = ?",
 			args: [email],
 		});
 
@@ -172,7 +172,7 @@ export const accountService: AccountService = {
 			return { authenticated: false };
 		}
 
-		return { authenticated: true, userId: row.id as string };
+		return { authenticated: true, userId: row.id };
 	},
 };
 

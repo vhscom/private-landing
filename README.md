@@ -2,6 +2,37 @@
 
 Authentication experiment using Hono + Cloudflare Workers.
 
+## Database Schema
+
+```mermaid
+erDiagram
+   account {
+      text id PK
+      text email UK "not null"
+      text password_data "not null"
+      text created_at "default current_timestamp"
+   }
+   session {
+      text id PK
+      text user_id FK "not null"
+      text user_agent "not null"
+      text ip_address "not null"
+      text expires_at "not null"
+      text created_at "not null"
+   }
+
+   account ||--o{ session : "has"
+```
+
+## Security Features
+
+- NIST SP 800-132 compliant password hashing
+- Secure session management with HTTP-only cookies
+- Cookie signing for tamper protection
+- IP address tracking for session security
+- Automatic session expiration
+- SQLite with a Turso distributed database
+
 ## Prerequisites
 
 1. Install [Turso CLI](https://docs.turso.tech/reference/cli)
@@ -46,20 +77,6 @@ turso db shell auth-db "select name from sqlite_master where type='table'"
 turso db shell auth-db ".schema account"
 ```
 
-## Database Schema
-
-User accounts and password data are stored in the `account` table:
-
-```mermaid
-erDiagram
-    account {
-        integer id PK
-        text email UK "not null"
-        text password_data "not null, see format below"
-        text created_at "default current_timestamp"
-    }
-```
-
 Passwords are stored salted and hashed as described in the data format below.
 
 ## Password Data Format
@@ -87,6 +104,7 @@ All binary data (salt, hash, digest) is stored as Base64. The format allows for 
    - Go to Workers & Pages → Settings → Integrations
    - Add Turso integration
    - Your `TURSO_URL` and `TURSO_AUTH_TOKEN` will be automatically available
+3. Use strong password for the `COOKIE_SIGNING` secret.
 
 ## Development
 

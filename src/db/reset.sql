@@ -1,7 +1,15 @@
--- Reset the database for testing
--- Drops the account table and any associated data
+-- Reset database for testing/development
+-- WARNING: Destroys all data and schema
+
+-- Drop tables in correct order to handle foreign keys
+drop table if exists session;
 drop table if exists account;
 
--- Clear any related indices or triggers we might add later
--- drop index if exists idx_accounts_email;
--- drop trigger if exists accounts_updated_at;
+-- Clear any indices (commented for reference)
+-- drop index if exists idx_account_email;
+-- drop index if exists idx_session_user;
+-- drop index if exists idx_session_expiry;
+
+-- Clear any triggers (commented for reference)
+-- drop trigger if exists account_updated_at;
+-- drop trigger if exists session_cleanup;
