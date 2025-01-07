@@ -1,6 +1,6 @@
-# Learn Auth
+# Private Landing
 
-Authentication experiment using Hono + Cloudflare Workers.
+A boilerplate/starter project for quickly building RESTful APIs using [Cloudflare Workers](https://workers.cloudflare.com/), [Hono](https://honojs.dev/) and [Turso](https://turso.tech/). Inspired by Scott Tolinski, Mark Volkmann.
 
 ## Security Features
 

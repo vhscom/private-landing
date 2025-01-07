@@ -1,13 +1,13 @@
 {
-	"name": "learn-auth",
+	"name": "private-landing",
 	"module": "src/index.ts",
 	"type": "module",
 	"scripts": {
 		"check": "biome check",
 		"deploy": "wrangler deploy --minify",
 		"dev": "wrangler dev --port 8788",
-		"db:migrate": "turso db shell auth-db < src/db/migration.sql",
-		"db:reset": "turso db shell auth-db < src/db/reset.sql && turso db shell auth-db < src/db/schema.sql",
+		"db:migrate": "turso db shell private-landing-db < src/db/migration.sql",
+		"db:reset": "turso db shell private-landing-db < src/db/reset.sql && turso db shell private-landing-db < src/db/schema.sql",
 		"format": "biome check --write",
 		"lint": "biome lint",
 		"test": "bun test",

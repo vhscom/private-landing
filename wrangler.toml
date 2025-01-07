@@ -1,4 +1,4 @@
-name = "learn-auth"
+name = "private-landing"
 main = "src/index.ts"
 compatibility_date = "2025-01-04"
 
