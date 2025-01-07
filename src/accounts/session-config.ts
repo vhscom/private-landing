@@ -34,13 +34,13 @@ export interface SessionConfig {
 
 /**
  * Default session configuration.
- * - 5 max sessions per user
+ * - 3 max sessions per user
  * - 7 day session duration
  * - 30 day maintenance window
  * - Secure cookie settings with HTTP-only and strict same-site policy
  */
 export const defaultSessionConfig: SessionConfig = {
-	maxSessions: 5,
+	maxSessions: 3,
 	sessionDuration: 60 * 60 * 24 * 7, // 7 days in seconds
 	maintenanceWindow: 30, // days
 	cookie: {

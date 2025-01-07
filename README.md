@@ -2,36 +2,31 @@
 
 Authentication experiment using Hono + Cloudflare Workers.
 
+## Security Features
+
+See [ADR-001: Authentication Implementation](docs/adr/001-auth-implementation.md) for detailed technical decisions and security features.
+
 ## Database Schema
 
 ```mermaid
 erDiagram
-   account {
-      text id PK
-      text email UK "not null"
-      text password_data "not null"
-      text created_at "default current_timestamp"
-   }
-   session {
-      text id PK
-      text user_id FK "not null"
-      text user_agent "not null"
-      text ip_address "not null"
-      text expires_at "not null"
-      text created_at "not null"
-   }
+    account {
+        integer id PK
+        text email UK "not null"
+        text password_data "not null"
+        text created_at "default current_timestamp"
+    }
+    session {
+        text id PK
+        integer user_id FK "not null"
+        text user_agent "not null"
+        text ip_address "not null"
+        text expires_at "not null"
+        text created_at "not null"
+    }
 
-   account ||--o{ session : "has"
+    account ||--o{ session : "has"
 ```
-
-## Security Features
-
-- NIST SP 800-132 compliant password hashing
-- Secure session management with HTTP-only cookies
-- Cookie signing for tamper protection
-- IP address tracking for session security
-- Automatic session expiration
-- SQLite with a Turso distributed database
 
 ## Prerequisites
 
@@ -56,10 +51,6 @@ turso db tokens create auth-db
 
 The database can be managed using SQL scripts in the `src/db` directory:
 
-- `schema.sql`: Creates tables and sets up the schema
-- `reset.sql`: Drops all tables for testing/reset
-- `migration.sql`: Handles schema updates
-
 ```bash
 # First time setup: Create tables
 turso db shell auth-db < src/db/schema.sql
@@ -76,8 +67,6 @@ turso db shell auth-db "select name from sqlite_master where type='table'"
 # Check table structure
 turso db shell auth-db ".schema account"
 ```
-
-Passwords are stored salted and hashed as described in the data format below.
 
 ## Password Data Format
 
@@ -105,6 +94,13 @@ All binary data (salt, hash, digest) is stored as Base64. The format allows for 
    - Add Turso integration
    - Your `TURSO_URL` and `TURSO_AUTH_TOKEN` will be automatically available
 3. Use strong password for the `COOKIE_SIGNING` secret.
+
+Required environment variables:
+```bash
+TURSO_URL="libsql://your-db.turso.io"
+TURSO_AUTH_TOKEN="your-auth-token"
+COOKIE_SIGNING="your-cookie-secret"    # For session management
+```
 
 ## Development
 

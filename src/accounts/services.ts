@@ -59,8 +59,8 @@ interface AuthResult {
 const passwordConfig: PasswordConfig = {
 	algorithm: "PBKDF2",
 	bits: 384,
-	saltBytes: 16, // NIST recommended minimum (128 bits)
-	iterations: 100000,
+	saltBytes: 16, // NIST recommended minimum (128 bits) (2025)
+	iterations: 100000, // OWASP guidance for SHA-512 is 210,000 (2025)
 	version: 1,
 };
 
