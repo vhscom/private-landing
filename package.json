@@ -17,6 +17,7 @@
 		"@biomejs/biome": "1.9.4",
 		"@cloudflare/workers-types": "^4.20241230.0",
 		"@types/bun": "latest",
+		"@types/nanoid": "^3.0.0",
 		"wrangler": "^3.99.0"
 	},
 	"peerDependencies": {
@@ -24,6 +25,7 @@
 	},
 	"dependencies": {
 		"@libsql/client": "^0.14.0",
-		"hono": "^4.6.15"
+		"hono": "^4.6.15",
+		"nanoid": "^5.0.9"
 	}
 }

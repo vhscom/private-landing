@@ -2,7 +2,7 @@ import type { CookieOptions } from "hono/utils/cookie";
 
 /**
  * Session information stored in database.
- * @property id - UUID v4 session identifier
+ * @property id - 21 character nanoid session identifier
  * @property userId - Associated user ID
  * @property userAgent - Browser user agent string
  * @property ipAddress - Client IP address

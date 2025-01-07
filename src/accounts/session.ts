@@ -2,6 +2,7 @@ import type { Client } from "@libsql/client/web";
 import type { Context } from "hono";
 import { getConnInfo } from "hono/cloudflare-workers";
 import { deleteCookie, getSignedCookie, setSignedCookie } from "hono/cookie";
+import { nanoid } from "nanoid";
 import { createDbClient } from "../db";
 import {
 	type SessionConfig,
@@ -86,7 +87,7 @@ export async function createSession(
 	await cleanupExpiredSessions(dbClient);
 	await enforceSessionLimit(userId, dbClient, config.maxSessions);
 
-	const sessionId = crypto.randomUUID();
+	const sessionId = nanoid();
 	const connInfo = getConnInfo(ctx);
 
 	const sessionData: SessionData = {
