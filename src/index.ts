@@ -44,7 +44,7 @@ app.use("/api/*", async (ctx, next) => {
 	}
 	return jwt({
 		secret: ctx.env.COOKIE_SIGNING,
-		cookie: "session",
+		cookie: "__Host-session",
 	})(ctx, next);
 });
 
