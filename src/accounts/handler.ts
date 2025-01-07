@@ -18,7 +18,7 @@ export async function handleLogin(ctx: Context) {
 		}
 
 		if (authResult.userId) {
-			await createSession(authResult.userId, ctx);
+			const sessionId = await createSession(authResult.userId, ctx);
 		}
 
 		return ctx.redirect("/?authenticated=true");

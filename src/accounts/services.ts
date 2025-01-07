@@ -42,12 +42,27 @@ interface PasswordValidationError extends Error {
 /**
  * Result of an authentication attempt.
  * @property authenticated - Whether the credentials were valid
- * @property userId - The user's ID if authentication succeeded
+ * @property userId - The user's ID if authentication succeeded, null otherwise
  */
 interface AuthResult {
 	authenticated: boolean;
-	userId?: number;
+	userId?: number | null;
 }
+
+/**
+ * Password hashing configuration following security best practices:
+ * - SHA-384 for balance of security and performance
+ * - 16 bytes of salt (128 bits) per NIST SP 800-132
+ * - 100k iterations for key stretching (PBKDF2)
+ * - Version tracking for future algorithm updates
+ */
+const passwordConfig: PasswordConfig = {
+	algorithm: "PBKDF2",
+	bits: 384,
+	saltBytes: 16, // NIST recommended minimum (128 bits)
+	iterations: 100000,
+	version: 1,
+};
 
 /**
  * Creates a typed validation error.
@@ -72,21 +87,6 @@ function createValidationError(
 function isValidHashBits(bits: number): bits is HashBits {
 	return VALID_HASH_BITS.includes(bits as HashBits);
 }
-
-/**
- * Password hashing configuration following security best practices:
- * - SHA-384 for balance of security and performance
- * - 16 bytes of salt (128 bits) per NIST SP 800-132
- * - 100k iterations for key stretching (PBKDF2)
- * - Version tracking for future algorithm updates
- */
-const passwordConfig: PasswordConfig = {
-	algorithm: "PBKDF2",
-	bits: 384,
-	saltBytes: 16, // NIST recommended minimum (128 bits)
-	iterations: 100000,
-	version: 1,
-};
 
 if (!isValidHashBits(passwordConfig.bits)) {
 	throw new Error("Invalid hash bits - must be 256, 384, or 512");
@@ -161,18 +161,19 @@ export const accountService: AccountService = {
 		});
 
 		if (result.rows.length === 0) {
-			return { authenticated: false };
+			return { authenticated: false, userId: null };
 		}
 
-		const [row] = result.rows;
+		const row = result.rows[0];
 		const storedPasswordData = row.password_data as string;
 		const isValid = await verifyPassword(password, storedPasswordData);
 
 		if (!isValid) {
-			return { authenticated: false };
+			return { authenticated: false, userId: null };
 		}
 
-		return { authenticated: true, userId: row.id };
+		const userId = typeof row.id === "number" ? row.id : null;
+		return { authenticated: true, userId };
 	},
 };
 
@@ -240,7 +241,7 @@ async function hashPassword(password: string) {
 	);
 
 	// Generate main hash
-	const hashBuffer: ArrayBuffer = await crypto.subtle.deriveBits(
+	const hashBuffer = await crypto.subtle.deriveBits(
 		{
 			name: passwordConfig.algorithm,
 			salt,
@@ -252,7 +253,7 @@ async function hashPassword(password: string) {
 	);
 
 	// Generate additional digest
-	const digestBuffer: ArrayBuffer = await crypto.subtle.digest(
+	const digestBuffer = await crypto.subtle.digest(
 		`SHA-${passwordConfig.bits}`,
 		hashBuffer,
 	);
@@ -327,7 +328,6 @@ async function verifyPassword(
 	storedPasswordData: string,
 ): Promise<boolean> {
 	const parsed = parsePasswordString(storedPasswordData);
-
 	if (!parsed) return false;
 
 	const { iterations, salt, hash } = parsed;
@@ -344,7 +344,7 @@ async function verifyPassword(
 	);
 
 	// Generate hash with same parameters
-	const hashBuffer: ArrayBuffer = await crypto.subtle.deriveBits(
+	const hashBuffer = await crypto.subtle.deriveBits(
 		{
 			name: passwordConfig.algorithm,
 			salt: saltBytes,
@@ -356,7 +356,7 @@ async function verifyPassword(
 	);
 
 	// Generate digest for additional verification
-	const digestBuffer: ArrayBuffer = await crypto.subtle.digest(
+	const digestBuffer = await crypto.subtle.digest(
 		`SHA-${passwordConfig.bits}`,
 		hashBuffer,
 	);
