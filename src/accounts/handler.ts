@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 import { accountService } from "./services";
 import { createSession } from "./session.ts";
+import { tokenService } from "./token.ts";
 
 export async function handleLogin(ctx: Context) {
 	try {
@@ -19,6 +20,7 @@ export async function handleLogin(ctx: Context) {
 
 		if (authResult.userId) {
 			const sessionId = await createSession(authResult.userId, ctx);
+			await tokenService.generateTokens(ctx, authResult.userId, sessionId);
 		}
 
 		return ctx.redirect("/?authenticated=true");

@@ -1,7 +1,7 @@
 import type { Client } from "@libsql/client/web";
 import type { Context } from "hono";
 import { getConnInfo } from "hono/cloudflare-workers";
-import { deleteCookie, getSignedCookie, setSignedCookie } from "hono/cookie";
+import { deleteCookie } from "hono/cookie";
 import { nanoid } from "nanoid";
 import { createDbClient } from "../db";
 import {
@@ -9,6 +9,7 @@ import {
 	type SessionData,
 	defaultSessionConfig,
 } from "./session-config";
+import type { TokenPayload } from "./token.ts";
 
 /**
  * Removes expired sessions from the database.
@@ -75,7 +76,7 @@ async function extendSession(
 
 /**
  * Creates a new session for authenticated user.
- * Stores session data and sets secure cookie.
+ * Stores session data in the database.
  */
 export async function createSession(
 	userId: number,
@@ -92,11 +93,13 @@ export async function createSession(
 
 	const sessionData: SessionData = {
 		id: sessionId,
-		userId,
-		userAgent: ctx.req.header("user-agent") || "unknown",
-		ipAddress: connInfo.remote?.address || "unknown",
-		expiresAt: new Date(Date.now() + config.sessionDuration * 1000),
-		createdAt: new Date(),
+		user_id: userId,
+		user_agent: ctx.req.header("user-agent") || "unknown",
+		ip_address: connInfo.remote?.address || "unknown",
+		expires_at: new Date(
+			Date.now() + config.sessionDuration * 1000,
+		).toISOString(),
+		created_at: new Date().toISOString(),
 	};
 
 	await dbClient.execute({
@@ -105,21 +108,14 @@ export async function createSession(
               VALUES (?, ?, ?, ?, ?, ?)`,
 		args: [
 			sessionData.id,
-			sessionData.userId,
-			sessionData.userAgent,
-			sessionData.ipAddress,
-			sessionData.expiresAt.toISOString(),
-			sessionData.createdAt.toISOString(),
+			sessionData.user_id,
+			sessionData.user_agent,
+			sessionData.ip_address,
+			sessionData.expires_at,
+			sessionData.created_at,
 		],
 	});
 
-	await setSignedCookie(
-		ctx,
-		"session",
-		sessionId,
-		ctx.env.COOKIE_SIGNING,
-		config.cookie,
-	);
 	return sessionId;
 }
 
@@ -131,11 +127,9 @@ export async function getSession(
 	ctx: Context,
 	config: SessionConfig = defaultSessionConfig,
 ): Promise<SessionData | null> {
-	const sessionId = await getSignedCookie(
-		ctx,
-		ctx.env.COOKIE_SIGNING,
-		"session",
-	);
+	const payload = ctx.get("jwtPayload") as TokenPayload;
+	const sessionId = payload?.session_id;
+
 	if (!sessionId) return null;
 
 	const dbClient = createDbClient(ctx.env);
@@ -145,10 +139,8 @@ export async function getSession(
 		dbClient,
 		config.sessionDuration,
 	);
-	if (!extended) {
-		deleteCookie(ctx, "session", config.cookie);
-		return null;
-	}
+
+	if (!extended) return null;
 
 	const result = await dbClient.execute({
 		sql: "SELECT * FROM session WHERE id = ?",
@@ -166,11 +158,9 @@ export async function endSession(
 	ctx: Context,
 	config: SessionConfig = defaultSessionConfig,
 ): Promise<void> {
-	const sessionId = await getSignedCookie(
-		ctx,
-		ctx.env.COOKIE_SIGNING,
-		"session",
-	);
+	const payload = ctx.get("jwtPayload") as TokenPayload;
+	const sessionId = payload.session_id;
+
 	if (!sessionId) return;
 
 	const dbClient = createDbClient(ctx.env);
@@ -181,5 +171,6 @@ export async function endSession(
 		args: [sessionId],
 	});
 
-	deleteCookie(ctx, "session", config.cookie);
+	deleteCookie(ctx, "access_token", config.cookie);
+	deleteCookie(ctx, "refresh_token", config.cookie);
 }

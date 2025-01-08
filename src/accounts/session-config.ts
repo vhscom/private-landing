@@ -3,19 +3,19 @@ import type { CookieOptions } from "hono/utils/cookie";
 /**
  * Session information stored in database.
  * @property id - 21 character nanoid session identifier
- * @property userId - Associated user ID
- * @property userAgent - Browser user agent string
- * @property ipAddress - Client IP address
- * @property expiresAt - Session expiration timestamp
- * @property createdAt - Session creation timestamp
+ * @property user_id - Associated user ID
+ * @property user_agent - Browser user agent string
+ * @property ip_address - Client IP address
+ * @property expires_at - Session expiration timestamp
+ * @property created_at - Session creation timestamp
  */
 export interface SessionData {
 	id: string;
-	userId: number;
-	userAgent: string;
-	ipAddress: string;
-	expiresAt: Date;
-	createdAt: Date;
+	user_id: number;
+	user_agent: string;
+	ip_address: string;
+	expires_at: string;
+	created_at: string;
 }
 
 /**

@@ -1,10 +1,69 @@
 # Private Landing
 
-A boilerplate/starter project for quickly building RESTful APIs using [Cloudflare Workers](https://workers.cloudflare.com/), [Hono](https://honojs.dev/) and [Turso](https://turso.tech/). Inspired by Scott Tolinski, Mark Volkmann.
+A boilerplate/starter project for quickly building RESTful APIs
+using [Cloudflare Workers](https://workers.cloudflare.com/), [Hono](https://honojs.dev/)
+and [Turso](https://turso.tech/). Inspired by Scott Tolinski, Mark Volkmann.
 
-## Security Features
+## Authentication System
 
-See [ADR-001: Authentication Implementation](docs/adr/001-auth-implementation.md) for detailed technical decisions and security features.
+The authentication system combines secure session management with JWT-based API access control, providing both
+auditability and stateless verification.
+
+### Core Components
+
+1. **Session Management**
+    - Sessions stored in SQLite (via Turso)
+    - Tracks user devices, IP addresses, and activity
+    - Enforces session limits per user
+    - Implements sliding expiration
+
+2. **JWT Tokens**
+    - Access token (15min expiry)
+    - Refresh token (7 day expiry)
+    - Tokens linked to sessions via `session_id`
+    - HTTP-only secure cookies
+
+### Authentication Flow
+
+1. **Login Process**:
+   ```
+   1. Validate credentials against account table
+   2. Create session record with:
+      - Unique session ID (nanoid)
+      - User agent and IP tracking
+      - Configurable expiration
+   3. Generate JWT tokens:
+      - Access token: {user_id, session_id, type: "access"}
+      - Refresh token: {user_id, session_id, type: "refresh"}
+   4. Set HTTP-only cookies:
+      - access_token: Short-lived API access
+      - refresh_token: Long-lived token for renewal
+   ```
+
+2. **API Request Authentication**:
+   ```
+   1. Check access_token cookie
+   2. Validate JWT signature and expiry
+   3. Verify session still exists and is valid
+   4. If token expired:
+      a. Check refresh token
+      b. Verify refresh token validity
+      c. Confirm session is still active
+      d. Issue new access token
+   5. Update session expiry (sliding window)
+   ```
+
+### Security Features
+
+- Session tracking and limiting
+- Secure cookie configuration
+- CSRF protection via Same-Site
+- Session-JWT linkage for revocation
+- IP and user agent tracking
+- Sliding session expiration
+
+See [ADR-001: Authentication Implementation](docs/adr/001-auth-implementation.md) for detailed technical decisions and
+security features.
 
 ## Database Schema
 
@@ -25,33 +84,33 @@ erDiagram
         text created_at "not null"
     }
 
-    account ||--o{ session : "has"
+    account ||--o{ session: "has"
 ```
 
 ## Prerequisites
 
 1. Install [Turso CLI](https://docs.turso.tech/reference/cli)
 2. Authenticate with Turso:
-```bash
-turso auth login
-```
+   ```shell
+   turso auth login
+   ```
 3. Create database and set up access:
-```bash
-# Create the database
-turso db create auth-db
-
-# Get database info and connection URL
-turso db show auth-db
-
-# Create auth token
-turso db tokens create auth-db
-```
+   ```shell
+   # Create the database
+   turso db create auth-db
+   
+   # Get database info and connection URL
+   turso db show auth-db
+   
+   # Create auth token
+   turso db tokens create auth-db
+   ```
 
 ## Database Setup
 
 The database can be managed using SQL scripts in the `src/db` directory:
 
-```bash
+```shell
 # First time setup: Create tables
 turso db shell auth-db < src/db/schema.sql
 
@@ -77,6 +136,7 @@ $pbkdf2-sha384$v1$iterations$salt$hash$digest
 ```
 
 Field details:
+
 - Algorithm: PBKDF2 with SHA-384 (balance of security/performance)
 - Version: Schema version for future algorithm updates
 - Iterations: Key stretching count (100,000)
@@ -84,27 +144,32 @@ Field details:
 - Hash: PBKDF2-derived key
 - Digest: Additional SHA-384 hash for verification
 
-All binary data (salt, hash, digest) is stored as Base64. The format allows for future algorithm changes while maintaining backward compatibility.
+All binary data (salt, hash, digest) is stored as Base64. The format allows for future algorithm changes while
+maintaining backward compatibility.
 
 ## Environment Setup
 
 1. Copy `.dev.vars.example` to `.dev.vars` for local development
-2. For production, [set up the Turso integration](https://developers.cloudflare.com/workers/databases/native-integrations/turso/) in your Cloudflare dashboard:
-   - Go to Workers & Pages → Settings → Integrations
-   - Add Turso integration
-   - Your `TURSO_URL` and `TURSO_AUTH_TOKEN` will be automatically available
-3. Use strong password for the `COOKIE_SIGNING` secret.
+2. For
+   production, [set up the Turso integration](https://developers.cloudflare.com/workers/databases/native-integrations/turso/)
+   in your Cloudflare dashboard:
+    - Go to Workers & Pages → Settings → Integrations
+    - Add Turso integration
+    - Your `TURSO_URL` and `TURSO_AUTH_TOKEN` will be automatically available
+3. Use strong passwords for JWT access and refresh token secrets
 
 Required environment variables:
-```bash
+
+```shell
 TURSO_URL="libsql://your-db.turso.io"
 TURSO_AUTH_TOKEN="your-auth-token"
-COOKIE_SIGNING="your-cookie-secret"    # For session management
+JWT_ACCESS_SECRET="your-access-secret"    # For JWT access tokens
+JWT_REFRESH_SECRET="your-refresh-secret"  # For JWT refresh tokens
 ```
 
 ## Development
 
-```bash
+```shell
 # Start development server
 bun run dev       # Runs on port 8788
 
@@ -122,7 +187,7 @@ bun run check     # Biome linter + formatter check
 
 Common database tasks:
 
-```bash
+```shell
 # Create database backup
 turso db dump auth-db > backup.sql
 

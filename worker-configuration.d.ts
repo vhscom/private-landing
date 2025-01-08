@@ -3,6 +3,7 @@
 interface Env {
 	TURSO_URL: string;
 	TURSO_AUTH_TOKEN: string;
-	COOKIE_SIGNING: string;
+	JWT_ACCESS_SECRET: string;
+	JWT_REFRESH_SECRET: string;
 	ASSETS: Fetcher;
 }
