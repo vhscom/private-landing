@@ -10,10 +10,10 @@ interface TokenConfig {
 }
 
 export interface TokenPayload {
-	user_id: number;
-	session_id: string;
-	type: "access" | "refresh";
-	exp?: number;
+	uid: number; // user_id
+	sid: string; // session_id
+	typ: "access" | "refresh"; // token type
+	exp?: number; // expiration (standard JWT claim)
 	[key: string]: string | number | undefined; // Index signature for JWT compatibility
 }
 
@@ -50,9 +50,9 @@ export const tokenService = {
 
 		// Generate refresh token
 		const refreshPayload: TokenPayload = {
-			user_id,
-			session_id,
-			type: "refresh",
+			uid: user_id,
+			sid: session_id,
+			typ: "refresh",
 			exp: Math.floor(Date.now() / 1000) + tokenConfig.refreshTokenExpiry,
 		};
 
@@ -60,9 +60,9 @@ export const tokenService = {
 
 		// Generate access token
 		const accessPayload: TokenPayload = {
-			user_id,
-			session_id,
-			type: "access",
+			uid: user_id,
+			sid: session_id,
+			typ: "access",
 			exp: Math.floor(Date.now() / 1000) + tokenConfig.accessTokenExpiry,
 		};
 
@@ -92,9 +92,9 @@ export const tokenService = {
 
 		// Generate new access token with same session_id
 		const accessPayload: TokenPayload = {
-			user_id: payload.user_id,
-			session_id: payload.session_id,
-			type: "access",
+			uid: payload.uid,
+			sid: payload.sid,
+			typ: "access",
 			exp: Math.floor(Date.now() / 1000) + tokenConfig.accessTokenExpiry,
 		};
 

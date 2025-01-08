@@ -1,27 +1,40 @@
 # Private Landing
 
-A boilerplate/starter project for quickly building RESTful APIs
-using [Cloudflare Workers](https://workers.cloudflare.com/), [Hono](https://honojs.dev/)
-and [Turso](https://turso.tech/). Inspired by Scott Tolinski, Mark Volkmann.
+A boilerplate/starter project for quickly building RESTful APIs using [Cloudflare Workers](https://workers.cloudflare.com/), [Hono](https://honojs.dev/) and [Turso](https://turso.tech/). Inspired by Scott Tolinski, Mark Volkmann.
+
+## What's Included
+
+This starter provides a foundation for building authenticated APIs:
+
+- 🔐 **Secure Authentication** - NIST-compliant password storage, JWT-based API auth
+- 📱 **Session Management** - Track devices, manage user sessions, auto-refresh tokens
+- 🗄️ **SQLite Database** - Purpose-built schema, migrations, and management scripts
+- 🚀 **Edge-Ready** - Built for Cloudflare Workers with Hono and Turso
+- 💻 **Developer Experience** - TypeScript, automated formatting, comprehensive docs
+- ⚡ **Security Features** - Rate limiting ready, following security best practices
+
+Perfect for:
+- Building authenticated APIs at the edge
+- Starting new SaaS projects quickly
+- Learning modern auth implementation
 
 ## Authentication System
 
-The authentication system combines secure session management with JWT-based API access control, providing both
-auditability and stateless verification.
+The authentication system combines secure session management with JWT-based API access control, providing both auditability and stateless verification.
 
 ### Core Components
 
 1. **Session Management**
-    - Sessions stored in SQLite (via Turso)
-    - Tracks user devices, IP addresses, and activity
-    - Enforces session limits per user
-    - Implements sliding expiration
+   - Sessions stored in SQLite (via Turso)
+   - Tracks user devices, IP addresses, and activity
+   - Enforces session limits per user
+   - Implements sliding expiration
 
 2. **JWT Tokens**
-    - Access token (15min expiry)
-    - Refresh token (7 day expiry)
-    - Tokens linked to sessions via `session_id`
-    - HTTP-only secure cookies
+   - Access token (15min expiry)
+   - Refresh token (7 day expiry)
+   - Tokens linked to sessions via `session_id`
+   - HTTP-only secure cookies
 
 ### Authentication Flow
 
@@ -62,8 +75,7 @@ auditability and stateless verification.
 - IP and user agent tracking
 - Sliding session expiration
 
-See [ADR-001: Authentication Implementation](docs/adr/001-auth-implementation.md) for detailed technical decisions and
-security features.
+See [ADR-001: Authentication Implementation](docs/adr/001-auth-implementation.md) for detailed technical decisions and security features.
 
 ## Database Schema
 
@@ -97,13 +109,13 @@ erDiagram
 3. Create database and set up access:
    ```shell
    # Create the database
-   turso db create auth-db
+   turso db create private-landing-db
    
    # Get database info and connection URL
-   turso db show auth-db
+   turso db show private-landing-db
    
    # Create auth token
-   turso db tokens create auth-db
+   turso db tokens create private-landing-db
    ```
 
 ## Database Setup
@@ -112,19 +124,19 @@ The database can be managed using SQL scripts in the `src/db` directory:
 
 ```shell
 # First time setup: Create tables
-turso db shell auth-db < src/db/schema.sql
+turso db shell private-landing-db < src/db/schema.sql
 
 # Development: Reset database (WARNING: destroys all data)
-turso db shell auth-db < src/db/reset.sql && turso db shell auth-db < src/db/schema.sql
+turso db shell private-landing-db < src/db/reset.sql && turso db shell private-landing-db < src/db/schema.sql
 
 # Run migrations (when schema changes)
-turso db shell auth-db < src/db/migration.sql
+turso db shell private-landing-db < src/db/migration.sql
 
 # Verify current tables
-turso db shell auth-db "select name from sqlite_master where type='table'"
+turso db shell private-landing-db "select name from sqlite_master where type='table'"
 
 # Check table structure
-turso db shell auth-db ".schema account"
+turso db shell private-landing-db ".schema account"
 ```
 
 ## Password Data Format
@@ -136,7 +148,6 @@ $pbkdf2-sha384$v1$iterations$salt$hash$digest
 ```
 
 Field details:
-
 - Algorithm: PBKDF2 with SHA-384 (balance of security/performance)
 - Version: Schema version for future algorithm updates
 - Iterations: Key stretching count (100,000)
@@ -144,22 +155,18 @@ Field details:
 - Hash: PBKDF2-derived key
 - Digest: Additional SHA-384 hash for verification
 
-All binary data (salt, hash, digest) is stored as Base64. The format allows for future algorithm changes while
-maintaining backward compatibility.
+All binary data (salt, hash, digest) is stored as Base64. The format allows for future algorithm changes while maintaining backward compatibility.
 
 ## Environment Setup
 
 1. Copy `.dev.vars.example` to `.dev.vars` for local development
-2. For
-   production, [set up the Turso integration](https://developers.cloudflare.com/workers/databases/native-integrations/turso/)
-   in your Cloudflare dashboard:
-    - Go to Workers & Pages → Settings → Integrations
-    - Add Turso integration
-    - Your `TURSO_URL` and `TURSO_AUTH_TOKEN` will be automatically available
+2. For production, [set up the Turso integration](https://developers.cloudflare.com/workers/databases/native-integrations/turso/) in your Cloudflare dashboard:
+   - Go to Workers & Pages → Settings → Integrations
+   - Add Turso integration
+   - Your `TURSO_URL` and `TURSO_AUTH_TOKEN` will be automatically available
 3. Use strong passwords for JWT access and refresh token secrets
 
 Required environment variables:
-
 ```shell
 TURSO_URL="libsql://your-db.turso.io"
 TURSO_AUTH_TOKEN="your-auth-token"
@@ -189,16 +196,16 @@ Common database tasks:
 
 ```shell
 # Create database backup
-turso db dump auth-db > backup.sql
+turso db dump private-landing-db > backup.sql
 
 # Restore from backup
-turso db shell auth-db < backup.sql
+turso db shell private-landing-db < backup.sql
 
 # Interactive SQL shell
-turso db shell auth-db
+turso db shell private-landing-db
 
 # Quick table data check
-turso db shell auth-db "select email, substr(password_data, 0, 30) || '...' from account"
+turso db shell private-landing-db "select email, substr(password_data, 0, 30) || '...' from account"
 ```
 
 ## License

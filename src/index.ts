@@ -58,13 +58,13 @@ const requireAuth = createMiddleware<{ Bindings: Env; Variables: Variables }>(
 					ctx.env.JWT_ACCESS_SECRET,
 				)) as TokenPayload;
 
-				if (payload.type !== "access") {
+				if (payload.typ !== "access") {
 					return ctx.json({ error: "Invalid token type" }, 401);
 				}
 
 				// Verify session still exists and is valid
 				const session = await getSession(ctx);
-				if (!session || session.id !== payload.session_id) {
+				if (!session || session.id !== payload.sid) {
 					return ctx.json({ error: "Invalid session" }, 401);
 				}
 
@@ -86,13 +86,13 @@ const requireAuth = createMiddleware<{ Bindings: Env; Variables: Variables }>(
 						ctx.env.JWT_REFRESH_SECRET,
 					)) as TokenPayload;
 
-					if (refreshPayload.type !== "refresh") {
+					if (refreshPayload.typ !== "refresh") {
 						return ctx.json({ error: "Invalid refresh token type" }, 401);
 					}
 
 					// Verify session still exists and is valid
 					const session = await getSession(ctx);
-					if (!session || session.id !== refreshPayload.session_id) {
+					if (!session || session.id !== refreshPayload.sid) {
 						return ctx.json({ error: "Invalid session" }, 401);
 					}
 

@@ -10,6 +10,8 @@ We need to implement a secure authentication system for our web application targ
 
 ## Decision
 
+Our authentication system combines secure password storage, robust session management, and JWT-based API authentication to create a comprehensive solution that provides both security and good UX.
+
 ### Password Storage
 
 - Using PBKDF2 with SHA-384 for password hashing
@@ -28,13 +30,99 @@ We need to implement a secure authentication system for our web application targ
   - ~121 bits of randomness (sufficient for session IDs)
   - Efficient cookie storage
   - Fast generation
-- HTTP-only, secure, Host-only cookies (no Domain attribute) with strict same-site policy
 - Server-side session storage in SQLite database
-- Signed cookies using HMAC SHA-256
-- Sliding expiration with 7-day default timeout
-- IP address and user agent tracking
 - Session limits per user (default: 3)
+- IP address and user agent tracking
 - Automatic cleanup of expired sessions
+- Sliding expiration with 7-day default timeout
+
+### JWT Authentication
+
+#### Token Types and Structure
+
+**Access Token** (15-minute lifetime):
+```json
+{
+  "uid": 123,
+  "sid": "BBH5Yw1Xzv21nKQ6UvNRt",
+  "typ": "access",
+  "exp": 1704724382
+}
+```
+
+**Refresh Token** (7-day lifetime):
+```json
+{
+  "uid": 123,
+  "sid": "BBH5Yw1Xzv21nKQ6UvNRt",
+  "typ": "refresh",
+  "exp": 1705329182
+}
+```
+
+#### Token Optimization
+- Short claim names reduce token size
+- Standard `exp` claim maintained per JWT spec
+- Type-safe token validation in code
+- Self-documenting type values
+
+#### Cookie Configuration
+- HTTP-only cookies
+- Secure flag enabled
+- Strict same-site policy
+- Host-only (no Domain attribute)
+- Path restricted to "/"
+
+#### Authentication Flow
+
+```mermaid
+sequenceDiagram
+  participant U as User Agent
+  participant B as Backend
+  participant DB as Database
+
+  U->>B: POST /api/login {email, password}
+  B->>DB: Verify credentials (PBKDF2)
+
+  B->>DB: Create session record
+  Note over B,DB: Store user_agent, IP, expiry
+
+  B->>B: Generate JWT tokens
+  Note over B: Link tokens to session_id
+
+  B->>U: Set HTTP-only cookies
+  Note over U: access_token (15min)<br/>refresh_token (7d)
+
+  U->>B: API Request with access_token
+
+  alt Valid Access Token
+    B->>DB: Verify session active
+    B->>U: API Response
+  else Expired Access Token
+    U->>B: Use refresh_token
+    B->>DB: Verify session still valid
+    B->>B: Generate new access_token
+    B->>U: Set new access_token cookie
+  end
+```
+
+#### Token Lifecycle
+
+```mermaid
+stateDiagram-v2
+  [*] --> Login
+  Login --> ActiveSession: Create Session + Tokens
+
+  state ActiveSession {
+    [*] --> ValidAccess
+    ValidAccess --> ExpiredAccess: 15min
+    ExpiredAccess --> ValidAccess: Refresh
+    ExpiredAccess --> InvalidSession: Session Expired
+  }
+
+  ActiveSession --> [*]: Logout/Expire
+  InvalidSession --> [*]: Clear Cookies
+```
 
 ### Security Features
 
@@ -43,6 +131,7 @@ We need to implement a secure authentication system for our web application targ
 - Protection against timing attacks
 - Secure cookie attributes (httpOnly, secure, sameSite)
 - Database-backed session validation
+- JWT-Session linking for revocation capability
 - Automatic session pruning
 - Rate limiting ready
 
@@ -56,27 +145,22 @@ We need to implement a secure authentication system for our web application targ
 - Maintainable codebase
 - Type-safe implementation
 - Easy to upgrade security parameters
+- Stateless API authentication with JWT
+- Session tracking and revocation capability
 
 ### Negative
 
 - More complex than simple password hashing
 - Additional database storage requirements
 - Slightly higher computational overhead
-
-## Notes
-
-- OWASP guidelines recommend 210,000 iterations
-- Cloudflare limits us to 100,000 iterations
-- Password format designed for upgradability
-- Digest may be used to prevent tampering
-- Session management considers scalability
-- All security parameters are configurable
-- Implementation follows NIST guidelines
+- Need to manage both sessions and JWTs
+- Additional database load for session validation
 
 ## Alternatives Considered
 
-### Bcrypt
+### Password Hashing
 
+#### Bcrypt
 - Pros:
   - Well-established and battle-tested
   - Adaptive work factor
@@ -88,8 +172,7 @@ We need to implement a secure authentication system for our web application targ
   - Limited to 72 bytes of password data
   - No version tracking built into format
 
-### Argon2
-
+#### Argon2
 - Pros:
   - Winner of the Password Hashing Competition
   - Memory-hard and highly resistant to GPU attacks
@@ -102,7 +185,6 @@ We need to implement a secure authentication system for our web application targ
   - Higher system requirements for memory usage
 
 We chose PBKDF2 because:
-
 - Widespread support across languages and platforms
 - FIPS-140 compliance if needed in future
 - Simpler implementation while still meeting security requirements
@@ -110,11 +192,52 @@ We chose PBKDF2 because:
 - Easy to adjust iterations as computational power increases
 - Built-in support in many cryptographic libraries
 
+### Authentication Strategies
+
+#### Pure JWT (Stateless)
+- Pros:
+  - Truly stateless
+  - No database lookups needed
+  - Simple implementation
+- Cons:
+  - No way to revoke tokens
+  - No session tracking
+  - Limited security controls
+
+#### Pure Session-Based
+- Pros:
+  - Full control over sessions
+  - Easy to revoke
+  - Traditional and well-understood
+- Cons:
+  - Database lookup on every request
+  - More complex scaling
+  - Cookie size limitations
+
+We chose hybrid JWT+Sessions because:
+- Combines benefits of both approaches
+- Provides stateless API auth while maintaining control
+- Enables session tracking and management
+- Allows for token revocation
+- Supports device management
+
+## Notes
+
+- OWASP guidelines recommend 210,000 iterations
+- Cloudflare limits us to 100,000 iterations
+- Password format designed for upgradability
+- Digest may be used to prevent tampering
+- Session management considers scalability
+- All security parameters are configurable
+- Implementation follows NIST guidelines
+
 ## References
 
 - [IETF RFC 2898 §5.2](https://datatracker.ietf.org/doc/html/rfc2898#section-5.2)
+- [IETF RFC 7519 - JSON Web Token (JWT)](https://tools.ietf.org/html/rfc7519)
 - [IETF RFC 9106](https://datatracker.ietf.org/doc/rfc9106/) (informational)
 - [NIST SP 800-132](https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-132.pdf)
 - [NIST SP 800-63-3](https://pages.nist.gov/800-63-3/)
 - [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
+- [OWASP Session Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
 - [Cookie Security: SameSite FAQ](https://web.dev/samesite-cookies-explained/)
