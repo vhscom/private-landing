@@ -128,7 +128,7 @@ export async function getSession(
 	config: SessionConfig = defaultSessionConfig,
 ): Promise<SessionData | null> {
 	const payload = ctx.get("jwtPayload") as TokenPayload;
-	const sessionId = payload?.session_id;
+	const sessionId = payload?.sid;
 
 	if (!sessionId) return null;
 

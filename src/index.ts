@@ -62,13 +62,16 @@ const requireAuth = createMiddleware<{ Bindings: Env; Variables: Variables }>(
 					return ctx.json({ error: "Invalid token type" }, 401);
 				}
 
+				// Set payload in context before session check
+				ctx.set("jwtPayload", payload);
+
 				// Verify session still exists and is valid
 				const session = await getSession(ctx);
 				if (!session || session.id !== payload.sid) {
 					return ctx.json({ error: "Invalid session" }, 401);
 				}
 
-				ctx.set("jwtPayload", payload);
+				return await next();
 			} catch (error) {
 				// Try to refresh the access token
 				const refreshToken = getCookie(ctx, "refresh_token");
@@ -90,6 +93,9 @@ const requireAuth = createMiddleware<{ Bindings: Env; Variables: Variables }>(
 						return ctx.json({ error: "Invalid refresh token type" }, 401);
 					}
 
+					// Set refresh payload in context before session check
+					ctx.set("jwtPayload", refreshPayload);
+
 					// Verify session still exists and is valid
 					const session = await getSession(ctx);
 					if (!session || session.id !== refreshPayload.sid) {
@@ -101,16 +107,19 @@ const requireAuth = createMiddleware<{ Bindings: Env; Variables: Variables }>(
 						ctx,
 						refreshPayload,
 					);
-					ctx.set(
-						"jwtPayload",
-						await verify(newAccessToken, ctx.env.JWT_ACCESS_SECRET),
+
+					// Update context with new access token payload
+					const newPayload = await verify(
+						newAccessToken,
+						ctx.env.JWT_ACCESS_SECRET,
 					);
+					ctx.set("jwtPayload", newPayload);
+
+					return await next();
 				} catch {
 					return ctx.json({ error: "Invalid or expired refresh token" }, 401);
 				}
 			}
-
-			return await next();
 		} catch (error) {
 			console.error("Auth middleware error:", error);
 			return ctx.json({ error: "Authentication failed" }, 401);
