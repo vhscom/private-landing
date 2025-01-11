@@ -134,6 +134,30 @@ ALTER TABLE session
   device_name TEXT;
 ```
 
+#### 7. Security Headers
+
+Following OWASP Secure Headers Project recommendations:
+
+```typescript
+const securityHeaders = {
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+    "X-Frame-Options": "deny",
+    "X-Content-Type-Options": "nosniff",
+    "Content-Security-Policy": [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+        "style-src 'self' 'unsafe-inline'",
+        "object-src 'none'",
+        "frame-ancestors 'none'",
+        "upgrade-insecure-requests",
+        "block-all-mixed-content"
+    ].join("; "),
+    "X-Permitted-Cross-Domain-Policies": "none",
+    "Referrer-Policy": "no-referrer",
+    "Cache-Control": "no-store, max-age=0"
+};
+```
+
 ## Technical Impact
 
 ### Storage Requirements

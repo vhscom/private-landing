@@ -7,20 +7,21 @@ import { handleLogin, handleRegistration } from "./accounts/handler";
 import { getSession } from "./accounts/session";
 import { type TokenPayload, tokenService } from "./accounts/token";
 import { createDbClient } from "./db";
+import { securityHeaders } from "./middleware/security";
 
 // Extend variables to include JWT payload
 type Variables = {
 	jwtPayload: TokenPayload;
 };
 
-const app = new Hono<{ Bindings: Env; Variables: Variables }>();
-
 type ServeStaticOptions = {
 	cache: string;
 };
 
+const app = new Hono<{ Bindings: Env; Variables: Variables }>();
+
 // Middleware that serves static content
-function serveStatic(opts: ServeStaticOptions) {
+function serveStatic(_opts: ServeStaticOptions) {
 	return createMiddleware<{ Bindings: Env }>(async (ctx, next) => {
 		const binding = ctx.env.ASSETS as Fetcher;
 		const response = await binding.fetch(
@@ -127,27 +128,31 @@ const requireAuth = createMiddleware<{ Bindings: Env; Variables: Variables }>(
 	},
 );
 
-// Public routes (no authentication required)
+// Global middleware
+app.use("*", securityHeaders);
 app.use("*", serveStatic({ cache: "key" }));
+
+// Authentication endpoints
 app.post("/api/register", handleRegistration);
 app.post("/api/login", async (ctx) => {
 	const result = await handleLogin(ctx);
-	if (
+
+	const isAuthenticated =
 		result.status === 302 &&
-		result.headers.get("Location")?.includes("authenticated=true")
-	) {
-		// Login successful, generate tokens
+		result.headers.get("Location")?.includes("authenticated=true");
+
+	if (isAuthenticated) {
 		const session = await getSession(ctx);
 		if (session?.user_id) {
 			await tokenService.generateTokens(ctx, session.user_id, session.id);
 		}
 	}
+
 	return result;
 });
 
-// Protected routes (require authentication)
+// Protected API routes
 app.use("/api/*", requireAuth);
-
 app.get("/api/ping", async (ctx) => {
 	const payload = ctx.get("jwtPayload");
 	const dbClient = createDbClient(ctx.env);
