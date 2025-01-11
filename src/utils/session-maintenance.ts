@@ -1,4 +1,4 @@
-import { createDbClient } from "../db";
+import { createDbClient } from "../infrastructure/db/client.ts";
 
 /**
  * Result of session maintenance operation

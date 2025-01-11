@@ -1,46 +1,7 @@
 import type { Context } from "hono";
-import { setCookie } from "hono/cookie";
 import { sign } from "hono/jwt";
-
-interface TokenConfig {
-	accessTokenExpiry: number; // seconds
-	refreshTokenExpiry: number; // seconds
-	cookieSecure: boolean;
-	cookieSameSite: "Strict" | "Lax" | "None";
-}
-
-export interface TokenPayload {
-	uid: number; // user_id
-	sid: string; // session_id
-	typ: "access" | "refresh"; // token type
-	exp?: number; // expiration (standard JWT claim)
-	[key: string]: string | number | undefined; // Index signature for JWT compatibility
-}
-
-const tokenConfig: TokenConfig = {
-	accessTokenExpiry: 15 * 60, // 15 minutes
-	refreshTokenExpiry: 7 * 24 * 3600, // 7 days
-	cookieSecure: true,
-	cookieSameSite: "Strict",
-};
-
-/**
- * Sets a secure cookie with the JWT token.
- */
-function setSecureCookie(
-	ctx: Context,
-	name: string,
-	token: string,
-	maxAge: number,
-): void {
-	setCookie(ctx, name, token, {
-		httpOnly: true,
-		secure: tokenConfig.cookieSecure,
-		sameSite: tokenConfig.cookieSameSite,
-		path: "/",
-		maxAge,
-	});
-}
+import { type TokenPayload, tokenConfig } from "../config/token-config.ts";
+import { setSecureCookie } from "../utils/cookie.ts";
 
 export const tokenService = {
 	generateTokens: async (ctx: Context, user_id: number, session_id: string) => {

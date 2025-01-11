@@ -1,5 +1,5 @@
 name = "private-landing"
-main = "src/index.ts"
+main = "src/app.ts"
 compatibility_date = "2025-01-04"
 
 # compatibility_flags = [ "nodejs_compat" ]
@@ -10,7 +10,7 @@ compatibility_date = "2025-01-04"
 # directory = "./public"
 [assets]
 # The following configuration unconditionally invokes the Worker script at
-# `src/index.ts`, which can programatically fetch assets via the ASSETS binding
+# `src/app.ts`, which can programatically fetch assets via the ASSETS binding
 directory = "public"
 binding = "ASSETS"
 experimental_serve_directly = false

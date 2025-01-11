@@ -120,17 +120,17 @@ erDiagram
 
 ## Database Setup
 
-The database can be managed using SQL scripts in the `src/db` directory:
+The database can be managed using SQL scripts in the `sql` directory:
 
 ```shell
 # First time setup: Create tables
-turso db shell private-landing-db < src/db/schema.sql
+turso db shell private-landing-db < sql/schema.sql
 
 # Development: Reset database (WARNING: destroys all data)
-turso db shell private-landing-db < src/db/reset.sql && turso db shell private-landing-db < src/db/schema.sql
+turso db shell private-landing-db < sql/reset.sql && turso db shell private-landing-db < sql/schema.sql
 
 # Run migrations (when schema changes)
-turso db shell private-landing-db < src/db/migration.sql
+turso db shell private-landing-db < sql/migration.sql
 
 # Verify current tables
 turso db shell private-landing-db "select name from sqlite_master where type='table'"

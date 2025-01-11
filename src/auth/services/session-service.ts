@@ -3,13 +3,13 @@ import type { Context } from "hono";
 import { getConnInfo } from "hono/cloudflare-workers";
 import { deleteCookie } from "hono/cookie";
 import { nanoid } from "nanoid";
-import { createDbClient } from "../db";
+import { createDbClient } from "../../infrastructure/db/client.ts";
 import {
 	type SessionConfig,
 	type SessionData,
 	defaultSessionConfig,
-} from "./session-config";
-import type { TokenPayload } from "./token.ts";
+} from "../config/session-config.ts";
+import type { TokenPayload } from "../config/token-config.ts";
 
 /**
  * Removes expired sessions from the database.

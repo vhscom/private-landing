@@ -1,7 +1,7 @@
 import type { Context } from "hono";
-import { accountService } from "./services";
-import { createSession } from "./session.ts";
-import { tokenService } from "./token.ts";
+import { createSession } from "../../auth/services/session-service";
+import { tokenService } from "../../auth/services/token-service";
+import { accountService } from "../services/account-service";
 
 export async function handleLogin(ctx: Context) {
 	try {
