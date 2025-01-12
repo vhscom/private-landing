@@ -5,6 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Private Landing</title>
+    <meta name="description" content="Build secure APIs at the edge in minutes. Authentication that just works.">
     <style>
         :root {
             /* Colors */
@@ -32,8 +33,8 @@
                 --color-text: #e0e0e0;
                 --color-border: #444;
                 --color-input-bg: #2c2c2c;
-                --color-button: #3b82f6;
-                --color-button-focus: #60a5fa;
+                --color-button: #1d4ed8;
+                --color-button-focus: #1e40af;
                 --color-focus-ring: rgb(147 197 253 / 0.5);
             }
         }
@@ -49,6 +50,7 @@
             color: var(--color-text);
             max-width: 70ch;
             margin-inline: auto;
+            padding: var(--space-sm);
         }
 
         h1 {
@@ -130,7 +132,7 @@
 <h1>Private Landing</h1>
 
 <section>
-    <h3>Registration</h3>
+    <h2>Registration</h2>
     <form id="registration" method="post" action="/api/register">
         <label>
             Email:
@@ -145,7 +147,7 @@
 </section>
 
 <section>
-    <h3>Log In</h3>
+    <h2>Log In</h2>
     <form id="login" method="post" action="/api/login">
         <label>
             Email:
