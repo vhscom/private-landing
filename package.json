@@ -3,8 +3,8 @@
 	"module": "src/app.ts",
 	"type": "module",
 	"scripts": {
-		"check": "biome check",
-		"deploy": "wrangler deploy --minify",
+		"check": "biome check && tsc",
+		"deploy": "bun run check && wrangler deploy --minify",
 		"dev": "wrangler dev --port 8788",
 		"db:migrate": "turso db shell private-landing-db < sql/migration.sql",
 		"db:reset": "turso db shell private-landing-db < sql/reset.sql && turso db shell private-landing-db < sql/schema.sql",
@@ -13,19 +13,17 @@
 		"test": "bun test",
 		"typegen": "wrangler types"
 	},
-	"devDependencies": {
-		"@biomejs/biome": "1.9.4",
-		"@cloudflare/workers-types": "^4.20241230.0",
-		"@types/bun": "latest",
-		"@types/nanoid": "^3.0.0",
-		"wrangler": "^3.99.0"
-	},
-	"peerDependencies": {
-		"typescript": "^5.0.0"
-	},
 	"dependencies": {
 		"@libsql/client": "^0.14.0",
-		"hono": "^4.6.15",
+		"hono": "^4.6.16",
 		"nanoid": "^5.0.9"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "1.9.4",
+		"@cloudflare/workers-types": "4.20250109.0",
+		"@types/bun": "^1.1.16",
+		"@types/nanoid": "^2.1.0",
+		"wrangler": "^3.101.0",
+		"typescript": "^5.7.3"
 	}
 }
