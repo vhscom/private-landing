@@ -7,7 +7,7 @@ import { requireAuth } from "./auth/middleware/require-auth.ts";
 import { securityHeaders } from "./auth/middleware/security.ts";
 import { getSession } from "./auth/services/session-service.ts";
 import { tokenService } from "./auth/services/token-service.ts";
-import type { Variables } from "./auth/types/variables.ts";
+import type { Variables } from "./auth/types/context.ts";
 import { createDbClient } from "./infrastructure/db/client.ts";
 import { serveStatic } from "./infrastructure/middleware/serve-static.ts";
 
