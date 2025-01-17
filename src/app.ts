@@ -3,6 +3,8 @@ import {
 	handleLogin,
 	handleRegistration,
 } from "./account/handlers/auth-handlers.ts";
+import { rateLimitConfig } from "./auth/config/rate-limit-config";
+import { createRateLimit } from "./auth/middleware/rate-limit.ts";
 import { requireAuth } from "./auth/middleware/require-auth.ts";
 import { securityHeaders } from "./auth/middleware/security.ts";
 import { getSession } from "./auth/services/session-service.ts";
@@ -17,9 +19,24 @@ const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 app.use("*", securityHeaders);
 app.use("*", serveStatic({ cache: "key" }));
 
-// Authentication endpoints
-app.post("/api/register", handleRegistration);
-app.post("/api/login", async (ctx) => {
+// Dev routes (only in development)
+if (process.env.NODE_ENV !== "production") {
+	app.get("/test/rate-limit", createRateLimit(rateLimitConfig.login), (ctx) => {
+		return ctx.json({ message: "Rate limit test successful" });
+	});
+
+	app.get("/test/auth", requireAuth, (ctx) => {
+		return ctx.json({ message: "Auth test successful" });
+	});
+}
+
+// Public auth endpoints (rate limited)
+app.post(
+	"/api/register",
+	createRateLimit(rateLimitConfig.login),
+	handleRegistration,
+);
+app.post("/api/login", createRateLimit(rateLimitConfig.login), async (ctx) => {
 	const result = await handleLogin(ctx);
 
 	const isAuthenticated =
@@ -36,9 +53,17 @@ app.post("/api/login", async (ctx) => {
 	return result;
 });
 
-// Protected API routes
-app.use("/api/*", requireAuth);
-app.get("/api/ping", async (ctx) => {
+// Token refresh endpoint (specially rate limited)
+const refresh = new Hono<{ Bindings: Env; Variables: Variables }>();
+refresh.use("*", createRateLimit(rateLimitConfig.refresh));
+refresh.use("*", requireAuth);
+app.route("/api/refresh", refresh);
+
+// All other protected routes
+const api = new Hono<{ Bindings: Env; Variables: Variables }>();
+api.use("*", requireAuth);
+
+api.get("/ping", async (ctx) => {
 	const payload = ctx.get("jwtPayload");
 	const dbClient = createDbClient(ctx.env);
 	const result = await dbClient.execute("SELECT sqlite_version();");
@@ -48,6 +73,13 @@ app.get("/api/ping", async (ctx) => {
 		userId: payload.user_id,
 		version: result,
 	});
+});
+
+app.route("/api", api);
+
+// Default route handler
+app.get("*", (ctx) => {
+	return ctx.json({ error: "Not Found" }, 404);
 });
 
 export default app;

@@ -1,4 +1,5 @@
 import { createMiddleware } from "hono/factory";
+import type { Variables } from "../types/context.ts";
 
 /**
  * Security headers middleware implementing OWASP Secure Headers Project recommendations.
@@ -33,7 +34,10 @@ import { createMiddleware } from "hono/factory";
  * - Permissions-Policy if you need specific browser features
  * - CORS headers if you have cross-origin requirements
  */
-export const securityHeaders = createMiddleware(async (ctx, next) => {
+export const securityHeaders = createMiddleware<{
+	Bindings: Env;
+	Variables: Variables;
+}>(async (ctx, next) => {
 	await next();
 
 	// Create new response with the same body and status

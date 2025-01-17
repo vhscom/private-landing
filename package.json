@@ -11,6 +11,10 @@
 		"format": "biome check --write",
 		"lint": "biome lint",
 		"test": "bun test",
+		"test:rate-limit": "curl -v http://localhost:8788/test/rate-limit",
+		"test:auth": "curl -v http://localhost:8788/test/auth",
+		"test:register": "curl -X POST http://localhost:8788/api/register -H 'Content-Type: application/json' -d '{\"email\":\"test@example.com\",\"password\":\"testing123\"}'",
+		"test:login": "curl -X POST http://localhost:8788/api/login -H 'Content-Type: application/json' -d '{\"email\":\"test@example.com\",\"password\":\"testing123\"}'",
 		"typegen": "wrangler types"
 	},
 	"dependencies": {

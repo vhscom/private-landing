@@ -174,6 +174,14 @@ JWT_ACCESS_SECRET="your-access-secret"    # For JWT access tokens
 JWT_REFRESH_SECRET="your-refresh-secret"  # For JWT refresh tokens
 ```
 
+Log-in to the `wrangler` cli and generate a KV store on Cloudflare:
+```shell 
+wrangler kv:namespace create AUTH_KV
+wrangler kv:namespace create AUTH_KV --preview # optional
+```
+
+Then update the `wrangler.toml` file to list the `id` and, optionally, `preview_id` for `AUTH_KV` within the `kv_namespaces` section. This KV allows the rate limiter to function. 
+
 ## Development
 
 ```shell
@@ -207,6 +215,39 @@ turso db shell private-landing-db
 # Quick table data check
 turso db shell private-landing-db "select email, substr(password_data, 0, 30) || '...' from account"
 ```
+
+## Quick Testing
+
+Start the dev server:
+```bash
+bun run dev
+```
+
+Test endpoints:
+```bash
+# Test rate limiting
+bun test:rate-limit  # Run 6 times to see rate limit
+
+# Test registration
+bun test:register
+
+# Test login
+bun test:login
+
+# Test auth
+bun test:auth  # Should fail without login
+```
+
+Visual testing:
+1. Open http://localhost:8788
+2. Try registering with test@example.com
+3. Try logging in
+4. Try multiple failed logins to test rate limit
+
+Remember:
+- Rate limits reset when you restart the dev server
+- Auth tokens are cleared on browser refresh
+- All test routes are disabled in production
 
 ## License
 

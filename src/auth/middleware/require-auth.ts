@@ -10,7 +10,7 @@ import type { AuthContext, Variables } from "../types/context.ts";
  * Authentication middleware that validates JWT tokens and sessions.
  * Uses refresh token to automatically renew expired access tokens.
  *
- * @see ADR-001 for authentication design
+ * @see {@link docs/adr/002-auth-enhancements.md ADR-002} for rate limiting design
  */
 export const requireAuth = createMiddleware<{
 	Bindings: Env;
