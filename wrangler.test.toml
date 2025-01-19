@@ -1,6 +1,8 @@
+#:schema node_modules/wrangler/config-schema.json
 name = "private-landing"
 main = "src/app.ts"
 compatibility_date = "2024-12-30"
+
 compatibility_flags = [ "nodejs_compat" ]
 
 [env.test]
@@ -9,6 +11,8 @@ compatibility_flags = [ "nodejs_compat" ]
 directory = "public"
 binding = "ASSETS"
 experimental_serve_directly = true
+html_handling = "auto-trailing-slash"
+not_found_handling = "none"
 
 [observability]
-enabled = true
+enabled = false
