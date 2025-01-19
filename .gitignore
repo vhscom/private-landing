@@ -2,5 +2,5 @@
 node_modules
 .wrangler
 .dev.vars*
-!.dev.vars.example
+!.dev.vars*.example
 backup.sql

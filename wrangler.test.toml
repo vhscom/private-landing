@@ -1,0 +1,14 @@
+name = "private-landing"
+main = "src/app.ts"
+compatibility_date = "2024-12-30"
+compatibility_flags = [ "nodejs_compat" ]
+
+[env.test]
+
+[assets]
+directory = "public"
+binding = "ASSETS"
+experimental_serve_directly = true
+
+[observability]
+enabled = true

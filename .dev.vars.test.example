@@ -1,0 +1,2 @@
+TURSO_URL="libsql://your-db.turso.io"
+TURSO_AUTH_TOKEN="your-auth-token"

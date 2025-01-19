@@ -10,13 +10,15 @@
 		"db:reset": "turso db shell private-landing-db < sql/reset.sql && turso db shell private-landing-db < sql/schema.sql",
 		"format": "biome check --write",
 		"lint": "biome lint",
-		"test": "bun test",
+		"test": "vitest",
 		"typegen": "wrangler types"
 	},
 	"dependencies": {
+		"@cloudflare/vitest-pool-workers": "^0.6.4",
 		"@libsql/client": "^0.14.0",
 		"hono": "^4.6.16",
-		"nanoid": "^5.0.9"
+		"nanoid": "^5.0.9",
+		"vitest": "2.1.8"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "1.9.4",
