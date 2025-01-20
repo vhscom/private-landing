@@ -1,6 +1,8 @@
-import { type Client, createClient } from "@libsql/client/web";
+import { type Client as SqliteClient, createClient } from "@libsql/client/web";
 
-export function createDbClient(env: Env): Client {
+export type { SqliteClient };
+
+export function createDbClient(env: Env): SqliteClient {
 	const url = env.TURSO_URL?.trim();
 	if (!url) throw new Error("No URL");
 

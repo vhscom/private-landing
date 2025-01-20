@@ -1,4 +1,7 @@
 import { SELF } from "cloudflare:test";
+import type { SqliteClient } from "../src/infrastructure/db/client.ts";
+
+export { RESET_SQL, SCHEMA_SQL, TEST_USER_SQL } from "./sql.ts";
 
 /** Base URL for API requests in test environment */
 export const BASE_URL = "http://localhost";

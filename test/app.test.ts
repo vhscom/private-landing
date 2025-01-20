@@ -1,6 +1,10 @@
 import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
-import worker from "../src/app";
+import worker from "../src/app.ts";
+
+declare module "cloudflare:test" {
+	interface ProvidedEnv extends Env {}
+}
 
 describe("Application", () => {
 	describe("Basic Routes", () => {
