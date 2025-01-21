@@ -1,7 +1,7 @@
 import { SELF } from "cloudflare:test";
-import type { SqliteClient } from "../src/infrastructure/db/client.ts";
 
-export { RESET_SQL, SCHEMA_SQL, TEST_USER_SQL } from "./sql.ts";
+export { RESET_SQL, SCHEMA_SQL, TEST_USER_SQL } from "./sql";
+export { initTestDB, executeSQL } from "./db-setup";
 
 /** Base URL for API requests in test environment */
 export const BASE_URL = "http://localhost";
@@ -15,67 +15,60 @@ export const TEST_USER = {
 } as const;
 
 /**
- * Authentication related test utilities
+ * Creates a FormData object for login requests
+ * @param {string} email - User's email address
+ * @param {string} password - User's password
+ * @returns {FormData} FormData object containing login credentials
  */
-export const auth = {
-	/**
-	 * Creates a FormData object for login requests
-	 * @param {string} email - User's email address
-	 * @param {string} password - User's password
-	 * @returns {FormData} FormData object containing login credentials
-	 */
-	createLoginFormData(email: string, password: string): FormData {
-		const formData = new FormData();
-		formData.set("email", email);
-		formData.set("password", password);
-		return formData;
-	},
-
-	/**
-	 * Makes an authentication request to the login endpoint
-	 * @param {FormData} formData - FormData containing login credentials
-	 * @returns {Promise<Response>} Response from the login request
-	 */
-	async makeLoginRequest(formData: FormData): Promise<Response> {
-		return api.makeRequest("/api/login", {
-			method: "POST",
-			body: formData,
-		});
-	},
-};
+export function createLoginFormData(email: string, password: string): FormData {
+	const formData = new FormData();
+	formData.set("email", email);
+	formData.set("password", password);
+	return formData;
+}
 
 /**
- * Protected route test utilities
+ * Makes an authentication request to the login endpoint
+ * @param {FormData} formData - FormData containing login credentials
+ * @returns {Promise<Response>} Response from the login request
  */
-export const api = {
-	/**
-	 * Makes a request to a protected API endpoint
-	 * @param {string} path - API endpoint path (should start with /)
-	 * @param {RequestInit} [options] - Optional fetch options
-	 * @returns {Promise<Response>} Response from the API request
-	 */
-	async makeRequest(path: string, options?: RequestInit): Promise<Response> {
-		return SELF.fetch(`${BASE_URL}${path}`, options);
-	},
+export async function makeLoginRequest(formData: FormData): Promise<Response> {
+	return makeRequest("/api/login", {
+		method: "POST",
+		body: formData,
+	});
+}
 
-	/**
-	 * Makes an authenticated request to a protected API endpoint
-	 * @param {string} path - API endpoint path (should start with /)
-	 * @param {string} token - Authentication token
-	 * @param {RequestInit} [options] - Optional additional fetch options
-	 * @returns {Promise<Response>} Response from the API request
-	 */
-	async makeAuthenticatedRequest(
-		path: string,
-		token: string,
-		options?: RequestInit,
-	): Promise<Response> {
-		return this.makeRequest(path, {
-			...options,
-			headers: {
-				...options?.headers,
-				Authorization: `Bearer ${token}`,
-			},
-		});
-	},
-};
+/**
+ * Makes a request to a protected API endpoint
+ * @param {string} path - API endpoint path (should start with /)
+ * @param {RequestInit} [options] - Optional fetch options
+ * @returns {Promise<Response>} Response from the API request
+ */
+export async function makeRequest(
+	path: string,
+	options?: RequestInit,
+): Promise<Response> {
+	return SELF.fetch(`${BASE_URL}${path}`, options);
+}
+
+/**
+ * Makes an authenticated request to a protected API endpoint
+ * @param {string} path - API endpoint path (should start with /)
+ * @param {string} token - Authentication token
+ * @param {RequestInit} [options] - Optional additional fetch options
+ * @returns {Promise<Response>} Response from the API request
+ */
+export async function makeAuthenticatedRequest(
+	path: string,
+	token: string,
+	options?: RequestInit,
+): Promise<Response> {
+	return makeRequest(path, {
+		...options,
+		headers: {
+			...options?.headers,
+			Authorization: `Bearer ${token}`,
+		},
+	});
+}
