@@ -14,18 +14,21 @@
 		"typegen": "wrangler types"
 	},
 	"dependencies": {
-		"@cloudflare/vitest-pool-workers": "^0.6.4",
 		"@libsql/client": "^0.14.0",
 		"hono": "^4.6.16",
-		"nanoid": "^5.0.9",
-		"vitest": "2.1.8"
+		"nanoid": "^5.0.9"
+	},
+	"optionalDependencies": {
+		"miniflare": "^3.20241230.2",
+		"wrangler": "^3.103.2"
 	},
 	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "^0.6.4",
 		"@biomejs/biome": "1.9.4",
 		"@cloudflare/workers-types": "4.20250109.0",
 		"@types/bun": "^1.1.16",
 		"@types/nanoid": "^2.1.0",
-		"wrangler": "^3.101.0",
-		"typescript": "^5.7.3"
+		"typescript": "^5.7.3",
+		"vitest": "2.1.8"
 	}
 }
