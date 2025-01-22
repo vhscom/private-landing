@@ -167,24 +167,27 @@
     const params = new URLSearchParams(window.location.search);
     const message = document.getElementById('message');
 
-    if (params.has('error')) {
-        message.textContent = decodeURIComponent(params.get('error'));
-        message.classList.add('visible', 'error');
-    }
-    if (params.has('registered')) {
-        message.textContent = 'Registration successful!';
-        requestAnimationFrame(() => {
-            message.classList.add('visible');
-        });
-        const form = document.getElementById('registration');
-        const controls = form.querySelectorAll('input, button');
-        controls.forEach(control => control.disabled = true);
-    }
-    if (params.has('authenticated')) {
-        message.textContent = 'Login successful!';
-        requestAnimationFrame(() => {
-            message.classList.add('visible');
-        });
+    const messageType = ["error", "registered", "authenticated"].find((type) => params.has(type));
+
+    if (messageType) {
+        switch (messageType) {
+            case 'error':
+                message.textContent = decodeURIComponent(params.get('error'));
+                message.classList.add('visible', 'error');
+                break;
+            case 'registered':
+                message.textContent = 'Registration successful!';
+                requestAnimationFrame(() => {
+                    message.classList.add('visible');
+                });
+                break;
+            case 'authenticated':
+                message.textContent = 'Login successful!';
+                requestAnimationFrame(() => {
+                    message.classList.add('visible');
+                });
+                break;
+        }
     }
 </script>
 </body>
