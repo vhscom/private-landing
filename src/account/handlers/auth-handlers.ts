@@ -1,8 +1,15 @@
 import type { Context } from "hono";
-import { createSession } from "../../auth/services/session-service";
+import { createSession, endSession } from "../../auth/services/session-service";
 import { tokenService } from "../../auth/services/token-service";
 import { accountService } from "../services/account-service";
 
+/**
+ * Handles user login requests.
+ * Authenticates credentials, creates a session, and sets auth tokens.
+ *
+ * @param ctx - Hono context containing request and environment
+ * @returns Redirect response with success or error message
+ */
 export async function handleLogin(ctx: Context) {
 	try {
 		const body = await ctx.req.parseBody();
@@ -30,6 +37,33 @@ export async function handleLogin(ctx: Context) {
 	}
 }
 
+/**
+ * Handles user logout requests.
+ * Invalidates the current session and clears auth cookies.
+ *
+ * @param ctx - Hono context containing request and environment
+ * @returns Redirect response with success or error message
+ */
+export async function handleLogout(ctx: Context) {
+	try {
+		await endSession(ctx);
+		return ctx.redirect("/?logged_out=true");
+	} catch (error) {
+		console.error("Logout error:", error);
+		const errorMessage =
+			error instanceof Error ? error.message : "Logout failed";
+		return ctx.redirect(`/?error=${encodeURIComponent(errorMessage)}`);
+	}
+}
+
+/**
+ * Handles new user registration requests.
+ * Creates account with secure password storage and validation.
+ *
+ * @param ctx - Hono context containing request and environment
+ * @returns Redirect response with success or validation error message
+ * @throws {ValidationError} If password requirements not met
+ */
 export async function handleRegistration(ctx: Context) {
 	try {
 		const body = await ctx.req.parseBody();
@@ -40,19 +74,22 @@ export async function handleRegistration(ctx: Context) {
 			ctx.env,
 		);
 		return ctx.redirect("/?registered=true");
-	} catch (error: unknown) {
+	} catch (error) {
 		if (
 			error &&
 			typeof error === "object" &&
 			"code" in error &&
 			error.code === "VALIDATION_ERROR"
 		) {
-			// Return validation errors with 400 status
-			// @ts-expect-error Custom errors have custom error messages
-			return ctx.redirect(`/?error=${encodeURIComponent(error.message)}`);
+			const errorMessage =
+				error instanceof Error ? error.message : "Validation failed.";
+			return ctx.redirect(`/?error=${encodeURIComponent(errorMessage)}`);
 		}
-		// Log unexpected errors and return generic message
 		console.error("Registration error:", error);
-		return ctx.redirect("/?error=Registration failed. Please try again.");
+		const errorMessage =
+			error instanceof Error
+				? error.message
+				: "Registration failed. Please try again.";
+		return ctx.redirect(`/?error=${encodeURIComponent(errorMessage)}`);
 	}
 }

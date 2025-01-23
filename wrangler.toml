@@ -17,9 +17,6 @@ binding = "ASSETS"
 experimental_serve_directly = false
 # https://developers.cloudflare.com/workers/static-assets/binding/#experimental_serve_directly
 
-# [vars]
-# MY_VAR = "my-variable"
-
 #[vars]
 # Turso secrets made available via native Cloudflare integration.
 # Docs: https://developers.cloudflare.com/workers/databases/native-integrations/turso/#set-up-an-integration-with-turso

@@ -105,6 +105,16 @@
             box-shadow: 0 0 0 3px var(--color-focus-ring);
         }
 
+        .logout-button {
+            background: transparent;
+            border: 1px solid var(--color-border);
+            color: var(--color-text);
+        }
+
+        .logout-button:is(:hover, :focus) {
+            background: rgb(255 255 255 / 0.1);
+        }
+
         .message {
             padding: var(--space-sm);
             margin-top: var(--space-sm);
@@ -161,13 +171,19 @@
     </form>
 </section>
 
+<section>
+    <form id="logout" method="post" action="/api/logout" style="margin-top: var(--space-sm);">
+        <button type="submit" class="logout-button">Log Out</button>
+    </form>
+</section>
+
 <div id="message" class="message"></div>
 
 <script>
     const params = new URLSearchParams(window.location.search);
     const message = document.getElementById('message');
 
-    const messageType = ["error", "registered", "authenticated"].find((type) => params.has(type));
+    const messageType = ["error", "registered", "authenticated", "logged_out"].find((type) => params.has(type));
 
     if (messageType) {
         switch (messageType) {
@@ -177,15 +193,15 @@
                 break;
             case 'registered':
                 message.textContent = 'Registration successful!';
-                requestAnimationFrame(() => {
-                    message.classList.add('visible');
-                });
+                requestAnimationFrame(() => message.classList.add('visible'));
                 break;
             case 'authenticated':
                 message.textContent = 'Login successful!';
-                requestAnimationFrame(() => {
-                    message.classList.add('visible');
-                });
+                requestAnimationFrame(() => message.classList.add('visible'));
+                break;
+            case 'logged_out':
+                message.textContent = 'Logout successful!';
+                requestAnimationFrame(() => message.classList.add('visible'));
                 break;
         }
     }

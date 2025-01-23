@@ -10,6 +10,7 @@ import {
 	defaultSessionConfig,
 } from "../config/session-config.ts";
 import type { TokenPayload } from "../config/token-config.ts";
+import { getAuthCookieSettings } from "../utils/cookie.ts";
 
 /**
  * Removes expired sessions from the database.
@@ -153,13 +154,11 @@ export async function getSession(
 
 /**
  * Ends user session and removes cookie.
+ * Invalidates session in database and clears JWT cookies.
  */
-export async function endSession(
-	ctx: Context,
-	config: SessionConfig = defaultSessionConfig,
-): Promise<void> {
+export async function endSession(ctx: Context): Promise<void> {
 	const payload = ctx.get("jwtPayload") as TokenPayload;
-	const sessionId = payload.session_id;
+	const sessionId = payload.sid;
 
 	if (!sessionId) return;
 
@@ -171,6 +170,6 @@ export async function endSession(
 		args: [sessionId],
 	});
 
-	deleteCookie(ctx, "access_token", config.cookie);
-	deleteCookie(ctx, "refresh_token", config.cookie);
+	deleteCookie(ctx, "access_token", getAuthCookieSettings(ctx));
+	deleteCookie(ctx, "refresh_token", getAuthCookieSettings(ctx));
 }

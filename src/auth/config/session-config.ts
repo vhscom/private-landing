@@ -1,3 +1,4 @@
+import type { Context } from "hono";
 import type { CookieOptions } from "hono/utils/cookie";
 
 /**
@@ -55,10 +56,12 @@ export const defaultSessionConfig: SessionConfig = {
 
 /**
  * Creates session configuration with custom overrides.
+ * @param ctx - Hono context containing request and environment
  * @param overrides - Partial configuration to override defaults
  * @returns Complete session configuration
  */
 export function createSessionConfig(
+	ctx: Context,
 	overrides?: Partial<SessionConfig>,
 ): SessionConfig {
 	return {

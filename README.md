@@ -167,7 +167,7 @@ All binary data (salt, hash, digest) is stored as Base64. The format allows for 
 3. Use strong passwords for JWT access and refresh token secrets
 
 Required environment variables:
-```shell
+```ini
 TURSO_URL="libsql://your-db.turso.io"
 TURSO_AUTH_TOKEN="your-auth-token"
 JWT_ACCESS_SECRET="your-access-secret"    # For JWT access tokens

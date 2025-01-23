@@ -1,8 +1,15 @@
-// Cookie helper function
 import type { Context } from "hono";
 import { setCookie } from "hono/cookie";
+import type { CookieOptions } from "hono/utils/cookie";
 import { tokenConfig } from "../config/token-config.ts";
 
+/**
+ * Sets a cookie with secure and same site settings.
+ * @param ctx - Hono context with auth bindings
+ * @param name - Cookie name to set
+ * @param token - JWT token to store in cookie
+ * @param maxAge - Cookie expiration in seconds
+ */
 export function setSecureCookie(
 	ctx: Context,
 	name: string,
@@ -16,4 +23,19 @@ export function setSecureCookie(
 		path: "/",
 		maxAge,
 	});
+}
+
+/**
+ * Returns core cookie settings used for auth token operations.
+ * Includes domain from context for proper cookie deletion.
+ * @param ctx - Hono context with auth bindings
+ * @returns Cookie options with security settings
+ */
+export function getAuthCookieSettings(ctx: Context): CookieOptions {
+	return {
+		httpOnly: true,
+		secure: tokenConfig.cookieSecure,
+		sameSite: tokenConfig.cookieSameSite,
+		path: "/",
+	};
 }

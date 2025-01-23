@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import {
 	handleLogin,
+	handleLogout,
 	handleRegistration,
 } from "./account/handlers/auth-handlers.ts";
 import { requireAuth } from "./auth/middleware/require-auth.ts";
@@ -35,6 +36,7 @@ app.post("/api/login", async (ctx) => {
 
 	return result;
 });
+app.post("/api/logout", requireAuth, handleLogout);
 
 // Protected API routes
 app.use("/api/*", requireAuth);
