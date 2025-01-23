@@ -1,3 +1,10 @@
+/**
+ * @file test-utils.ts
+ * Testing utilities for authentication and API request simulation.
+ *
+ * @license LGPL-3.0-or-later
+ */
+
 import { SELF } from "cloudflare:test";
 
 export { RESET_SQL, SCHEMA_SQL, TEST_USER_SQL } from "./sql";

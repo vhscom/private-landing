@@ -1,3 +1,10 @@
+/**
+ * @file session-maintenance.ts
+ * Session cleanup utilities for database maintenance and security.
+ *
+ * @license LGPL-3.0-or-later
+ */
+
 import { createDbClient } from "../infrastructure/db/client.ts";
 
 /**

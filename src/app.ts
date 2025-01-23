@@ -1,3 +1,10 @@
+/**
+ * @file app.ts
+ * Main application setup with route definitions and middleware configuration.
+ *
+ * @license LGPL-3.0-or-later
+ */
+
 import { Hono } from "hono";
 import {
 	handleLogin,

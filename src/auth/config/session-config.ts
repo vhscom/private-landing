@@ -1,3 +1,10 @@
+/**
+ * @file session-config.ts
+ * Configuration and type definitions for user session management.
+ *
+ * @license LGPL-3.0-or-later
+ */
+
 import type { Context } from "hono";
 import type { CookieOptions } from "hono/utils/cookie";
 
@@ -35,10 +42,14 @@ export interface SessionConfig {
 
 /**
  * Default session configuration.
- * - 3 max sessions per user
- * - 7 day session duration
- * - 30 day maintenance window
- * - Secure cookie settings with HTTP-only and strict same-site policy
+ * - 3 max sessions per user (balance between convenience and security)
+ * - 7 day session duration (standard duration for remembered sessions)
+ * - 30 day maintenance window (ensures cleanup of abandoned sessions)
+ * - Secure cookie settings:
+ *   - HTTP-only to prevent XSS access
+ *   - Strict SameSite to prevent CSRF
+ *   - Secure flag for HTTPS only
+ *   - Partitioned for privacy
  */
 export const defaultSessionConfig: SessionConfig = {
 	maxSessions: 3,

@@ -1,3 +1,9 @@
+/**
+ * @file cookie.ts
+ * Utilities for setting and configuring secure HTTP cookies for authentication tokens.
+ * @license LGPL-3.0-or-later
+ */
+
 import type { Context } from "hono";
 import { setCookie } from "hono/cookie";
 import type { CookieOptions } from "hono/utils/cookie";

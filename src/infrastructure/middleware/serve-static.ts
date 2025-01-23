@@ -1,4 +1,10 @@
-// Middleware that serves static content
+/**
+ * @file serve-static.ts
+ * Middleware for serving static assets through Cloudflare Workers.
+ *
+ * @license LGPL-3.0-or-later
+ */
+
 import type { Fetcher } from "@cloudflare/workers-types";
 import { createMiddleware } from "hono/factory";
 

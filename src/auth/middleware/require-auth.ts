@@ -1,3 +1,12 @@
+/**
+ * @file require-auth.ts
+ * Authentication middleware that validates JWT tokens and sessions.
+ * Uses refresh token to automatically renew expired access tokens.
+ *
+ * @license LGPL-3.0-or-later
+ * @see ADR-001 for authentication design
+ */
+
 import { getCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
 import { verify } from "hono/jwt";

@@ -1,4 +1,11 @@
 /**
+ * @file password-service.ts
+ * Implementation of NIST SP 800-132 compliant password hashing and verification.
+ *
+ * @license LGPL-3.0-or-later
+ */
+
+/**
  * Valid bit lengths for hash algorithms.
  * Must match available SHA variants (SHA-256, SHA-384, SHA-512).
  * - SHA-256: Fastest, good for legacy compatibility
@@ -43,9 +50,9 @@ const passwordConfig: PasswordConfig = {
  * @param bits - The number of bits to validate
  * @returns True if bits is a valid hash length
  */
-function isValidHashBits(bits: number): bits is HashBits {
+const isValidHashBits = (bits: number) => {
 	return VALID_HASH_BITS.includes(bits as HashBits);
-}
+};
 
 if (!isValidHashBits(passwordConfig.bits)) {
 	throw new Error("Invalid hash bits - must be 256, 384, or 512");

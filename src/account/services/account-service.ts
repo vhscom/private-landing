@@ -1,3 +1,10 @@
+/**
+ * @file account-service.ts
+ * Service for managing user accounts and authentication with secure password handling.
+ *
+ * @license LGPL-3.0-or-later
+ */
+
 import type { ResultSet } from "@libsql/client";
 import { createDbClient } from "../../infrastructure/db/client.ts";
 import { createValidationError } from "../../utils/errors.ts";
@@ -15,6 +22,8 @@ interface AuthResult {
 
 /**
  * Service interface for account management operations.
+ * Provides methods for account creation and authentication
+ * following NIST security guidelines.
  */
 interface AccountService {
 	/**
@@ -57,6 +66,11 @@ interface AccountService {
 	) => Promise<AuthResult>;
 }
 
+/**
+ * Implementation of account management service.
+ * Handles secure account creation and authentication
+ * using database storage and password hashing.
+ */
 export const accountService: AccountService = {
 	createAccount: async (email: string, password: string, env: Env) => {
 		// Minimum of 8 character passwords per NIST SP 800-63-3
@@ -85,15 +99,15 @@ export const accountService: AccountService = {
 			return { authenticated: false, userId: null };
 		}
 
-		const row = result.rows[0];
-		const storedPasswordData = row.password_data as string;
+		const [accountRow] = result.rows;
+		const storedPasswordData = accountRow.password_data as string;
 		const isValid = await verifyPassword(password, storedPasswordData);
 
 		if (!isValid) {
 			return { authenticated: false, userId: null };
 		}
 
-		const userId = typeof row.id === "number" ? row.id : null;
+		const userId = typeof accountRow.id === "number" ? accountRow.id : null;
 		return { authenticated: true, userId };
 	},
 };

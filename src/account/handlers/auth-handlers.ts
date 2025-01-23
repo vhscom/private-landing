@@ -1,3 +1,10 @@
+/**
+ * @file auth-handlers.ts
+ * Request handlers for user authentication, registration, and session management.
+ *
+ * @license LGPL-3.0-or-later
+ */
+
 import type { Context } from "hono";
 import { createSession, endSession } from "../../auth/services/session-service";
 import { tokenService } from "../../auth/services/token-service";

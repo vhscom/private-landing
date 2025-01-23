@@ -1,4 +1,11 @@
 /**
+ * @file errors.ts
+ * Custom error types and factory functions for validation handling.
+ *
+ * @license LGPL-3.0-or-later
+ */
+
+/**
  * Error type for password validation failures.
  * Provides structured error information for UI feedback.
  * @property code - Error type identifier
