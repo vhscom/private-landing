@@ -5,5 +5,6 @@ interface Env {
 	TURSO_AUTH_TOKEN: string;
 	JWT_ACCESS_SECRET: string;
 	JWT_REFRESH_SECRET: string;
+	HYGRAPH_ENDPOINT: string;
 	ASSETS: Fetcher;
 }

@@ -12,6 +12,7 @@ This starter provides a foundation for building authenticated APIs:
 - 🚀 **Edge-Ready** - Built for Cloudflare Workers with Hono and Turso
 - 💻 **Developer Experience** - TypeScript, automated formatting, comprehensive docs
 - ⚡ **Security Features** - Rate limiting ready, following security best practices
+- 🚦 **Service Controls** - Dynamic maintenance mode, graceful degradation
 
 Perfect for:
 - Building authenticated APIs at the edge
@@ -76,6 +77,21 @@ The authentication system combines secure session management with JWT-based API 
 - Sliding session expiration
 
 See [ADR-001: Authentication Implementation](docs/adr/001-auth-implementation.md) for detailed technical decisions and security features.
+
+## Maintenance Mode
+Built-in maintenance mode with CMS control provides:
+
+- 🎯 **Zero-Downtime Updates** - Gracefully take the system offline while preserving session state
+- 🌗 **Dark Mode Support** - Responsive maintenance page with automatic theme detection
+- 🤖 **SEO Optimization** - Schema.org markup keeps search engines informed
+- 🔒 **Security Integration** - Respects existing security headers and CSP configuration
+- 🏃 **Fast Recovery** - Toggle service availability without deployment
+
+The maintenance mode is controlled through the Hygraph CMS:
+1. Create a MaintenanceConfig entry with:
+   - `isEnabled` (Boolean) to toggle maintenance mode
+   - `message` (String) for custom maintenance notice
+2. Changes take effect immediately when published
 
 ## Database Schema
 
@@ -172,6 +188,7 @@ TURSO_URL="libsql://your-db.turso.io"
 TURSO_AUTH_TOKEN="your-auth-token"
 JWT_ACCESS_SECRET="your-access-secret"    # For JWT access tokens
 JWT_REFRESH_SECRET="your-refresh-secret"  # For JWT refresh tokens
+HYGRAPH_ENDPOINT="your-hygraph-endpoint"  # Content API endpoint for maintenance mode
 ```
 
 ## Development

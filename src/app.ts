@@ -18,11 +18,13 @@ import { tokenService } from "./auth/services/token-service.ts";
 import type { Variables } from "./auth/types/context.ts";
 import { createDbClient } from "./infrastructure/db/client.ts";
 import { serveStatic } from "./infrastructure/middleware/serve-static.ts";
+import { maintenanceMiddleware } from "./system/middleware/maintenance";
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 // Global middleware
 app.use("*", securityHeaders);
+app.use("*", maintenanceMiddleware);
 app.use("*", serveStatic({ cache: "key" }));
 
 // Authentication endpoints
