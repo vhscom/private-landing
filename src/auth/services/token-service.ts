@@ -7,7 +7,8 @@
 
 import type { Context } from "hono";
 import { sign } from "hono/jwt";
-import { type TokenPayload, tokenConfig } from "../config/token-config.ts";
+import { tokenConfig } from "../config/token-config.ts";
+import type { TokenPayload } from "../types/auth.types.ts";
 import { setSecureCookie } from "../utils/cookie.ts";
 
 /**

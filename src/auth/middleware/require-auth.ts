@@ -10,9 +10,9 @@
 import { getCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
 import { verify } from "hono/jwt";
-import type { TokenPayload } from "../config/token-config.ts";
 import { getSession } from "../services/session-service.ts";
 import { tokenService } from "../services/token-service.ts";
+import type { TokenPayload } from "../types/auth.types.ts";
 import type { AuthContext, Variables } from "../types/context.ts";
 
 /**

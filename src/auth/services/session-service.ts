@@ -11,12 +11,12 @@ import { getConnInfo } from "hono/cloudflare-workers";
 import { deleteCookie } from "hono/cookie";
 import { nanoid } from "nanoid";
 import { createDbClient } from "../../infrastructure/db/client.ts";
-import {
-	type SessionConfig,
-	type SessionData,
-	defaultSessionConfig,
-} from "../config/session-config.ts";
-import type { TokenPayload } from "../config/token-config.ts";
+import { defaultSessionConfig } from "../config/session-config.ts";
+import type {
+	SessionConfig,
+	SessionState,
+	TokenPayload,
+} from "../types/auth.types.ts";
 import { getAuthCookieSettings } from "../utils/cookie.ts";
 
 /**
@@ -115,15 +115,15 @@ export async function createSession(
 	const sessionId = nanoid();
 	const connInfo = getConnInfo(ctx);
 
-	const sessionData: SessionData = {
+	const sessionData: SessionState = {
 		id: sessionId,
-		user_id: userId,
-		user_agent: ctx.req.header("user-agent") || "unknown",
-		ip_address: connInfo.remote?.address || "unknown",
-		expires_at: new Date(
+		userId,
+		userAgent: ctx.req.header("user-agent") || "unknown",
+		ipAddress: connInfo.remote?.address || "unknown",
+		expiresAt: new Date(
 			Date.now() + config.sessionDuration * 1000,
 		).toISOString(),
-		created_at: new Date().toISOString(),
+		createdAt: new Date().toISOString(),
 	};
 
 	await dbClient.execute({
@@ -132,11 +132,11 @@ export async function createSession(
               VALUES (?, ?, ?, ?, ?, ?)`,
 		args: [
 			sessionData.id,
-			sessionData.user_id,
-			sessionData.user_agent,
-			sessionData.ip_address,
-			sessionData.expires_at,
-			sessionData.created_at,
+			sessionData.userId,
+			sessionData.userAgent,
+			sessionData.ipAddress,
+			sessionData.expiresAt,
+			sessionData.createdAt,
 		],
 	});
 
@@ -155,7 +155,7 @@ export async function createSession(
 export async function getSession(
 	ctx: Context,
 	config: SessionConfig = defaultSessionConfig,
-): Promise<SessionData | null> {
+): Promise<SessionState | null> {
 	const payload = ctx.get("jwtPayload") as TokenPayload;
 	const sessionId = payload?.sid;
 
@@ -177,7 +177,7 @@ export async function getSession(
 	});
 
 	if (result.rows.length === 0) return null;
-	return result.rows[0] as unknown as SessionData;
+	return result.rows[0] as unknown as SessionState;
 }
 
 /**

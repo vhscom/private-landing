@@ -5,7 +5,7 @@
  */
 
 import type { Context } from "hono";
-import type { TokenPayload } from "../config/token-config.ts";
+import type { TokenPayload } from "./auth.types.ts";
 
 /**
  * Defines the structure of variables available throughout the application context.

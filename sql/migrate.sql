@@ -27,7 +27,7 @@ alter table account_new rename to account;
 -- Add session management
 create table if not exists session (
     id text primary key,
-    user_id text not null,
+    user_id integer not null,
     user_agent text not null,
     ip_address text not null,
     expires_at text not null,

@@ -59,6 +59,15 @@ CREATE TABLE token_rotation
 );
 ```
 
+#### 3. Input Validation
+- Schema-based validation with strict type checking
+- Unicode and space normalization for passwords
+- Common password detection
+- Email format verification
+- Consistent error handling
+
+Implements controls against CWE-20: Improper Input Validation.
+
 ### Phase 2: Visibility & Control
 
 #### 3. Session Activity Tracking
@@ -247,4 +256,7 @@ const securityHeaders = {
 
 - [OWASP ASVS 4.0 Level 2](https://owasp.org/www-project-application-security-verification-standard/)
 - [RFC 6819 - OAuth 2.0 Threat Model](https://tools.ietf.org/html/rfc6819)
-- [Token Best Practices - Auth0](https://auth0.com/docs/security/tokens)
+- [Token Best Practices - Auth0](https://auth0.com/docs/secure/tokens/token-best-practices)
+- [NIST SP 800-63B - Digital Identity Guidelines (Authentication & Lifecycle)](https://pages.nist.gov/800-63-3/sp800-63b.html)
+- [Unicode Standard Annex #15 - Unicode Normalization Forms](https://www.unicode.org/reports/tr15/)
+- [CWE-20: Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html)

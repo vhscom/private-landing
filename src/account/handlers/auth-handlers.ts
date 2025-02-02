@@ -6,13 +6,19 @@
  */
 
 import type { Context } from "hono";
+import type {
+	LoginInput,
+	RegistrationInput,
+} from "../../auth/schemas/auth.schema.ts";
 import { createSession, endSession } from "../../auth/services/session-service";
 import { tokenService } from "../../auth/services/token-service";
+import { ValidationError } from "../../auth/utils/errors.ts";
 import { accountService } from "../services/account-service";
 
 /**
  * Handles user login requests.
- * Authenticates credentials, creates a session, and sets auth tokens.
+ * Routes login credentials to account service for validation and authentication.
+ * Creates session and sets tokens upon successful authentication.
  *
  * @param ctx - Hono context containing request and environment
  * @returns Redirect response with success or error message
@@ -20,16 +26,15 @@ import { accountService } from "../services/account-service";
 export async function handleLogin(ctx: Context) {
 	try {
 		const body = await ctx.req.parseBody();
-		const { email, password } = body;
-
 		const authResult = await accountService.authenticate(
-			email as string,
-			password as string,
+			body as LoginInput,
 			ctx.env,
 		);
 
 		if (!authResult.authenticated) {
-			return ctx.redirect("/?error=Invalid email or password");
+			return ctx.redirect(
+				`/?error=${encodeURIComponent(authResult.error ?? "Authentication failed")}`,
+			);
 		}
 
 		if (authResult.userId) {
@@ -65,34 +70,21 @@ export async function handleLogout(ctx: Context) {
 
 /**
  * Handles new user registration requests.
- * Creates account with secure password storage and validation.
+ * Routes registration data to account service for validation and account creation.
  *
  * @param ctx - Hono context containing request and environment
- * @returns Redirect response with success or validation error message
- * @throws {ValidationError} If password requirements not met
+ * @returns Redirect response with success or error message
  */
 export async function handleRegistration(ctx: Context) {
 	try {
 		const body = await ctx.req.parseBody();
-		const { email, password } = body;
-		await accountService.createAccount(
-			email as string,
-			password as string,
-			ctx.env,
-		);
+		await accountService.createAccount(body as RegistrationInput, ctx.env);
 		return ctx.redirect("/?registered=true");
 	} catch (error) {
-		if (
-			error &&
-			typeof error === "object" &&
-			"code" in error &&
-			error.code === "VALIDATION_ERROR"
-		) {
-			const errorMessage =
-				error instanceof Error ? error.message : "Validation failed.";
-			return ctx.redirect(`/?error=${encodeURIComponent(errorMessage)}`);
+		if (error instanceof ValidationError) {
+			return ctx.redirect(`/?error=${encodeURIComponent(error.message)}`);
 		}
-		console.error("Registration error:", error);
+		console.error("Registration error: ", error);
 		const errorMessage =
 			error instanceof Error
 				? error.message

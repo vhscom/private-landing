@@ -36,8 +36,8 @@ app.post("/api/login", async (ctx) => {
 
 	if (isAuthenticated) {
 		const session = await getSession(ctx);
-		if (session?.user_id) {
-			await tokenService.generateTokens(ctx, session.user_id, session.id);
+		if (session?.userId) {
+			await tokenService.generateTokens(ctx, session.userId, session.id);
 		}
 	}
 

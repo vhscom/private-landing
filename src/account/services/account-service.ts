@@ -1,31 +1,32 @@
 /**
  * @file account-service.ts
  * Service for managing user accounts and authentication with secure password handling.
+ * Implements NIST SP 800-63B requirements for memorized secrets.
  *
  * @license LGPL-3.0-or-later
  */
 
 import type { ResultSet } from "@libsql/client";
+import {
+	loginSchema,
+	registrationSchema,
+} from "../../auth/schemas/auth.schema.ts";
+import type {
+	AuthResult,
+	LoginInput,
+	RegistrationInput,
+} from "../../auth/types/auth.types.ts";
+import { ValidationError } from "../../auth/utils/errors.ts";
+import { formatZodError } from "../../auth/utils/schema.ts";
 import { createDbClient } from "../../infrastructure/db/client.ts";
-import { createValidationError } from "../../utils/errors.ts";
 import { hashPassword, verifyPassword } from "./password-service.ts";
 
 /**
- * Result of an authentication attempt.
- * @property authenticated - Whether the credentials were valid
- * @property userId - The user's ID if authentication succeeded, null otherwise
- */
-interface AuthResult {
-	authenticated: boolean;
-	userId?: number | null;
-}
-
-/**
- * Service interface for account management operations.
+ * Service for account management operations.
  * Provides methods for account creation and authentication
  * following NIST security guidelines.
  */
-interface AccountService {
+export const accountService = {
 	/**
 	 * Creates a new user account with secure password storage.
 	 * Implements NIST SP 800-63-3 password requirements and
@@ -38,76 +39,84 @@ interface AccountService {
 	 * 4. Generates additional integrity digest
 	 * 5. Stores combined password data in database
 	 *
-	 * @param email - User's email address (unique identifier)
-	 * @param password - Plain text password to hash and store
+	 * @param input - Registration data including email and password
 	 * @param env - Environment containing database connection
 	 * @returns Database result with affected rows and insert ID
-	 * @throws PasswordValidationError if password requirements not met
+	 * @throws ValidationError Error if input cannot be parsed
 	 */
-	createAccount: (
-		email: string,
-		password: string,
+	createAccount: async (
+		input: RegistrationInput,
 		env: Env,
-	) => Promise<ResultSet>;
+	): Promise<ResultSet> => {
+		const parseResult = await registrationSchema.safeParseAsync(input);
+
+		if (!parseResult.success) {
+			throw new ValidationError(formatZodError(parseResult.error));
+		}
+
+		const validatedData = parseResult.data;
+		const passwordData = await hashPassword(validatedData.password);
+
+		const dbClient = createDbClient(env);
+		return dbClient.execute({
+			sql: "INSERT INTO account (email, password_data) VALUES (?, ?)",
+			args: [validatedData.email, passwordData],
+		});
+	},
 
 	/**
 	 * Authenticates a user with email and password.
 	 * Performs constant-time password verification to prevent timing attacks.
 	 *
-	 * @param email - User's email address
-	 * @param password - Plain text password to verify
+	 * @param input - Login credentials including email and password
 	 * @param env - Environment containing database connection
 	 * @returns Authentication result containing success status and user ID
 	 */
-	authenticate: (
-		email: string,
-		password: string,
-		env: Env,
-	) => Promise<AuthResult>;
-}
-
-/**
- * Implementation of account management service.
- * Handles secure account creation and authentication
- * using database storage and password hashing.
- */
-export const accountService: AccountService = {
-	createAccount: async (email: string, password: string, env: Env) => {
-		// Minimum of 8 character passwords per NIST SP 800-63-3
-		if (password.length < 8) {
-			throw createValidationError(
-				"Password must be at least 8 characters long",
-				"password",
-			);
+	authenticate: async (input: LoginInput, env: Env): Promise<AuthResult> => {
+		const parseResult = await loginSchema.safeParseAsync(input);
+		if (!parseResult.success) {
+			return {
+				authenticated: false,
+				userId: null,
+				error: formatZodError(parseResult.error),
+			};
 		}
-		const passwordData = await hashPassword(password);
-		const dbClient = createDbClient(env);
-		return dbClient.execute({
-			sql: "INSERT INTO account (email, password_data) VALUES (?, ?)",
-			args: [email, passwordData],
-		});
-	},
 
-	authenticate: async (email: string, password: string, env: Env) => {
+		const validatedData = parseResult.data;
 		const dbClient = createDbClient(env);
+
 		const result = await dbClient.execute({
 			sql: "SELECT password_data, id FROM account WHERE email = ?",
-			args: [email],
+			args: [validatedData.email],
 		});
 
 		if (result.rows.length === 0) {
-			return { authenticated: false, userId: null };
+			return {
+				authenticated: false,
+				userId: null,
+				error: "Invalid email or password",
+			};
 		}
 
 		const [accountRow] = result.rows;
 		const storedPasswordData = accountRow.password_data as string;
-		const isValid = await verifyPassword(password, storedPasswordData);
+		const isValid = await verifyPassword(
+			validatedData.password,
+			storedPasswordData,
+		);
 
 		if (!isValid) {
-			return { authenticated: false, userId: null };
+			return {
+				authenticated: false,
+				userId: null,
+				error: "Invalid email or password",
+			};
 		}
 
 		const userId = typeof accountRow.id === "number" ? accountRow.id : null;
-		return { authenticated: true, userId };
+		return {
+			authenticated: true,
+			userId,
+		};
 	},
 };

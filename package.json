@@ -16,7 +16,8 @@
 	"dependencies": {
 		"@libsql/client": "^0.14.0",
 		"hono": "^4.6.16",
-		"nanoid": "^5.0.9"
+		"nanoid": "^5.0.9",
+		"zod": "^3.24.1"
 	},
 	"optionalDependencies": {
 		"miniflare": "^3.20241230.2",

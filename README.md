@@ -74,6 +74,7 @@ The authentication system combines secure session management with JWT-based API 
 - Session-JWT linkage for revocation
 - IP and user agent tracking
 - Sliding session expiration
+- Strict input validation
 
 See [ADR-001: Authentication Implementation](docs/adr/001-auth-implementation.md) for detailed technical decisions and security features.
 
