@@ -82,6 +82,9 @@ sequenceDiagram
   participant DB as Database
 
   U->>B: POST /api/login {email, password}
+  B->>B: Schema validation (NIST SP 800-63B)
+  Note over B: Validate & normalize input
+
   B->>DB: Verify credentials (PBKDF2)
 
   B->>DB: Create session record
@@ -134,6 +137,29 @@ stateDiagram-v2
 - JWT-Session linking for revocation capability
 - Automatic session pruning
 - Rate limiting ready
+
+### Type Safety
+
+Our authentication system uses TypeScript's type system to enforce security invariants:
+
+```ts
+// Discriminated union ensures userId presence when authenticated
+type AuthResult = 
+  | { authenticated: true; userId: number }
+  | { authenticated: false; userId: null; error?: string };
+
+// Type guard ensures type-safe auth flow
+const isAuthenticated = (result: AuthResult): result is AuthenticatedState => 
+  result.authenticated;
+```
+
+Key type safety features:
+
+- Schema validation using Zod
+- Discriminated unions for auth states
+- Type guards for runtime safety
+- NIST-compliant input validation
+- No unsafe type assertions
 
 ## Consequences
 

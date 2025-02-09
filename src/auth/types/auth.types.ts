@@ -17,16 +17,28 @@ import type {
 export type { LoginInput, RegistrationInput, RegistrationOutput };
 
 /**
- * Result of an authentication attempt.
- * @property authenticated - Whether the credentials were valid
- * @property userId - The user's ID if authentication succeeded, null otherwise
- * @property error - Optional error message if authentication failed
+ * Represents a successful authentication with valid user ID
  */
-export interface AuthResult {
-	authenticated: boolean;
-	userId: number | null;
+export interface AuthenticatedState {
+	authenticated: true;
+	userId: number;
+}
+
+/**
+ * Represents a failed authentication attempt
+ */
+export interface UnauthenticatedState {
+	authenticated: false;
+	userId: null;
 	error?: string;
 }
+
+/**
+ * Result of an authentication attempt.
+ * Successful authentication must include a userId.
+ * Failed authentication may include an error message.
+ */
+export type AuthResult = AuthenticatedState | UnauthenticatedState;
 
 /**
  * Standard payload structure for JWT tokens.

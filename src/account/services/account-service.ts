@@ -113,10 +113,18 @@ export const accountService = {
 			};
 		}
 
-		const userId = typeof accountRow.id === "number" ? accountRow.id : null;
+		// Ensure userId is a number, if not return unauthenticated
+		if (typeof accountRow.id !== "number") {
+			return {
+				authenticated: false,
+				userId: null,
+				error: "Invalid account state",
+			};
+		}
+
 		return {
 			authenticated: true,
-			userId,
+			userId: accountRow.id,
 		};
 	},
 };

@@ -16,7 +16,32 @@ We will implement security enhancements in three phases, prioritized by security
 
 ### Phase 1: Critical Security Controls
 
-#### 1. Rate Limiting
+#### 1. Input Validation & Type Safety ✅
+
+Implements controls against CWE-20: Improper Input Validation.
+
+Implemented:
+
+- Schema-based validation with Zod
+- Runtime type checking via discriminated unions
+- Unicode and space normalization for passwords
+- Common password detection
+- Email format verification
+- Type-safe error handling
+
+```ts
+// Example of implemented validation
+const loginSchema = z.object({
+  email: emailSchema,
+  password: z.string().transform(normalizePassword),
+});
+
+// Type-safe authentication flow
+const isAuthenticated = (result: AuthResult): result is AuthenticatedState => 
+  result.authenticated;
+```
+
+#### 2. Rate Limiting
 
 ```typescript
 interface RateLimitConfig {
@@ -39,7 +64,7 @@ Implementation:
 - Auto-expiring KV entries match window size
 - Minimal impact on successful auth flows
 
-#### 2. Token Rotation
+#### 3. Token Rotation
 
 Enhance refresh token security by implementing one-time use:
 
@@ -58,15 +83,6 @@ CREATE TABLE token_rotation
     expires_at   TIMESTAMP NOT NULL
 );
 ```
-
-#### 3. Input Validation
-- Schema-based validation with strict type checking
-- Unicode and space normalization for passwords
-- Common password detection
-- Email format verification
-- Consistent error handling
-
-Implements controls against CWE-20: Improper Input Validation.
 
 ### Phase 2: Visibility & Control
 

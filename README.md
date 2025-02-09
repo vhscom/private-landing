@@ -40,15 +40,19 @@ The authentication system combines secure session management with JWT-based API 
 
 1. **Login Process**:
    ```
-   1. Validate credentials against account table
-   2. Create session record with:
+   1. Validate input against NIST-compliant schema:
+      - Email format verification
+      - Password normalization
+      - Common password checks
+   2. Validate credentials against account table
+   3. Create session record with:
       - Unique session ID (nanoid)
       - User agent and IP tracking
       - Configurable expiration
-   3. Generate JWT tokens:
+   4. Generate JWT tokens:
       - Access token: {user_id, session_id, type: "access"}
       - Refresh token: {user_id, session_id, type: "refresh"}
-   4. Set HTTP-only cookies:
+   5. Set HTTP-only cookies:
       - access_token: Short-lived API access
       - refresh_token: Long-lived token for renewal
    ```
@@ -68,13 +72,16 @@ The authentication system combines secure session management with JWT-based API 
 
 ### Security Features
 
+- Type-safe authentication flow
+- Schema validation (NIST SP 800-63B compliant)
 - Session tracking and limiting
 - Secure cookie configuration
 - CSRF protection via Same-Site
 - Session-JWT linkage for revocation
 - IP and user agent tracking
 - Sliding session expiration
-- Strict input validation
+- Runtime type checking
+- No unsafe type assertions
 
 See [ADR-001: Authentication Implementation](docs/adr/001-auth-implementation.md) for detailed technical decisions and security features.
 

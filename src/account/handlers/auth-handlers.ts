@@ -6,14 +6,29 @@
  */
 
 import type { Context } from "hono";
-import type {
-	LoginInput,
-	RegistrationInput,
+import {
+	type LoginInput,
+	type RegistrationInput,
+	loginSchema,
 } from "../../auth/schemas/auth.schema.ts";
 import { createSession, endSession } from "../../auth/services/session-service";
 import { tokenService } from "../../auth/services/token-service";
+import type {
+	AuthResult,
+	AuthenticatedState,
+} from "../../auth/types/auth.types.ts";
 import { ValidationError } from "../../auth/utils/errors.ts";
 import { accountService } from "../services/account-service";
+
+/**
+ * Type guard ensuring auth result has userId.
+ * Discriminates between authenticated and unauthenticated states.
+ *
+ * @param result - Authentication result to check
+ * @returns Type predicate for authenticated state with userId
+ */
+const isAuthenticated = (result: AuthResult): result is AuthenticatedState =>
+	result.authenticated;
 
 /**
  * Handles user login requests.
@@ -22,25 +37,29 @@ import { accountService } from "../services/account-service";
  *
  * @param ctx - Hono context containing request and environment
  * @returns Redirect response with success or error message
+ * @throws Never - All errors are caught and converted to redirects
  */
 export async function handleLogin(ctx: Context) {
 	try {
+		// Validate input against NIST-compliant schema
 		const body = await ctx.req.parseBody();
 		const authResult = await accountService.authenticate(
 			body as LoginInput,
 			ctx.env,
 		);
 
-		if (!authResult.authenticated) {
+		// Ensure we have both authentication and userId
+		if (!isAuthenticated(authResult)) {
 			return ctx.redirect(
 				`/?error=${encodeURIComponent(authResult.error ?? "Authentication failed")}`,
 			);
 		}
 
-		if (authResult.userId) {
-			const sessionId = await createSession(authResult.userId, ctx);
-			await tokenService.generateTokens(ctx, authResult.userId, sessionId);
-		}
+		// Create session with guaranteed userId
+		const sessionId = await createSession(authResult.userId, ctx);
+
+		// Generate tokens with guaranteed userId and sessionId
+		await tokenService.generateTokens(ctx, authResult.userId, sessionId);
 
 		return ctx.redirect("/?authenticated=true");
 	} catch (error) {
