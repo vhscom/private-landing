@@ -5,3 +5,4 @@ node_modules
 !.dev.vars*.example
 backup.sql
 coverage
+src/db/backups

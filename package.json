@@ -6,9 +6,12 @@
 		"check": "biome check && tsc",
 		"deploy": "bun run check && wrangler deploy --minify",
 		"dev": "wrangler dev --port 8788",
-		"db:migrate": "turso db shell private-landing-db < sql/migration.sql",
-		"db:reset": "turso db shell private-landing-db < sql/reset.sql && turso db shell private-landing-db < sql/schema.sql",
+		"db:backup": "src/db/scripts/backup.sh",
+		"db:migrate": "turso db shell private-landing-db < src/db/migrations/001_password_consolidation.sql",
+		"db:migrate-safe": "src/db/scripts/migrate-safe.sh",
+		"db:reset": "turso db shell private-landing-db < src/db/scripts/reset.sql && turso db shell private-landing-db < src/db/schema/sql/schema.sql",
 		"format": "biome check --write",
+		"format:shell": "shfmt -w src/db/scripts/*.sh",
 		"lint": "biome lint",
 		"test": "vitest",
 		"typegen": "wrangler types"
@@ -24,8 +27,8 @@
 		"wrangler": "^3.103.2"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "^0.6.4",
 		"@biomejs/biome": "1.9.4",
+		"@cloudflare/vitest-pool-workers": "^0.6.4",
 		"@cloudflare/workers-types": "4.20250109.0",
 		"@types/bun": "^1.1.16",
 		"@types/nanoid": "^2.1.0",

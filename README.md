@@ -128,17 +128,17 @@ erDiagram
 
 ## Database Setup
 
-The database can be managed using SQL scripts in the `sql` directory:
+The database can be managed using the following commands:
 
 ```shell
 # First time setup: Create tables
-turso db shell private-landing-db < sql/schema.sql
+turso db shell private-landing-db < src/db/schema/sql/schema.sql
 
 # Development: Reset database (WARNING: destroys all data)
-turso db shell private-landing-db < sql/reset.sql && turso db shell private-landing-db < sql/schema.sql
+bun run db:reset
 
-# Run migrations (when schema changes)
-turso db shell private-landing-db < sql/migration.sql
+# Run migrations
+bun run db:migrate
 
 # Verify current tables
 turso db shell private-landing-db "select name from sqlite_master where type='table'"
@@ -203,11 +203,21 @@ bun run check     # Biome linter + formatter check
 Common database tasks:
 
 ```shell
-# Create database backup
-turso db dump private-landing-db > backup.sql
+# Create database backup (creates timestamped .tar.gz in src/db/backups)
+bun run db:backup
 
-# Restore from backup
-turso db shell private-landing-db < backup.sql
+# Restore from backup (after extracting .tar.gz)
+tar -xzf src/db/backups/backup-TIMESTAMP.tar.gz
+turso db shell private-landing-db < database.sql
+
+# Development: Reset database (WARNING: destroys all data)
+bun run db:reset
+
+# Run migrations with automatic backup
+bun run db:migrate-safe   # Creates backup before migrating
+
+# Run migrations
+bun run db:migrate
 
 # Interactive SQL shell
 turso db shell private-landing-db
