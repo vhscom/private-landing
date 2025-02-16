@@ -171,13 +171,13 @@ All binary data (salt, hash, digest) is stored as Base64. The format allows for 
 2. For production, [set up the Turso integration](https://developers.cloudflare.com/workers/databases/native-integrations/turso/) in your Cloudflare dashboard:
    - Go to Workers & Pages → Settings → Integrations
    - Add Turso integration
-   - Your `TURSO_URL` and `TURSO_AUTH_TOKEN` will be automatically available
+   - Your `AUTH_DB_URL` and `AUTH_DB_TOKEN` will be automatically available
 3. Use strong passwords for JWT access and refresh token secrets
 
 Required environment variables:
 ```ini
-TURSO_URL="libsql://your-db.turso.io"
-TURSO_AUTH_TOKEN="your-auth-token"
+AUTH_DB_URL="libsql://your-db.turso.io"
+AUTH_DB_TOKEN="your-auth-token"
 JWT_ACCESS_SECRET="your-access-secret"    # For JWT access tokens
 JWT_REFRESH_SECRET="your-refresh-secret"  # For JWT refresh tokens
 ```

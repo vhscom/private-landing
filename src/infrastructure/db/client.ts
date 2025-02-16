@@ -10,10 +10,10 @@ import { type Client as SqliteClient, createClient } from "@libsql/client/web";
 export type { SqliteClient };
 
 export function createDbClient(env: Env): SqliteClient {
-	const url = env.TURSO_URL?.trim();
+	const url = env.AUTH_DB_URL?.trim();
 	if (!url) throw new Error("No URL");
 
-	const authToken = env.TURSO_AUTH_TOKEN?.trim();
+	const authToken = env.AUTH_DB_TOKEN?.trim();
 	if (!authToken) throw new Error("No auth token provided");
 
 	return createClient({ url, authToken });

@@ -14,10 +14,10 @@ export const executeSQL = async (sql: string, client: SqliteClient) => {
 
 export const initTestDB = async (client: SqliteClient, env: Env) => {
 	// Safety check: Ensure we're using a test database
-	const libsqlUrlLower = env.TURSO_URL.toLowerCase();
+	const libsqlUrlLower = env.AUTH_DB_URL.toLowerCase();
 	if (!libsqlUrlLower.includes("test-db")) {
 		throw new Error(
-			'Safety check failed: TURSO_URL must include "test-db" to run tests',
+			'Safety check failed: AUTH_DB_URL must include "test-db" to run tests',
 		);
 	}
 	console.info(`Running tests against: ${libsqlUrlLower}`);
