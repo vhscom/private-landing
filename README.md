@@ -1,6 +1,6 @@
 # Private Landing
 
-A boilerplate/starter project for quickly building RESTful APIs using [Cloudflare Workers](https://workers.cloudflare.com/), [Hono](https://honojs.dev/) and [Turso](https://turso.tech/). Inspired by Scott Tolinski, Mark Volkmann.
+A monorepo template for building secure, type-safe APIs using [Cloudflare Workers](https://workers.cloudflare.com/), [Hono](https://honojs.dev/) and [Turso](https://turso.tech/). Inspired by Scott Tolinski, Mark Volkmann.
 
 ## What's Included
 
@@ -12,11 +12,42 @@ This starter provides a foundation for building authenticated APIs:
 - 🚀 **Edge-Ready** - Built for Cloudflare Workers with Hono and Turso
 - 💻 **Developer Experience** - TypeScript, automated formatting, comprehensive docs
 - ⚡ **Security Features** - Rate limiting ready, following security best practices
+- 📦 **Monorepo Structure** - Well-organized packages with clear boundaries
 
 Perfect for:
 - Building authenticated APIs at the edge
 - Starting new SaaS projects quickly
 - Learning modern auth implementation
+
+## Repository Structure
+
+```shell
+.
+├── apps/
+│   └── cloudflare-workers/    # Example Cloudflare Workers implementation
+├── packages/
+│   ├── core/                  # Core authentication logic
+│   ├── errors/                # Shared error types and handling
+│   ├── infrastructure/        # Database and middleware utilities
+│   ├── schemas/               # Zod schemas for validation
+│   └── types/                 # Shared TypeScript types
+└── docs/
+    └── adr/                   # Architecture Decision Records
+```
+
+## Package Exports
+
+```typescript
+// Core authentication functionality
+import { requireAuth, securityHeaders } from "@private-landing/core/auth";
+import { defaultSessionConfig } from "@private-landing/core/config";
+
+// Type-safe error handling
+import { TokenError, SessionError } from "@private-landing/types/auth";
+
+// Database utilities
+import { createDbClient } from "@private-landing/infrastructure/db";
+```
 
 ## Authentication System
 
@@ -185,22 +216,65 @@ JWT_REFRESH_SECRET="your-refresh-secret"  # For JWT refresh tokens
 ## Development
 
 ```shell
+# Install dependencies
+bun install
+
+# Build packages
+bun run build
+
+# Build worker (dry-run deployment)
+bun run build:workers
+
 # Start development server
 bun run dev       # Runs on port 8788
 
 # Run tests
-bun test
+bun run test:workers         # Run worker tests
+bun run test:workers:watch   # Run worker tests in watch mode
 
 # Format code
-bun run format    # Biome formatter
+bun run format              # Format all code
+bun run format:packages     # Format only package code
 
-# Check code
-bun run check     # Biome linter + formatter check
+# Type check
+bun run typecheck          # Type check all packages
+```
+
+## Testing
+
+The project uses Vitest for testing the Cloudflare Worker implementation:
+
+- Unit tests for individual components
+- Integration tests for auth flows
+- End-to-end API tests
+- Cloudflare Workers runtime simulation
+
+- Run tests using:
+
+```shell
+bun run test:workers        # Run all worker tests
+bun run test:workers:watch  # Watch mode for development
+```
+
+## Package Management
+The monorepo uses Bun workspaces for package management:
+
+- Packages are versioned independently
+- Workspace dependencies are resolved locally
+- Consistent formatting with Biome
+- Automated package builds
+
+Package scripts:
+
+```shell
+bun run build             # Build all packages
+bun run clean             # Clean all build artifacts
+bun run typecheck         # Type check all packages
 ```
 
 ## Database Management
 
-Common database tasks:
+Common database tasks (run from `apps/cloudflare-workers` directory):
 
 ```shell
 # Create database backup (creates timestamped .tar.gz in src/db/backups)
@@ -225,6 +299,26 @@ turso db shell private-landing-db
 # Quick table data check
 turso db shell private-landing-db "select email, substr(password_data, 0, 30) || '...' from account"
 ```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+   ```shell
+   bun run typecheck
+   bun run test:workers
+   bun run format
+   ```
+
+The `test:workers` task contains integration tests which use the `AUTH_DB_TOKEN` and `AUTH_DB_URL` specified in `.dev.vars.test` to connect to a real database in order to validate authentication end-to-end via Turso. Generate a token for the test DB like:
+
+```shell
+cd apps/cloudflare-workers && \
+    turso db tokens create private-landing-test-db 
+```
+
+A failsafe mechanism is in place requiring the word `test` within your test database name. This behavior is intended to prevent accidentally running test SQL against non-test DBs.
 
 ## License
 

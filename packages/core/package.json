@@ -1,0 +1,37 @@
+{
+	"name": "@private-landing/core",
+	"version": "1.0.0-alpha.3",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./auth": {
+			"types": "./dist/auth/index.d.ts",
+			"import": "./dist/auth/index.js"
+		},
+		"./config": {
+			"types": "./dist/auth/config/index.d.ts",
+			"import": "./dist/auth/config/index.js"
+		}
+	},
+	"files": ["dist"],
+	"scripts": {
+		"clean": "rm -rf dist tsconfig.tsbuildinfo",
+		"build": "tsc --build",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@private-landing/infrastructure": "workspace:*",
+		"@private-landing/schemas": "workspace:*",
+		"@private-landing/types": "workspace:*",
+		"@libsql/client": "^0.14.0",
+		"hono": "^4.7.2",
+		"nanoid": "^5.1.2"
+	},
+	"devDependencies": {
+		"bun-types": "latest",
+		"typescript": "^5.0.0"
+	}
+}

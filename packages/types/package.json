@@ -1,0 +1,37 @@
+{
+	"name": "@private-landing/types",
+	"version": "1.0.0-alpha.3",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./auth": {
+			"types": "./dist/auth/index.d.ts",
+			"import": "./dist/auth/index.js"
+		},
+		"./http": {
+			"types": "./dist/http/index.d.ts",
+			"import": "./dist/http/index.js"
+		},
+		"./env": {
+			"types": "./dist/env.d.ts",
+			"import": "./dist/env.js"
+		}
+	},
+	"files": ["dist"],
+	"scripts": {
+		"clean": "rm -rf dist tsconfig.tsbuildinfo",
+		"build": "tsc --build",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@private-landing/schemas": "workspace:*",
+		"hono": "^4.7.2"
+	},
+	"devDependencies": {
+		"bun-types": "latest",
+		"typescript": "^5.0.0"
+	}
+}

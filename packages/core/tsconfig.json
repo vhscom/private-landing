@@ -1,0 +1,15 @@
+{
+	"extends": "../../tsconfig.packages.jsonc",
+	"compilerOptions": {
+		"outDir": "./dist",
+		"rootDir": "./src",
+		"lib": ["ESNext", "DOM"]
+	},
+	"include": ["src/**/*.ts"],
+	"references": [
+		{ "path": "../schemas" },
+		{ "path": "../types" },
+		{ "path": "../infrastructure" },
+		{ "path": "../errors" }
+	]
+}

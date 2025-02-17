@@ -1,0 +1,22 @@
+{
+	"name": "@private-landing/errors",
+	"version": "1.0.0-alpha.3",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"files": ["dist"],
+	"scripts": {
+		"clean": "rm -rf dist tsconfig.tsbuildinfo",
+		"build": "tsc --build",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {},
+	"devDependencies": {
+		"bun-types": "latest",
+		"typescript": "^5.0.0"
+	}
+}

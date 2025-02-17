@@ -1,0 +1,9 @@
+{
+	"extends": "../../tsconfig.packages.jsonc",
+	"compilerOptions": {
+		"outDir": "./dist",
+		"rootDir": "./src"
+	},
+	"include": ["src/**/*.ts"],
+	"references": [{ "path": "../schemas" }]
+}

@@ -1,0 +1,10 @@
+{
+	"extends": "../../tsconfig.packages.jsonc",
+	"compilerOptions": {
+		"outDir": "./dist",
+		"rootDir": "./src",
+		"types": ["@cloudflare/workers-types/experimental"]
+	},
+	"include": ["src/**/*.ts"],
+	"references": [{ "path": "../types" }]
+}

@@ -1,0 +1,45 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "private-landing"
+main = "src/app.ts"
+compatibility_date = "2025-01-04"
+
+# compatibility_flags = [ "nodejs_compat" ]
+
+# Bind static asset directory. Allows resource fetching from Worker scripts.
+# Docs: https://developers.cloudflare.com/workers/static-assets/binding/
+# [assets]
+# directory = "./public"
+[assets]
+# The following configuration unconditionally invokes the Worker script at
+# `src/app.ts`, which can programatically fetch assets via the ASSETS binding
+directory = "public"
+binding = "ASSETS"
+
+#[vars]
+# Turso secrets made available via native Cloudflare integration.
+# Docs: https://developers.cloudflare.com/workers/databases/native-integrations/turso/#set-up-an-integration-with-turso
+#TURSO_URL = "libsql://auth-db-username.turso.io"
+#TURSO_AUTH_TOKEN = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# Defined via .dev.vars file copied from .dev.vars.example
+
+# [[kv_namespaces]]
+# binding = "MY_KV_NAMESPACE"
+# id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# [[r2_buckets]]
+# binding = "MY_BUCKET"
+# bucket_name = "my-bucket"
+
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "my-database"
+# database_id = ""
+
+# [ai]
+# binding = "AI"
+
+# Workers Logs
+# Docs: https://developers.cloudflare.com/workers/observability/logs/workers-logs/
+# Configuration: https://developers.cloudflare.com/workers/observability/logs/workers-logs/#enable-workers-logs
+[observability]
+enabled = true

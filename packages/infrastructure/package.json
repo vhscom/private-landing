@@ -1,0 +1,34 @@
+{
+	"name": "@private-landing/infrastructure",
+	"version": "1.0.0-alpha.3",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./db": {
+			"types": "./dist/db/index.d.ts",
+			"import": "./dist/db/index.js"
+		},
+		"./middleware": {
+			"types": "./dist/middleware/index.d.ts",
+			"import": "./dist/middleware/index.js"
+		}
+	},
+	"files": ["dist"],
+	"scripts": {
+		"clean": "rm -rf dist tsconfig.tsbuildinfo",
+		"build": "tsc --build",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@private-landing/types": "workspace:*",
+		"@libsql/client": "^0.14.0"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "4.20250214.0",
+		"bun-types": "latest",
+		"typescript": "^5.0.0"
+	}
+}

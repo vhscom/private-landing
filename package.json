@@ -1,38 +1,19 @@
 {
-	"name": "private-landing",
-	"module": "src/app.ts",
-	"type": "module",
+	"name": "@private-landing/root",
+	"private": true,
+	"workspaces": ["packages/*", "apps/*"],
 	"scripts": {
-		"check": "biome check && tsc",
-		"deploy": "bun run check && wrangler deploy --minify",
-		"dev": "wrangler dev --port 8788",
-		"db:backup": "src/db/scripts/backup.sh",
-		"db:migrate": "turso db shell private-landing-db < src/db/migrations/001_password_consolidation.sql",
-		"db:migrate-safe": "src/db/scripts/migrate-safe.sh",
-		"db:reset": "turso db shell private-landing-db < src/db/scripts/reset.sql && turso db shell private-landing-db < src/db/schema/sql/schema.sql",
-		"format": "biome check --write",
-		"format:shell": "shfmt -w src/db/scripts/*.sh",
-		"lint": "biome lint",
-		"test": "vitest",
-		"typegen": "wrangler types"
-	},
-	"dependencies": {
-		"@libsql/client": "^0.14.0",
-		"hono": "^4.6.16",
-		"nanoid": "^5.0.9",
-		"zod": "^3.24.1"
-	},
-	"optionalDependencies": {
-		"miniflare": "^3.20241230.2",
-		"wrangler": "^3.103.2"
+		"clean": "bun run --filter '@private-landing/*' clean",
+		"build": "bun run --filter '@private-landing/*' build && bun run build:workers",
+		"build:workers": "bun run --filter '@private-landing/cloudflare-workers' wrangler:build",
+		"dev": "bun run --filter '@private-landing/cloudflare-workers' dev",
+		"test": "bun run test:workers",
+		"test:workers": "bun run --filter '@private-landing/cloudflare-workers' test",
+		"typecheck": "bun run --filter '@private-landing/*' typecheck",
+		"format": "biome check --write .",
+		"format:packages": "biome check --write packages"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "1.9.4",
-		"@cloudflare/vitest-pool-workers": "^0.6.4",
-		"@cloudflare/workers-types": "4.20250109.0",
-		"@types/bun": "^1.1.16",
-		"@types/nanoid": "^2.1.0",
-		"typescript": "^5.7.3",
-		"vitest": "2.1.8"
+		"@biomejs/biome": "^1.9.4"
 	}
 }
