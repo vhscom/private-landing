@@ -27,7 +27,7 @@
 		"@libsql/client": "^0.14.0"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "4.20250214.0",
+		"@cloudflare/workers-types": "4.20250224.0",
 		"bun-types": "latest",
 		"typescript": "^5.0.0"
 	}
