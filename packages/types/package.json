@@ -2,6 +2,9 @@
 	"name": "@private-landing/types",
 	"version": "1.0.0-alpha.3",
 	"type": "module",
+	"engines": {
+		"node": ">=18.0.0"
+	},
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
@@ -28,7 +31,7 @@
 	},
 	"dependencies": {
 		"@private-landing/schemas": "workspace:*",
-		"hono": "^4.7.2"
+		"hono": "^4.7.5"
 	},
 	"devDependencies": {
 		"bun-types": "latest",

@@ -2,6 +2,9 @@
 	"name": "@private-landing/core",
 	"version": "1.0.0-alpha.3",
 	"type": "module",
+	"engines": {
+		"node": ">=18.0.0"
+	},
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
@@ -23,15 +26,15 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@libsql/client": "^0.15.0",
 		"@private-landing/infrastructure": "workspace:*",
 		"@private-landing/schemas": "workspace:*",
 		"@private-landing/types": "workspace:*",
-		"@libsql/client": "^0.14.0",
-		"hono": "^4.7.2",
-		"nanoid": "^5.1.2"
+		"hono": "^4.7.5",
+		"nanoid": "^5.1.5"
 	},
 	"devDependencies": {
-		"bun-types": "latest",
+		"bun-types": "^1.2.5",
 		"typescript": "^5.0.0"
 	}
 }

@@ -2,6 +2,9 @@
 	"name": "@private-landing/errors",
 	"version": "1.0.0-alpha.3",
 	"type": "module",
+	"engines": {
+		"node": ">=18.0.0"
+	},
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
@@ -16,7 +19,7 @@
 	},
 	"dependencies": {},
 	"devDependencies": {
-		"bun-types": "latest",
+		"bun-types": "^1.2.5",
 		"typescript": "^5.0.0"
 	}
 }

@@ -3,6 +3,9 @@
 	"version": "1.0.0-alpha.3",
 	"private": true,
 	"type": "module",
+	"engines": {
+		"node": ">=18.0.0"
+	},
 	"scripts": {
 		"clean": "rm -rf .wrangler",
 		"check": "biome check && tsc",
@@ -20,23 +23,23 @@
 		"typegen": "wrangler types"
 	},
 	"dependencies": {
+		"@libsql/client": "^0.15.0",
 		"@private-landing/core": "workspace:*",
-		"@private-landing/types": "workspace:*",
 		"@private-landing/errors": "workspace:*",
 		"@private-landing/infrastructure": "workspace:*",
 		"@private-landing/schemas": "workspace:*",
-		"@libsql/client": "^0.14.0",
-		"hono": "^4.7.2",
+		"@private-landing/types": "workspace:*",
+		"hono": "^4.7.5",
 		"nanoid": "^5.1.2",
 		"zod": "^3.24.2"
 	},
 	"optionalDependencies": {
 		"miniflare": "^3.20250214.1",
-		"wrangler": "^3.111.0"
+		"wrangler": "^4.3.0"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "1.9.4",
-		"@cloudflare/vitest-pool-workers": "^0.7.4",
+		"@cloudflare/vitest-pool-workers": "^0.7.8",
 		"@cloudflare/workers-types": "4.20250224.0",
 		"@types/bun": "^1.2.4",
 		"@types/nanoid": "^3.0.0",

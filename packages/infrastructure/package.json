@@ -2,6 +2,9 @@
 	"name": "@private-landing/infrastructure",
 	"version": "1.0.0-alpha.3",
 	"type": "module",
+	"engines": {
+		"node": ">=18.0.0"
+	},
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
@@ -23,12 +26,12 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@private-landing/types": "workspace:*",
-		"@libsql/client": "^0.14.0"
+		"@libsql/client": "^0.15.0",
+		"@private-landing/types": "workspace:*"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "4.20250224.0",
-		"bun-types": "latest",
+		"bun-types": "^1.2.5",
 		"typescript": "^5.0.0"
 	}
 }
