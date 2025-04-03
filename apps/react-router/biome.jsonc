@@ -1,0 +1,26 @@
+{
+	"$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+	"extends": ["../../biome.jsonc"],
+	"files": {
+		"ignore": [
+			".wrangler",
+			"**/worker-configuration.d.ts",
+			"**/dist/**",
+			"**/node_modules/**"
+		]
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"a11y": {
+				"noSvgWithoutTitle": "off"
+			},
+			"style": {
+				"noParameterAssign": "off"
+			},
+			"suspicious": {
+				"noExplicitAny": "off"
+			}
+		}
+	}
+}

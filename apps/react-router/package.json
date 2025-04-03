@@ -1,0 +1,49 @@
+{
+	"name": "@private-landing/react-router",
+	"version": "1.0.0-alpha.3",
+	"private": true,
+	"sideEffects": false,
+	"type": "module",
+	"scripts": {
+		"build": "react-router build",
+		"deploy": "wrangler deploy",
+		"dev": "react-router dev",
+		"format": "biome check --write .",
+		"lint": "biome check .",
+		"start": "wrangler dev",
+		"typecheck": "react-router typegen && tsc",
+		"typegen": "wrangler types && react-router typegen"
+	},
+	"dependencies": {
+		"@private-landing/core": "workspace:*",
+		"@private-landing/errors": "workspace:*",
+		"@private-landing/infrastructure": "workspace:*",
+		"@private-landing/schemas": "workspace:*",
+		"@private-landing/types": "workspace:*",
+		"@react-router/cloudflare": "^7.4.1",
+		"isbot": "^4.4.0",
+		"react": "^19.1.0",
+		"react-aria-components": "^1.7.1",
+		"react-dom": "^19.1.0",
+		"react-router": "^7.4.1",
+		"react-router-dom": "^7.4.1"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^1.9.4",
+		"@cloudflare/workers-types": "^4.20250402.0",
+		"@react-router/dev": "^7.4.1",
+		"@react-router/fs-routes": "^7.4.1",
+		"@types/react": "^18.3.20",
+		"@types/react-dom": "^18.3.5",
+		"autoprefixer": "^10.4.21",
+		"postcss": "^8.5.3",
+		"tailwindcss": "^3.4.17",
+		"typescript": "^5.8.2",
+		"vite": "^6.2.4",
+		"vite-tsconfig-paths": "^4.3.2",
+		"wrangler": "3.84.0"
+	},
+	"engines": {
+		"node": ">=20.0.0"
+	}
+}

@@ -3,15 +3,14 @@
 	"private": true,
 	"workspaces": ["packages/*", "apps/*"],
 	"scripts": {
+		"build": "bun run --filter '@private-landing/*' build",
+		"build:packages": "bun run --filter './packages/*' build",
 		"clean": "bun run --filter '@private-landing/*' clean",
-		"build": "bun run --filter '@private-landing/*' build && bun run build:workers",
-		"build:workers": "bun run --filter '@private-landing/cloudflare-workers' wrangler:build",
-		"dev": "bun run --filter '@private-landing/cloudflare-workers' dev",
-		"test": "bun run test:workers",
-		"test:workers": "bun run --filter '@private-landing/cloudflare-workers' test",
-		"typecheck": "bun run --filter '@private-landing/*' typecheck",
+		"dev": "bun run --filter '@private-landing/react-router' dev",
 		"format": "biome check --write .",
-		"format:packages": "biome check --write packages"
+		"format:packages": "biome check --write packages",
+		"test": "bun run --filter '@private-landing/react-router' test",
+		"typecheck": "bun run --filter '@private-landing/*' typecheck"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4"
