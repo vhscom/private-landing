@@ -10,6 +10,12 @@ on:
     # Run weekly on Sundays at 2 AM UTC to catch new dependency issues
     - cron: '0 2 * * 0'
 
+# Add permissions for the workflow to write back to the repository
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -66,7 +72,7 @@ jobs:
             FOSSA has detected potential license compliance issues in this PR.
 
             ### Next Steps:
-            1. Review the FOSSA dashboard: https://app.fossa.com/projects/custom%2B56080%2Fgit%40codeberg.org%3Avhs%2Fprivate-landing.git
+            1. Review the FOSSA dashboard: https://app.fossa.com/projects/git%2Bgithub.com%2F${{ github.repository }}
             2. Check for newly added dependencies with incompatible licenses
             3. Update \`.fossa.yml\` configuration if needed
             4. Contact the team if you need help resolving license issues
@@ -142,10 +148,12 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           
-          if git diff --quiet NOTICE.md; then
+          # Always add the NOTICE.md file (even if it's new)
+          git add NOTICE.md
+          
+          if git diff --cached --quiet; then
             echo "No attribution changes detected"
           else
-            git add NOTICE.md
             git commit -m "docs: update license attribution file [automated]"
             git push
           fi
