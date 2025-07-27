@@ -1,0 +1,151 @@
+# License compliance workflow using FOSSA
+name: License Compliance
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run weekly on Sundays at 2 AM UTC to catch new dependency issues
+    - cron: '0 2 * * 0'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  license-scan:
+    name: FOSSA License Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Fetch full history for better dependency analysis
+          fetch-depth: 0
+
+      - name: Setup Node.js (for FOSSA compatibility)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies with Bun
+        run: bun install --frozen-lockfile
+
+      - name: FOSSA Analysis
+        uses: fossas/fossa-action@main
+        with:
+          api-key: ${{ secrets.FOSSA_API_KEY }}
+          run-tests: false
+
+      - name: FOSSA Test (License Policy Check)
+        uses: fossas/fossa-action@main
+        with:
+          api-key: ${{ secrets.FOSSA_API_KEY }}
+          run-tests: true
+        # Allow this to fail without blocking PR - log issues instead
+        continue-on-error: true
+        id: fossa-test
+
+      - name: Comment PR with license issues
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueBody = `
+            ## ⚠️ License Compliance Issues Detected
+
+            FOSSA has detected potential license compliance issues in this PR.
+
+            ### Next Steps:
+            1. Review the FOSSA dashboard: https://app.fossa.com/projects/custom%2B56080%2Fgit%40codeberg.org%3Avhs%2Fprivate-landing.git
+            2. Check for newly added dependencies with incompatible licenses
+            3. Update \`.fossa.yml\` configuration if needed
+            4. Contact the team if you need help resolving license issues
+
+            **Note**: This check is informational and won't block the PR, but issues should be resolved before merging.
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: issueBody
+            });
+
+      - name: Upload FOSSA results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fossa-analysis-results
+          path: |
+            .fossa/
+          retention-days: 30
+
+  # Generate attribution file on main branch only
+  generate-attribution:
+    name: Generate License Attribution
+    runs-on: ubuntu-latest
+    needs: license-scan
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate attribution file
+        run: |
+          # Create comprehensive attribution notice
+          cat > NOTICE.md << 'EOF'
+          # Third-Party Licenses and Attributions
+
+          This software contains code and dependencies under various open source licenses.
+          The following is a summary of the licenses and their respective components:
+
+          ## Direct Dependencies
+
+          EOF
+
+          # Extract license info from package.json files
+          find . -name "package.json" -not -path "./node_modules/*" | while read pkg; do
+            echo "Processing: $pkg"
+            if [ -f "$pkg" ]; then
+              dir=$(dirname "$pkg")
+              name=$(node -e "console.log(require('$pkg').name || 'unknown')")
+              license=$(node -e "console.log(require('$pkg').license || 'unknown')")
+              echo "- **$name**: $license License" >> NOTICE.md
+            fi
+          done
+
+          echo "" >> NOTICE.md
+          echo "## Dependency Licenses" >> NOTICE.md
+          echo "" >> NOTICE.md
+          echo "For a complete list of all dependencies and their licenses, see the FOSSA analysis report." >> NOTICE.md
+          echo "" >> NOTICE.md
+          echo "Generated on: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> NOTICE.md
+
+      - name: Commit attribution updates
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          if git diff --quiet NOTICE.md; then
+            echo "No attribution changes detected"
+          else
+            git add NOTICE.md
+            git commit -m "docs: update license attribution file [automated]"
+            git push
+          fi

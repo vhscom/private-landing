@@ -1,0 +1,51 @@
+# FOSSA configuration for private-landing
+version: 3
+
+project:
+  name: "private-landing"
+  # team: automatically assigned to default team
+
+# Let FOSSA auto-discover all packages (works great with Bun workspaces)
+options:
+  allow-unresolved: true
+
+# License policies for Apache-2.0 open core strategy
+policies:
+  # Automatically approve permissive licenses
+  allow:
+    - "MIT"
+    - "Apache-2.0"
+    - "ISC"
+    - "BSD-2-Clause"
+    - "BSD-3-Clause"
+    - "0BSD"
+    - "Unlicense"
+    - "CC0-1.0"
+
+  # Flag for manual review (won't fail build)
+  flag:
+    - "LGPL-2.1"
+    - "LGPL-3.0"
+    - "MPL-2.0"
+    - "EPL-2.0"
+    - "CDDL-1.0"
+
+  # Deny viral licenses that could hurt open core model
+  deny:
+    - "GPL-2.0"
+    - "GPL-3.0"
+    - "AGPL-3.0"
+    - "SSPL-1.0"
+    - "BSL-1.1"
+    - "Copyleft"
+    - "Proprietary"
+
+# Notification settings
+notifications:
+  email:
+    - "josh@comfus.io"
+
+# Vulnerability scanning
+vulnerability:
+  enabled: true
+  fail-on: "critical"
