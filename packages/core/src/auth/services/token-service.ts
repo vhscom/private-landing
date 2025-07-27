@@ -2,7 +2,7 @@
  * @file token-service.ts
  * Handles JWT token generation and management for user authentication.
  * Implements access and refresh token pattern with secure cookie storage.
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import type { TokenPayload } from "@private-landing/types";

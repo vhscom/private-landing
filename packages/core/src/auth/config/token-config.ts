@@ -2,7 +2,7 @@
  * @file token-config.ts
  * Configuration for JWT token management and authentication.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import type { TokenConfig } from "@private-landing/types";

@@ -9,7 +9,7 @@
  * - User registration with validation
  * - Error handling with user feedback
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import { createAuthSystem } from "@private-landing/core";

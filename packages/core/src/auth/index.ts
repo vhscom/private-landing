@@ -3,7 +3,7 @@
  * Main entry point for authentication system core functionality.
  * Creates and configures authentication services with database customization.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import type { AuthDatabaseConfig } from "@private-landing/types";

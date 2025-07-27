@@ -322,4 +322,4 @@ A failsafe mechanism is in place requiring the word `test` within your test data
 
 ## License
 
-LGPL - Open source with required code sharing.
+Apache 2.0 - Open source and commercial-friendly. See [LICENSE](LICENSE) for details.

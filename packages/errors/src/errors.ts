@@ -3,7 +3,7 @@
  * Error types and utilities for authentication error handling.
  * Provides consistent error types for validation and authentication failures.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 /**

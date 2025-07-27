@@ -9,7 +9,7 @@
  * - 409 Conflict: Resource conflicts (e.g., session limits)
  * - 429 Too Many Requests: Rate limiting
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 /**

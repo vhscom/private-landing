@@ -1,7 +1,7 @@
 /**
  * @file cookie.ts
  * Utilities for setting and configuring secure HTTP cookies for authentication tokens.
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import type { AuthCookieOptions } from "@private-landing/types";

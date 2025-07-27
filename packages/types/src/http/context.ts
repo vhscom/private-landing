@@ -3,7 +3,7 @@
  * HTTP context types for the Hono framework integration.
  * Extends Hono's context types with authentication-specific additions.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import type { Context } from "hono";

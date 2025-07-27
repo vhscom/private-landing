@@ -2,7 +2,7 @@
  * @file test-utils.ts
  * Testing utilities for authentication and API request simulation.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import { SELF } from "cloudflare:test";

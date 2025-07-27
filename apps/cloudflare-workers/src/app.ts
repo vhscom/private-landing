@@ -2,7 +2,7 @@
  * @file app.ts
  * Main application setup with route definitions and middleware configuration.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import {

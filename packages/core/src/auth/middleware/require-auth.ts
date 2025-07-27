@@ -3,7 +3,7 @@
  * Authentication middleware that validates JWT tokens and sessions.
  * Uses refresh token to automatically renew expired access tokens.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  * @see ADR-001 for authentication design
  */
 

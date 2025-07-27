@@ -3,7 +3,7 @@
  * Authentication database types and configuration.
  * Defines required database structure and configuration options.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 /**

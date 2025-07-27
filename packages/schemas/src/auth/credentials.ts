@@ -11,7 +11,7 @@
  * 5. No composition rules (special chars, mixed case, etc.)
  * 6. Check against common/compromised passwords
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import { z } from "zod";

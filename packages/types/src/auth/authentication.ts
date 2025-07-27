@@ -3,7 +3,7 @@
  * Core authentication types for login, registration, and auth state.
  * Defines the fundamental types for authentication flows and results.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import type {

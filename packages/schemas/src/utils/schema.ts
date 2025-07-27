@@ -2,7 +2,7 @@
  * @file schema.ts
  * Schema validation utilities for handling errors and common checks.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import type { ZodError } from "zod";

@@ -2,7 +2,7 @@
  * @file index.ts
  * Barrel file exporting all HTTP-related types.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 export * from "./context";

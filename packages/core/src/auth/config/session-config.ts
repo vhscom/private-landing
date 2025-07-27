@@ -2,7 +2,7 @@
  * @file session-config.ts
  * Configuration and type definitions for user session management.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import type { SessionConfig } from "@private-landing/types";

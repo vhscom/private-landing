@@ -2,7 +2,7 @@
  * @file password-service.ts
  * Implementation of NIST SP 800-132 compliant password hashing and verification.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 /**

@@ -2,7 +2,7 @@
  * @file session-maintenance.ts
  * Session cleanup utilities for database maintenance and security.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import { createDbClient } from "@private-landing/infrastructure";

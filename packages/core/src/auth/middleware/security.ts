@@ -3,7 +3,7 @@
  * Security headers middleware implementing OWASP Secure Headers Project recommendations.
  * Provides comprehensive protection against common web vulnerabilities through HTTP security headers.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import type { Env } from "@private-landing/types";

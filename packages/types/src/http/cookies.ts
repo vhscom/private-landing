@@ -3,7 +3,7 @@
  * HTTP cookie configuration types for authentication system.
  * Defines types for cookie settings and management.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 /**

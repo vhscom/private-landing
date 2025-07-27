@@ -8,7 +8,7 @@
 # - Automatic cleanup of old backups
 # - Error handling and cleanup on failure
 #
-# @license LGPL-3.0-or-later
+# @license Apache-2.0
 
 # Configuration variables
 DB_NAME="private-landing-db" # Database to backup

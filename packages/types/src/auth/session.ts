@@ -3,7 +3,7 @@
  * Session management types for user authentication system.
  * Defines types for session state, configuration, and management.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import type { CookieOptions } from "hono/utils/cookie";

@@ -2,7 +2,7 @@
  * @file index.ts
  * Exports authentication service implementations.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 export * from "./account-service";

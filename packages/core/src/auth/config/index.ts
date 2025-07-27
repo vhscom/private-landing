@@ -2,7 +2,7 @@
  * @file index.ts
  * Exports authentication system configuration.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 export * from "./session-config";

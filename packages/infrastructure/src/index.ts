@@ -2,7 +2,7 @@
  * @file index.ts
  * Main entry point for infrastructure functionality.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 export { createDbClient, type SqliteClient } from "./db";

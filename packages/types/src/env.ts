@@ -2,7 +2,7 @@
  * @file env.ts
  * Environment type definitions matching Cloudflare Worker configuration.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 /**

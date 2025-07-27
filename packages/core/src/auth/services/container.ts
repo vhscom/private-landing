@@ -2,7 +2,7 @@
  * @file container.ts
  * Service container for managing singleton service instances.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import type { AccountService } from "./account-service";

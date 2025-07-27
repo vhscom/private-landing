@@ -9,7 +9,7 @@
  * - Secure account creation and authentication
  * - Type-safe database operations
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import type { ResultSet } from "@libsql/client";

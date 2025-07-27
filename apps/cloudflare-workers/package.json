@@ -45,5 +45,6 @@
 		"@types/nanoid": "^3.0.0",
 		"typescript": "^5.8.2",
 		"vitest": "2.1.8"
-	}
+	},
+	"license": "Apache-2.0"
 }

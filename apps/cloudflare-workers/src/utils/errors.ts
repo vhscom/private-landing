@@ -2,7 +2,7 @@
  * @file errors.ts
  * Custom error types and factory functions for validation handling.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 /**

@@ -3,7 +3,7 @@
  * Main entry point for authentication system errors.
  * Exports error types and utilities for error handling.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 export * from "./errors";
