@@ -2,7 +2,7 @@
  * @file load-context.ts
  * Defines the load context for the React Router app, providing access to Cloudflare environment.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import type { PlatformProxy } from "wrangler";

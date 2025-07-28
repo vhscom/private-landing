@@ -2,7 +2,7 @@
  * @file AuthForm.tsx
  * Combined authentication form for login, registration and logout.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import { useState, type FormEvent } from "react";

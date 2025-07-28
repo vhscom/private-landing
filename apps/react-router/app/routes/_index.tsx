@@ -2,7 +2,7 @@
  * @file _index.tsx
  * Simple landing page for example purposes.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import { useState } from "react";

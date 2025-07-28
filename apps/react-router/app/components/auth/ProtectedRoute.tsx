@@ -2,7 +2,7 @@
  * @file ProtectedRoute.tsx
  * Route protection component that redirects unauthenticated users.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import type { ReactNode } from "react";

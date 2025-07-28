@@ -2,7 +2,7 @@
  * @file routes/auth.tsx
  * Authentication page with combined sign-in/register form.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import { AuthForm } from "~/components/auth/AuthForm";

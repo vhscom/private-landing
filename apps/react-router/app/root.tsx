@@ -2,7 +2,7 @@
  * @file root.tsx
  * Provides layout, error boundaries, and global styles.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import {

@@ -3,7 +3,7 @@
  * Authentication context provider for managing auth state.
  * Ready to integrate with Private Landing auth system.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import {

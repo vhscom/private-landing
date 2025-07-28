@@ -2,7 +2,7 @@
  * @file entry.client.tsx
  * React Router client entrypoint.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import { HydratedRouter } from "react-router/dom";

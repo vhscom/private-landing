@@ -2,7 +2,7 @@
  * @file Layout.tsx
  * Main application layout with navigation and authentication status.
  *
- * @license LGPL-3.0-or-later
+ * @license Apache-2.0
  */
 
 import { Link, Outlet, useLocation } from "react-router";
