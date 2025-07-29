@@ -1,6 +1,9 @@
-# Cloudflare Launchpad
+# Private Landing
 
-> Launch your next Cloudflare Workers project in minutes with production-ready authentication
+> **🚀 Developer platform and foundational tools for modern applications**  
+> **⚡ Built for edge deployment with Cloudflare Workers**
+
+Private Landing provides enterprise-grade authentication infrastructure and developer tools, serving as the technical foundation for Comfusion's upcoming platform innovations.
 
 [![License](https://badgen.net/badge/License/Apache-2.0/blue?style=flat)](https://opensource.org/licenses/Apache-2.0)
 [![FOSSA Status](https://app.fossa.com/api/projects/custom%2B56080%2Fgithub.com%2Fvhscom%2Fprivate-landing.svg?type=small)](https://app.fossa.com/projects/custom%2B56080%2Fgithub.com%2Fvhscom%2Fprivate-landing?ref=badge_small)
@@ -9,21 +12,19 @@
 
 A monorepo foundation for building secure, type-safe APIs using [Cloudflare Workers](https://workers.cloudflare.com/), [Hono](https://honojs.dev/) and [Turso](https://turso.tech/).
 
-This is the pure authentication foundation extracted from a larger audio platform project. Perfect for bootstrapping new applications that need solid auth infrastructure.
+## 🏗️ Project Evolution
 
-## 📋 License Compliance
+Private Landing serves as the core platform for multiple initiatives:
 
-This foundation has been scanned and verified to contain **only permissive dependencies**:
-- ✅ No GPL/AGPL dependencies
-- ✅ No copyleft restrictions
-- ✅ 100% commercial-use friendly
-- ✅ Safe for enterprise adoption
+- **🚀 Cloudflare Launchpad** - Pure auth scaffold → [`archive/cloudflare-launchpad`](../../tree/archive/cloudflare-launchpad) branch
+- **🎯 Main Platform** - Enhanced foundation with upcoming specialized capabilities
+- **⚡ Edge-First** - Optimized for global deployment and performance
 
-Perfect for building commercial applications without license concerns.
+**Need just authentication?** Use the [Cloudflare Launchpad](../../tree/archive/cloudflare-launchpad) archive for a clean, focused starting point.
 
 ## What's Included
 
-This foundation provides everything needed for authenticated APIs:
+This foundation provides everything needed for modern edge applications:
 
 - **🔐 Secure Authentication** - NIST-compliant password storage, JWT-based API auth
 - **📱 Session Management** - Track devices, manage user sessions, auto-refresh tokens
@@ -32,27 +33,25 @@ This foundation provides everything needed for authenticated APIs:
 - **💻 Developer Experience** - TypeScript, automated formatting, comprehensive docs
 - **⚡ Security Features** - Rate limiting ready, following security best practices
 - **📦 Monorepo Structure** - Well-organized packages with clear boundaries
+- **🔧 Production Ready** - FOSSA compliance, automated attribution, CI/CD integration
 
-## What's NOT Included
+## What's Coming
 
-- Audio processing capabilities
-- Advanced analytics features
-- Domain-specific business logic
+Private Landing is actively evolving to support advanced use cases:
 
-This keeps the foundation lightweight and focused purely on authentication infrastructure.
+- 🚧 **Enhanced capabilities** for specialized applications
+- 🚧 **Additional developer tools** and utilities
+- 🚧 **Extended platform features** (details coming soon)
+- 🚧 **Business-grade functionality** for enterprise deployments
 
-Perfect for:
-- Building authenticated APIs at the edge
-- Starting new SaaS projects quickly
-- Learning modern auth implementation
-- Enterprise projects needing clean Apache-2.0 foundation
+Stay tuned for announcements about upcoming platform capabilities.
 
 ## Repository Structure
 
 ```shell
 .
 ├── apps/
-│   └── cloudflare-workers/    # Example Cloudflare Workers implementation
+│   └── cloudflare-workers/    # Main Cloudflare Workers application
 ├── packages/
 │   ├── auth/                  # Core authentication logic
 │   ├── errors/                # Shared error types and handling
@@ -351,19 +350,20 @@ A failsafe mechanism is in place requiring the word `test` within your test data
 
 ## Project Lineage
 
-This foundation was extracted from a larger platform project to provide a clean, enterprise-safe starting point:
+Private Landing is the foundational platform for multiple specialized applications:
 
-- **This branch** (`archive/cloudflare-launchpad`): Pure Apache-2.0 auth foundation
+- **Archive branch** (`archive/cloudflare-launchpad`): Pure Apache-2.0 auth foundation
+- **Main branch**: Enhanced platform with extensibility for specialized use cases
 - **Canonical source**: https://codeberg.org/vhs/private-landing
 - **GitHub mirror**: https://github.com/vhscom/private-landing
 
-**Need advanced features?** The main branch includes additional capabilities for specialized use cases.
+**Need just the auth foundation?** Use the [Cloudflare Launchpad](../../tree/archive/cloudflare-launchpad) archive branch.
 
 ## Getting Started
 
-1. **Clone this foundation**:
+1. **Clone this platform**:
    ```shell
-   git clone -b archive/cloudflare-launchpad https://github.com/vhscom/private-landing.git my-new-project
+   git clone https://github.com/vhscom/private-landing.git my-new-project
    cd my-new-project
    ```
 
@@ -381,8 +381,20 @@ This foundation was extracted from a larger platform project to provide a clean,
    bun run dev
    ```
 
-6. **Build your application** on this solid authentication foundation!
+6. **Build your application** on this solid foundation!
+
+## 📞 Contact
+
+- **General questions**: Open an issue on the repository
+- **Business inquiries**: josh@comfus.io
+- **Security issues**: josh@comfus.io (private disclosure)
 
 ## License
 
 Apache 2.0 - Open source and commercial-friendly. Use this foundation in any project without restrictions. See [LICENSE](LICENSE) for details.
+
+---
+
+**🚀 Building the future of edge applications**  
+**⚡ Powered by Cloudflare Workers and modern web standards**  
+**🔧 Production-ready foundation for your next project**
