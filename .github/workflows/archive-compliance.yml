@@ -1,0 +1,126 @@
+name: Archive License Compliance
+
+on:
+  push:
+    branches: [ archive/cloudflare-launchpad ]
+  pull_request:
+    branches: [ archive/cloudflare-launchpad ]
+  schedule:
+    # Run weekly on Sundays at 3 AM UTC (offset from main branch scan)
+    - cron: '0 3 * * 0'
+
+jobs:
+  license-scan:
+    name: Strict License Scan for Archive
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # Verify no BSL components exist
+      - name: Check for BSL components
+        run: |
+          if [ -d "packages/fingerprinting" ]; then
+            echo "❌ ERROR: BSL fingerprinting package found in archive branch"
+            echo "Archive branch should contain only Apache-2.0 components"
+            exit 1
+          fi
+          
+          # Check for any BSL references
+          if grep -r "BSL\|Business Source" . --exclude-dir=node_modules --exclude-dir=.git; then
+            echo "❌ ERROR: BSL references found in archive branch"
+            exit 1
+          fi
+          
+          echo "✅ Archive branch is clean - no BSL components found"
+
+      # Verify all packages are Apache-2.0
+      - name: Verify package licenses
+        run: |
+          echo "📋 Checking package licenses..."
+          find packages -name "package.json" 2>/dev/null | while read pkg; do
+            if [ -f "$pkg" ]; then
+              license=$(node -e "console.log(require('$pkg').license || 'unknown')")
+              name=$(node -e "console.log(require('$pkg').name || 'unknown')")
+          
+              if [ "$license" != "Apache-2.0" ] && [ "$name" != "@private-landing/root" ]; then
+                echo "❌ ERROR: Package $name has license: $license (expected Apache-2.0)"
+                exit 1
+              fi
+          
+              echo "✅ $name: $license"
+            fi
+          done
+
+      # Stricter FOSSA scan for foundation
+      - name: FOSSA Analysis
+        uses: fossas/fossa-action@main
+        with:
+          api-key: ${{ secrets.FOSSA_API_KEY }}
+          run-tests: false
+
+      # Fail hard on any license violations
+      - name: FOSSA Test (Strict)
+        uses: fossas/fossa-action@main
+        with:
+          api-key: ${{ secrets.FOSSA_API_KEY }}
+          run-tests: true
+        # Don't allow failures on archive branch
+        continue-on-error: false
+
+      # Create issue if weekly scan fails
+      - name: Create issue on weekly scan failure
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueBody = `
+            ## 🚨 Archive Branch License Compliance Issue
+
+            The weekly license compliance scan for the \`archive/cloudflare-launchpad\` branch has detected issues.
+
+            ### What this means:
+            - Dependencies may have changed licenses
+            - New transitive dependencies might have incompatible licenses
+            - The archive branch may no longer be enterprise-safe
+
+            ### Immediate actions needed:
+            1. Review the FOSSA dashboard: https://app.fossa.com/projects/git%2Bgithub.com%2F${{ github.repository }}?ref=archive%2Fcloudflare-launchpad
+            2. Check \`bun install\` logs for any dependency changes
+            3. Update \`.fossa.yml\` policies if needed
+            4. Consider pinning problematic dependencies
+
+            ### Impact:
+            ⚠️ **The Cloudflare Launchpad foundation may not be safe for enterprise use until this is resolved.**
+
+            CC: @${github.repository_owner}
+            `;
+
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Archive Branch License Compliance Failure',
+              body: issueBody,
+              labels: ['license-compliance', 'archive-branch', 'urgent']
+            });
+
+      - name: Archive validation summary
+        if: success()
+        run: |
+          echo "🎉 Archive branch validation complete!"
+          echo "✅ No BSL components"
+          echo "✅ All packages Apache-2.0"
+          echo "✅ Dependencies license compliant"
+          echo "✅ Ready for enterprise use"

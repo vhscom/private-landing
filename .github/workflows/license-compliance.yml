@@ -3,7 +3,7 @@ name: License Compliance
 
 on:
   push:
-    branches: [ main, develop, archive/cloudflare-launchpad ]
+    branches: [ main, develop ]
   pull_request:
     branches: [ main ]
   schedule:
@@ -75,7 +75,7 @@ jobs:
             1. Review the FOSSA dashboard: https://app.fossa.com/projects/git%2Bgithub.com%2F${{ github.repository }}
             2. Check for newly added dependencies with incompatible licenses
             3. Update \`.fossa.yml\` configuration if needed
-            4. Contact the team if you need help resolving license issues
+            4. Contact josh@comfus.io if you need help resolving license issues
 
             **Note**: This check is informational and won't block the PR, but issues should be resolved before merging.
             `;
@@ -96,7 +96,7 @@ jobs:
             .fossa/
           retention-days: 30
 
-  # Generate attribution file on main branch only
+  # Generate attribution file on main branch only (will handle mixed licensing)
   generate-attribution:
     name: Generate License Attribution
     runs-on: ubuntu-latest
@@ -118,29 +118,57 @@ jobs:
           cat > NOTICE.md << 'EOF'
           # Third-Party Licenses and Attributions
 
-          This software contains code and dependencies under various open source licenses.
-          The following is a summary of the licenses and their respective components:
+          This software contains code and dependencies under various licenses.
 
-          ## Direct Dependencies
+          ## Internal Packages
 
+          ### Apache-2.0 Licensed
           EOF
 
-          # Extract license info from package.json files
-          find . -name "package.json" -not -path "./node_modules/*" | while read pkg; do
+          # Process Apache-2.0 packages (exclude fingerprinting if it exists)
+          find . -name "package.json" -not -path "./node_modules/*" -not -path "./packages/fingerprinting/*" | while read pkg; do
             echo "Processing: $pkg"
             if [ -f "$pkg" ]; then
-              dir=$(dirname "$pkg")
               name=$(node -e "console.log(require('$pkg').name || 'unknown')")
               license=$(node -e "console.log(require('$pkg').license || 'unknown')")
-              echo "- **$name**: $license License" >> NOTICE.md
+              if [ "$license" = "Apache-2.0" ] && [ "$name" != "@private-landing/root" ]; then
+                echo "- **$name**: $license License" >> NOTICE.md
+              fi
             fi
           done
 
+          # Check if BSL packages exist and add them
+          if [ -d "./packages/fingerprinting" ] && [ -f "./packages/fingerprinting/package.json" ]; then
+            echo "" >> NOTICE.md
+            echo "### Business Source License (BSL-1.1)" >> NOTICE.md
+          
+            name=$(node -e "console.log(require('./packages/fingerprinting/package.json').name)")
+            echo "- **$name**: BSL-1.1 (converts to Apache-2.0 on August 1, 2027)" >> NOTICE.md
+            echo "  - Copyright (c) 2025 Josh Habdas / Comfusion" >> NOTICE.md
+            echo "  - Contact: josh@comfus.io for commercial licensing" >> NOTICE.md
+            echo "  - Full license: packages/fingerprinting/LICENSE" >> NOTICE.md
+          fi
+
           echo "" >> NOTICE.md
-          echo "## Dependency Licenses" >> NOTICE.md
+          echo "## External Dependencies" >> NOTICE.md
           echo "" >> NOTICE.md
           echo "For a complete list of all dependencies and their licenses, see the FOSSA analysis report." >> NOTICE.md
           echo "" >> NOTICE.md
+
+          # Add mixed license notice only if BSL packages exist
+          if [ -d "./packages/fingerprinting" ]; then
+            echo "## Mixed License Notice" >> NOTICE.md
+            echo "" >> NOTICE.md
+            echo "This monorepo contains packages under different licenses:" >> NOTICE.md
+            echo "- Most packages are Apache-2.0 (permissive open source)" >> NOTICE.md
+            echo "- Fingerprinting package is BSL-1.1 (source-available, becomes Apache-2.0 in 2027)" >> NOTICE.md
+            echo "" >> NOTICE.md
+            echo "When using packages from this repository, respect the individual package licenses." >> NOTICE.md
+            echo "" >> NOTICE.md
+            echo "**🏗️ Need just authentication?** Use the \`archive/cloudflare-launchpad\` branch for a clean Apache-2.0 foundation." >> NOTICE.md
+            echo "" >> NOTICE.md
+          fi
+
           echo "Generated on: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> NOTICE.md
 
       - name: Commit attribution updates
