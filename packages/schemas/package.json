@@ -1,6 +1,16 @@
 {
 	"name": "@private-landing/schemas",
-	"version": "1.0.0-alpha.3",
+	"version": "1.0.0",
+	"description": "Zod validation schemas for authentication system",
+	"license": "Apache-2.0",
+	"author": "Josh Habdas <josh@comfus.io>",
+	"homepage": "https://github.com/vhscom/private-landing/tree/archive/cloudflare-launchpad",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/vhscom/private-landing",
+		"directory": "packages/schemas"
+	},
+	"keywords": ["validation", "schemas", "zod", "typescript"],
 	"type": "module",
 	"engines": {
 		"node": ">=18.0.0"
@@ -31,6 +41,5 @@
 	"devDependencies": {
 		"bun-types": "^1.2.5",
 		"typescript": "^5.0.0"
-	},
-	"license": "Apache-2.0"
+	}
 }

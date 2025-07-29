@@ -1,6 +1,16 @@
 {
 	"name": "@private-landing/cloudflare-workers",
-	"version": "1.0.0-alpha.3",
+	"version": "1.0.0",
+	"description": "Example Cloudflare Workers implementation with authentication",
+	"license": "Apache-2.0",
+	"author": "Josh Habdas <josh@comfus.io>",
+	"homepage": "https://github.com/vhscom/private-landing/tree/archive/cloudflare-launchpad",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/vhscom/private-landing",
+		"directory": "apps/cloudflare-workers"
+	},
+	"keywords": ["cloudflare-workers", "authentication", "api", "example"],
 	"private": true,
 	"type": "module",
 	"engines": {
@@ -45,6 +55,5 @@
 		"@types/nanoid": "^3.0.0",
 		"typescript": "^5.8.2",
 		"vitest": "2.1.8"
-	},
-	"license": "Apache-2.0"
+	}
 }

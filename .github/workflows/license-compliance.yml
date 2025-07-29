@@ -3,7 +3,7 @@ name: License Compliance
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, archive/cloudflare-launchpad ]
   pull_request:
     branches: [ main ]
   schedule:

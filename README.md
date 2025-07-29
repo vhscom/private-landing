@@ -1,23 +1,49 @@
-# Private Landing
+# Cloudflare Launchpad
 
-A monorepo template for building secure, type-safe APIs using [Cloudflare Workers](https://workers.cloudflare.com/), [Hono](https://honojs.dev/) and [Turso](https://turso.tech/). Inspired by Scott Tolinski, Mark Volkmann.
+> Launch your next Cloudflare Workers project in minutes with production-ready authentication
+
+[![License](https://badgen.net/badge/License/Apache-2.0/blue?style=flat)](https://opensource.org/licenses/Apache-2.0)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fvhscom%2Fprivate-landing.svg?type=shield&ref=archive%2Fcloudflare-launchpad&style=flat)](https://app.fossa.com/projects/git%2Bgithub.com%2Fvhscom%2Fprivate-landing?ref=archive%2Fcloudflare-launchpad)
+[![TypeScript](https://badgen.net/badge/TypeScript/5.0+/blue?style=flat)](https://www.typescriptlang.org/)
+[![Cloudflare Workers](https://badgen.net/badge/Cloudflare/Workers/orange?style=flat)](https://workers.cloudflare.com/)
+
+A monorepo foundation for building secure, type-safe APIs using [Cloudflare Workers](https://workers.cloudflare.com/), [Hono](https://honojs.dev/) and [Turso](https://turso.tech/).
+
+This is the pure authentication foundation extracted from a larger audio platform project. Perfect for bootstrapping new applications that need solid auth infrastructure.
 
 ## What's Included
 
-This starter provides a foundation for building authenticated APIs:
+This foundation provides everything needed for authenticated APIs:
 
-- 🔐 **Secure Authentication** - NIST-compliant password storage, JWT-based API auth
-- 📱 **Session Management** - Track devices, manage user sessions, auto-refresh tokens
-- 🗄️ **SQLite Database** - Purpose-built schema, migrations, and management scripts
-- 🚀 **Edge-Ready** - Built for Cloudflare Workers with Hono and Turso
-- 💻 **Developer Experience** - TypeScript, automated formatting, comprehensive docs
-- ⚡ **Security Features** - Rate limiting ready, following security best practices
-- 📦 **Monorepo Structure** - Well-organized packages with clear boundaries
+- **Secure Authentication** - NIST-compliant password storage, JWT-based API auth
+- **Session Management** - Track devices, manage user sessions, auto-refresh tokens
+- **SQLite Database** - Purpose-built schema, migrations, and management scripts
+- **Edge-Ready** - Built for Cloudflare Workers with Hono and Turso
+- **Developer Experience** - TypeScript, automated formatting, comprehensive docs
+- **Security Features** - Rate limiting ready, following security best practices
+- **Monorepo Structure** - Well-organized packages with clear boundaries
+
+## What's NOT Included
+
+- Audio processing capabilities (see main branch for advanced features)
+- Business logic beyond authentication
+- Domain-specific functionality
 
 Perfect for:
 - Building authenticated APIs at the edge
 - Starting new SaaS projects quickly
 - Learning modern auth implementation
+- Enterprise projects needing clean Apache-2.0 foundation
+
+## License Compliance
+
+This foundation has been scanned and verified to contain only permissive dependencies:
+- No GPL/AGPL dependencies
+- No copyleft restrictions
+- 100% commercial-use friendly
+- Safe for enterprise adoption
+
+Perfect for building commercial applications without license concerns.
 
 ## Repository Structure
 
@@ -26,7 +52,7 @@ Perfect for:
 ├── apps/
 │   └── cloudflare-workers/    # Example Cloudflare Workers implementation
 ├── packages/
-│   ├── core/                  # Core authentication logic
+│   ├── auth/                  # Core authentication logic
 │   ├── errors/                # Shared error types and handling
 │   ├── infrastructure/        # Database and middleware utilities
 │   ├── schemas/               # Zod schemas for validation
@@ -39,8 +65,8 @@ Perfect for:
 
 ```typescript
 // Core authentication functionality
-import { requireAuth, securityHeaders } from "@private-landing/core/auth";
-import { defaultSessionConfig } from "@private-landing/core/config";
+import { requireAuth, securityHeaders } from "@private-landing/auth";
+import { defaultSessionConfig } from "@private-landing/auth/config";
 
 // Type-safe error handling
 import { TokenError, SessionError } from "@private-landing/types/auth";
@@ -249,7 +275,7 @@ The project uses Vitest for testing the Cloudflare Worker implementation:
 - End-to-end API tests
 - Cloudflare Workers runtime simulation
 
-- Run tests using:
+Run tests using:
 
 ```shell
 bun run test:workers        # Run all worker tests
@@ -257,6 +283,7 @@ bun run test:workers:watch  # Watch mode for development
 ```
 
 ## Package Management
+
 The monorepo uses Bun workspaces for package management:
 
 - Packages are versioned independently
@@ -320,6 +347,17 @@ cd apps/cloudflare-workers && \
 
 A failsafe mechanism is in place requiring the word `test` within your test database name. This behavior is intended to prevent accidentally running test SQL against non-test DBs.
 
+## Project Lineage
+
+This foundation was extracted from a larger audio platform project:
+
+- **This branch** (`archive/cloudflare-launchpad`): Pure Apache-2.0 auth foundation
+- **Main branch**: Full platform including BSL-licensed audio fingerprinting technology
+- **Canonical source**: https://codeberg.org/vhs/private-landing
+- **GitHub mirror**: https://github.com/vhscom/private-landing
+
+**Need advanced audio features?** See the main branch for cutting-edge audio fingerprinting capabilities.
+
 ## License
 
-Apache 2.0 - Open source and commercial-friendly. See [LICENSE](LICENSE) for details.
+Apache 2.0 - Open source and commercial-friendly. Use this foundation in any project without restrictions. See [LICENSE](LICENSE) for details.
