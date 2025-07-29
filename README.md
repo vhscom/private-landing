@@ -11,39 +11,41 @@ A monorepo foundation for building secure, type-safe APIs using [Cloudflare Work
 
 This is the pure authentication foundation extracted from a larger audio platform project. Perfect for bootstrapping new applications that need solid auth infrastructure.
 
+## 📋 License Compliance
+
+This foundation has been scanned and verified to contain **only permissive dependencies**:
+- ✅ No GPL/AGPL dependencies
+- ✅ No copyleft restrictions
+- ✅ 100% commercial-use friendly
+- ✅ Safe for enterprise adoption
+
+Perfect for building commercial applications without license concerns.
+
 ## What's Included
 
 This foundation provides everything needed for authenticated APIs:
 
-- **Secure Authentication** - NIST-compliant password storage, JWT-based API auth
-- **Session Management** - Track devices, manage user sessions, auto-refresh tokens
-- **SQLite Database** - Purpose-built schema, migrations, and management scripts
-- **Edge-Ready** - Built for Cloudflare Workers with Hono and Turso
-- **Developer Experience** - TypeScript, automated formatting, comprehensive docs
-- **Security Features** - Rate limiting ready, following security best practices
-- **Monorepo Structure** - Well-organized packages with clear boundaries
+- **🔐 Secure Authentication** - NIST-compliant password storage, JWT-based API auth
+- **📱 Session Management** - Track devices, manage user sessions, auto-refresh tokens
+- **🗄️ SQLite Database** - Purpose-built schema, migrations, and management scripts
+- **🚀 Edge-Ready** - Built for Cloudflare Workers with Hono and Turso
+- **💻 Developer Experience** - TypeScript, automated formatting, comprehensive docs
+- **⚡ Security Features** - Rate limiting ready, following security best practices
+- **📦 Monorepo Structure** - Well-organized packages with clear boundaries
 
 ## What's NOT Included
 
-- Audio processing capabilities (see main branch for advanced features)
-- Business logic beyond authentication
-- Domain-specific functionality
+- Audio processing capabilities
+- Advanced analytics features
+- Domain-specific business logic
+
+This keeps the foundation lightweight and focused purely on authentication infrastructure.
 
 Perfect for:
 - Building authenticated APIs at the edge
 - Starting new SaaS projects quickly
 - Learning modern auth implementation
 - Enterprise projects needing clean Apache-2.0 foundation
-
-## License Compliance
-
-This foundation has been scanned and verified to contain only permissive dependencies:
-- No GPL/AGPL dependencies
-- No copyleft restrictions
-- 100% commercial-use friendly
-- Safe for enterprise adoption
-
-Perfect for building commercial applications without license concerns.
 
 ## Repository Structure
 
@@ -349,14 +351,37 @@ A failsafe mechanism is in place requiring the word `test` within your test data
 
 ## Project Lineage
 
-This foundation was extracted from a larger audio platform project:
+This foundation was extracted from a larger platform project to provide a clean, enterprise-safe starting point:
 
 - **This branch** (`archive/cloudflare-launchpad`): Pure Apache-2.0 auth foundation
-- **Main branch**: Full platform including BSL-licensed audio fingerprinting technology
 - **Canonical source**: https://codeberg.org/vhs/private-landing
 - **GitHub mirror**: https://github.com/vhscom/private-landing
 
-**Need advanced audio features?** See the main branch for cutting-edge audio fingerprinting capabilities.
+**Need advanced features?** The main branch includes additional capabilities for specialized use cases.
+
+## Getting Started
+
+1. **Clone this foundation**:
+   ```shell
+   git clone -b archive/cloudflare-launchpad https://github.com/vhscom/private-landing.git my-new-project
+   cd my-new-project
+   ```
+
+2. **Install dependencies**:
+   ```shell
+   bun install
+   ```
+
+3. **Set up your database** (see Database Setup section above)
+
+4. **Configure environment** (see Environment Setup section above)
+
+5. **Start developing**:
+   ```shell
+   bun run dev
+   ```
+
+6. **Build your application** on this solid authentication foundation!
 
 ## License
 
