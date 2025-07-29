@@ -4,6 +4,12 @@ version: 3
 project:
   name: "cloudflare-launchpad"
 
+projects:
+  - path: .
+    type: npm
+    detect:
+      exclude-dev: true
+
 options:
   allow-unresolved: true
 
