@@ -3,7 +3,7 @@
 > Launch your next Cloudflare Workers project in minutes with production-ready authentication
 
 [![License](https://badgen.net/badge/License/Apache-2.0/blue?style=flat)](https://opensource.org/licenses/Apache-2.0)
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fvhscom%2Fprivate-landing.svg?type=shield&ref=archive%2Fcloudflare-launchpad&style=flat)](https://app.fossa.com/projects/git%2Bgithub.com%2Fvhscom%2Fprivate-landing?ref=archive%2Fcloudflare-launchpad)
+[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B56080%2Fgithub.com%2Fvhscom%2Fprivate-landing.svg?type=small)](https://app.fossa.com/projects/custom%2B56080%2Fgithub.com%2Fvhscom%2Fprivate-landing?ref=badge_small)
 [![TypeScript](https://badgen.net/badge/TypeScript/5.0+/blue?style=flat)](https://www.typescriptlang.org/)
 [![Cloudflare Workers](https://badgen.net/badge/Cloudflare/Workers/orange?style=flat)](https://workers.cloudflare.com/)
 
