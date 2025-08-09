@@ -9,7 +9,12 @@
 		"url": "https://github.com/vhscom/private-landing",
 		"directory": "."
 	},
-	"keywords": ["authentication", "cloudflare-workers", "typescript", "launchpad"],
+	"keywords": [
+		"authentication",
+		"cloudflare-workers",
+		"typescript",
+		"launchpad"
+	],
 	"private": true,
 	"workspaces": ["packages/*", "apps/*"],
 	"engines": {
