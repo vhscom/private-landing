@@ -10,7 +10,12 @@
 		"url": "https://github.com/vhscom/private-landing",
 		"directory": "packages/infrastructure"
 	},
-	"keywords": ["infrastructure", "database", "middleware", "cloudflare-workers"],
+	"keywords": [
+		"infrastructure",
+		"database",
+		"middleware",
+		"cloudflare-workers"
+	],
 	"type": "module",
 	"engines": {
 		"node": ">=18.0.0"
