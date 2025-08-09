@@ -10,7 +10,13 @@
 		"url": "https://github.com/vhscom/private-landing",
 		"directory": "packages/core"
 	},
-	"keywords": ["authentication", "jwt", "sessions", "cloudflare-workers", "security"],
+	"keywords": [
+		"authentication",
+		"jwt",
+		"sessions",
+		"cloudflare-workers",
+		"security"
+	],
 	"type": "module",
 	"engines": {
 		"node": ">=18.0.0"
