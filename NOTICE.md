@@ -6,8 +6,8 @@ This software contains code and dependencies under various licenses.
 
 ### Apache-2.0 Licensed
 - **@private-landing/cloudflare-workers**: Apache-2.0 License
-- **@private-landing/schemas**: Apache-2.0 License
 - **@private-landing/types**: Apache-2.0 License
+- **@private-landing/schemas**: Apache-2.0 License
 - **@private-landing/core**: Apache-2.0 License
 - **@private-landing/errors**: Apache-2.0 License
 - **@private-landing/infrastructure**: Apache-2.0 License
@@ -16,4 +16,4 @@ This software contains code and dependencies under various licenses.
 
 For a complete list of all dependencies and their licenses, see the FOSSA analysis report.
 
-Generated on: 2025-10-19 02:32:58 UTC
+Generated on: 2025-10-26 02:37:50 UTC
