@@ -5,6 +5,8 @@
  * @license Apache-2.0
  */
 
+import { timingSafeEqual } from "../utils/crypto";
+
 /**
  * Valid bit lengths for hash algorithms.
  * Must match available SHA variants (SHA-256, SHA-384, SHA-512).
@@ -197,8 +199,7 @@ export async function hashPassword(password: string) {
  * Process:
  * 1. Parse stored password components
  * 2. Recreate hash using same salt/iterations
- * 3. Generate verification digest
- * 4. Compare both hash and digest
+ * 3. Compare hash using constant-time verification
  *
  * @param password - Plain text password to verify
  * @param storedPasswordData - Complete stored password string
@@ -236,20 +237,17 @@ export async function verifyPassword(
 		passwordConfig.bits,
 	);
 
-	// Generate digest for additional verification
-	const digestBuffer = await crypto.subtle.digest(
+	// Generate digest using derived bits
+	const _digestBuffer = await crypto.subtle.digest(
 		`SHA-${passwordConfig.bits}`,
 		hashBuffer,
 	);
 
-	// Convert to base64 for comparison
-	const hashArray = Array.from(new Uint8Array(hashBuffer));
-	const digestArray = Array.from(new Uint8Array(digestBuffer));
-	const computedHash = btoa(String.fromCharCode(...hashArray));
-	const computedDigest = btoa(String.fromCharCode(...digestArray));
-
-	// Compare both hash and digest
-	return computedHash === hash && computedDigest === parsed.digest;
+	// Compare hashes using constant-time comparison
+	return await timingSafeEqual(
+		hashBuffer,
+		Uint8Array.from(atob(hash), (c) => c.charCodeAt(0)),
+	);
 }
 
 /**

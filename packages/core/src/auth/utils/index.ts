@@ -1,8 +1,9 @@
 /**
  * @file index.ts
- * Exports authentication cookie utilities.
+ * Exports authentication utilities.
  *
  * @license Apache-2.0
  */
 
 export * from "./cookie";
+export * from "./crypto";
