@@ -7,11 +7,3 @@ backup.sql
 coverage
 dist
 tsconfig.tsbuildinfo
-
-# FOSSA
-.fossa/
-fossa-report.json
-.fossa-cache/
-
-# Keep the configuration file
-!.fossa.yml
