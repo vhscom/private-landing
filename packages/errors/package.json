@@ -4,7 +4,7 @@
 	"description": "Shared error types and handling utilities",
 	"license": "Apache-2.0",
 	"author": "Josh Habdas <josh@comfus.io>",
-	"homepage": "https://github.com/vhscom/private-landing/tree/archive/cloudflare-launchpad",
+	"homepage": "https://github.com/vhscom/private-landing",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/vhscom/private-landing",
@@ -14,7 +14,8 @@
 	"private": true,
 	"type": "module",
 	"engines": {
-		"node": ">=18.0.0"
+		"node": ">=24.0.0",
+		"bun": ">=1.0.0"
 	},
 	"exports": {
 		".": {

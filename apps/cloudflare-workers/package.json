@@ -4,7 +4,7 @@
 	"description": "Example Cloudflare Workers implementation with authentication",
 	"license": "Apache-2.0",
 	"author": "Josh Habdas <josh@comfus.io>",
-	"homepage": "https://github.com/vhscom/private-landing/tree/archive/cloudflare-launchpad",
+	"homepage": "https://github.com/vhscom/private-landing",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/vhscom/private-landing",

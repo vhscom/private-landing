@@ -1,9 +1,9 @@
 {
 	"name": "@private-landing/root",
 	"version": "1.0.0",
-	"description": "Cloudflare authentication launchpad - battle-tested foundation",
+	"description": "Private Landing — Authentication Reference",
 	"license": "Apache-2.0",
-	"homepage": "https://github.com/vhscom/private-landing/tree/archive/cloudflare-launchpad",
+	"homepage": "https://github.com/vhscom/private-landing/",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/vhscom/private-landing",
@@ -18,7 +18,7 @@
 	"private": true,
 	"workspaces": ["packages/*", "apps/*"],
 	"engines": {
-		"node": ">=18.0.0",
+		"node": ">=24.0.0",
 		"bun": ">=1.0.0"
 	},
 	"scripts": {
