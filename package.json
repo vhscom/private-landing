@@ -34,5 +34,21 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4"
+	},
+	"cloudflare": {
+		"bindings": {
+			"AUTH_DB_URL": {
+				"description": "libSQL database connection string like libsql://your-db.turso.io (Variable or Secret)"
+			},
+			"AUTH_DB_TOKEN": {
+				"description": "libSQL database access token (Secret)"
+			},
+			"JWT_ACCESS_SECRET": {
+				"description": "Generate a random string using `openssl rand -hex 32` (Secret)"
+			},
+			"JWT_REFRESH_SECRET": {
+				"description": "Generate a random string using `openssl rand -hex 32` (Secret)"
+			}
+		}
 	}
 }
