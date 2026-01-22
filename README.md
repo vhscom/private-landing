@@ -1,6 +1,6 @@
 # Private Landing – Authentication Reference
 
-> A clean, educational reference implementation of secure authentication for Cloudflare Workers inspired by Mark Volkmann and Scott Tolinski
+> A clean, educational reference implementation of secure authentication for Cloudflare Workers
 
 [![License](https://badgen.net/badge/License/Apache-2.0/blue?style=flat)](https://opensource.org/licenses/Apache-2.0)
 [![TypeScript](https://badgen.net/badge/TypeScript/5.0+/blue?style=flat)](https://www.typescriptlang.org/)
