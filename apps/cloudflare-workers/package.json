@@ -41,7 +41,7 @@
 		"@private-landing/types": "workspace:*",
 		"hono": "^4.7.5",
 		"nanoid": "^5.1.2",
-		"zod": "^3.24.2"
+		"zod": "^4.3.5"
 	},
 	"optionalDependencies": {
 		"miniflare": "^3.20250214.1",
