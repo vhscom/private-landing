@@ -15,26 +15,39 @@
  */
 
 import { z } from "zod";
+import { normalizePassword } from "../utils";
 
 /**
- * Base email validation schema with normalization.
- * Ensures consistent email format and case handling.
+ * Email validation schema with normalization.
+ * Ensures consistent email format and case handling to prevent duplicate accounts.
  */
 const emailSchema = z
 	.string()
 	.email("Invalid email format")
-	.transform((email) => email.toLowerCase().trim());
+	.toLowerCase()
+	.trim();
+
+/**
+ * Password validation schema following NIST SP 800-63B requirements:
+ * - Password length requirements per NIST recommendations
+ * - No composition rules (per NIST guidance against complexity requirements)
+ */
+const passwordSchema = z
+	.string()
+	.min(8, "Password must contain at least 8 characters")
+	.max(64, "Password may not exceed 64 characters")
+	.transform(normalizePassword)
+	.refine((normalized) => normalized.length >= 8, {
+		message: "Password must contain at least 8 characters after normalization",
+	});
 
 /**
  * Login credentials schema.
- * Applies NIST SP 800-63B compliant validation:
- * - Email normalization to prevent duplicate accounts
- * - Password normalization per NIST recommendations
- * - No composition rules (per NIST guidance against complexity requirements)
+ * Applies NIST SP 800-63B compliant email and password validation.
  */
 export const loginSchema = z.object({
 	email: emailSchema,
-	password: z.string(),
+	password: passwordSchema,
 });
 
 /**

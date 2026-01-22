@@ -89,6 +89,7 @@ export function createAccountService(
 				throw new ValidationError(formatZodError(parseResult.error));
 			}
 
+			// Schema implements NIST SP 800-63B requirements for memorized secrets
 			const validatedData = parseResult.data;
 			const passwordData = await hashPassword(validatedData.password);
 
@@ -112,6 +113,7 @@ export function createAccountService(
 				};
 			}
 
+			// Schema implements NIST SP 800-63B requirements for memorized secrets
 			const validatedData = parseResult.data;
 			const dbClient = createDbClient(env);
 

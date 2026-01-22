@@ -28,3 +28,14 @@ export function formatZodError(error: ZodError): string {
 export async function isEmailUnique(email: string): Promise<boolean> {
 	return true; // TODO: implement database check
 }
+
+/**
+ * Normalizes a password string according to NIST SP 800-63B requirements.
+ * Applies NFKC normalization for Unicode stability and space normalization.
+ *
+ * @param password - Raw password string to normalize
+ * @returns Normalized password string
+ */
+export function normalizePassword(password: string): string {
+	return password.normalize("NFKC").replace(/\s+/g, " ");
+}

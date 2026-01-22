@@ -251,17 +251,6 @@ export async function verifyPassword(
 }
 
 /**
- * Normalizes a password string according to NIST SP 800-63B requirements.
- * Applies NFKC normalization for Unicode stability and space normalization.
- *
- * @param password - Raw password string to normalize
- * @returns Normalized password string
- */
-export function normalizePassword(password: string): string {
-	return password.normalize("NFKC").replace(/\s+/g, " ");
-}
-
-/**
  * Checks if a password is commonly used, compromised, or follows obvious patterns.
  * Implements NIST SP 800-63B guidelines for password verification.
  *
@@ -298,6 +287,5 @@ export async function isPasswordCompromised(password: string): Promise<{
 export const passwordService = {
 	hashPassword,
 	verifyPassword,
-	normalizePassword,
 	isPasswordCompromised,
 };
