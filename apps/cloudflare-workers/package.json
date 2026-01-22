@@ -19,6 +19,7 @@
 	"scripts": {
 		"clean": "rm -rf .wrangler",
 		"check": "biome check && tsc",
+		"build": "echo 'Skipping workers build during main build pass...'",
 		"dev": "wrangler dev --port 8788",
 		"wrangler:build": "wrangler deploy --dry-run --outdir=.wrangler/dist",
 		"deploy": "bun run check && wrangler deploy --minify",
@@ -43,10 +44,6 @@
 		"nanoid": "^5.1.2",
 		"zod": "^4.3.5"
 	},
-	"optionalDependencies": {
-		"miniflare": "^3.20250214.1",
-		"wrangler": "^4.3.0"
-	},
 	"devDependencies": {
 		"@biomejs/biome": "1.9.4",
 		"@cloudflare/vitest-pool-workers": "^0.7.8",
@@ -54,6 +51,7 @@
 		"@types/bun": "^1.2.4",
 		"@types/nanoid": "^3.0.0",
 		"typescript": "^5.8.2",
-		"vitest": "2.1.8"
+		"vitest": "2.1.8",
+		"wrangler": "^4.59.3"
 	}
 }
