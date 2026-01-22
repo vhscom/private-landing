@@ -251,6 +251,36 @@ export async function verifyPassword(
 }
 
 /**
+ * Performs a timing-equivalent password verification using a dummy password hash.
+ * Always returns `false` after spending roughly the same time as a real verification.
+ *
+ * @param _password - Password parameter (ignored, for API consistency)
+ * @throws Never. Errors swallowed to preserve timing behavior.
+ * @returns Promise resolving to false after timing-equivalent operation
+ */
+export async function rejectPasswordWithConstantTime(
+	_password: string,
+): Promise<false> {
+	// Use a fixed dummy password hash to maintain consistent timing.
+	// This password data represents a valid but non-existent account.
+	const DUMMY_PASSWORD_DATA =
+		"$pbkdf2-sha384$v1$100000$eUePGIA4YLuAgoL9Rdes+g==$" +
+		"BI747ZGJuwlcbJFfRTFW4naNkRj1goq035wXUBT7Ernv5s0qQWr2aM9zQPXDu9lD$" +
+		"HbHDDTUSrKhft4vw7QNWJFhHfqTQmn74RC6a7TUSe2Wx2cyDybFdUbZhLIqUVzqr";
+
+	// Perform full verification operation (will always return false).
+	// The real verifyPassword **must** use timing-safe comparison internally.
+	await verifyPassword(_password, DUMMY_PASSWORD_DATA).catch(
+		(error: unknown) => {
+			// swallow errors to prevent introducing timing differences
+			// or leaking information about the password data format
+		},
+	);
+
+	return false;
+}
+
+/**
  * Checks if a password is commonly used, compromised, or follows obvious patterns.
  * Implements NIST SP 800-63B guidelines for password verification.
  *
@@ -287,5 +317,6 @@ export async function isPasswordCompromised(password: string): Promise<{
 export const passwordService = {
 	hashPassword,
 	verifyPassword,
+	rejectPasswordWithConstantTime,
 	isPasswordCompromised,
 };

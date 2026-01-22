@@ -12,6 +12,7 @@
  * @license Apache-2.0
  */
 
+import { LibsqlError } from "@libsql/client";
 import { createAuthSystem } from "@private-landing/core";
 import { ValidationError } from "@private-landing/errors";
 import type { LoginInput, RegistrationInput } from "@private-landing/schemas";
@@ -84,7 +85,12 @@ export async function handleLogout(ctx: Context) {
 
 /**
  * Example registration handler showing account creation.
- * Demonstrates input validation and error handling.
+ * Demonstrates input validation and error handling with protection against user enumeration.
+ *
+ * Security considerations:
+ * - Database constraint errors are sanitized to prevent email enumeration
+ * - Generic error messages don't reveal whether an email exists
+ * - Validation errors provide specific feedback (safe)
  *
  * @param ctx - Hono context containing request and environment
  * @returns Redirect response with success or error message
@@ -94,15 +100,40 @@ export async function handleRegistration(ctx: Context) {
 		const body = await ctx.req.parseBody();
 		await auth.accounts.createAccount(body as RegistrationInput, ctx.env);
 		return ctx.redirect("/?registered=true");
-	} catch (error) {
+	} catch (error: unknown) {
+		// Validation errors are safe to display (format/length issues)
 		if (error instanceof ValidationError) {
 			return ctx.redirect(`/?error=${encodeURIComponent(error.message)}`);
 		}
-		console.error("Registration error: ", error);
-		const errorMessage =
-			error instanceof Error
-				? error.message
-				: "Registration failed. Please try again.";
-		return ctx.redirect(`/?error=${encodeURIComponent(errorMessage)}`);
+
+		// Database constraint violations (e.g. duplicate email).
+		// Return generic message to prevent user account enumeration.
+		//
+		// Gotcha: Cannot check `error instanceof LibsqlError` in a monorepo
+		// unless libsql is hoisted properly. As a result, we need to perform
+		// a more defensive check to determine when there's a libsql error.
+		if (
+			error instanceof LibsqlError ||
+			(error instanceof Error && error.name === "LibsqlError")
+		) {
+			const coercedError = error as LibsqlError;
+
+			// Log the actual error for debugging (server-side only)
+			console.error("Database error during registration:", {
+				code: coercedError.code,
+				message: coercedError.message,
+			});
+
+			// Show user generic message that doesn't reveal if email exists
+			return ctx.redirect(
+				"/?error=Registration failed. Please try again or use a different email address.",
+			);
+		}
+
+		// Generic error for all other cases
+		console.error("Registration error:", error);
+		return ctx.redirect(
+			"/?error=Registration failed. Please try again or use a different email address.",
+		);
 	}
 }

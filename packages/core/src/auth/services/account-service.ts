@@ -25,7 +25,11 @@ import type {
 	LoginInput,
 	RegistrationInput,
 } from "@private-landing/types";
-import { hashPassword, verifyPassword } from "./password-service";
+import {
+	hashPassword,
+	rejectPasswordWithConstantTime,
+	verifyPassword,
+} from "./password-service";
 
 /**
  * Interface defining the account service API.
@@ -124,7 +128,11 @@ export function createAccountService(
 				args: [validatedData.email],
 			});
 
+			// Timing-safe rejection: perform dummy PBKDF2 operation when user
+			// doesn't exist. This equalizes response time with actual password
+			// verification to prevent timing-based user enumeration attacks.
 			if (result.rows.length === 0) {
+				await rejectPasswordWithConstantTime(validatedData.password);
 				return {
 					authenticated: false,
 					userId: null,
