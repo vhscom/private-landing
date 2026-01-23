@@ -24,11 +24,12 @@
 	"scripts": {
 		"clean": "bun run --filter '@private-landing/*' clean",
 		"build": "bun run --filter '@private-landing/*' build && bun run build:workers",
-		"build:workers": "bun run --filter '@private-landing/cloudflare-workers' wrangler:build",
-		"dev": "bun run --filter '@private-landing/cloudflare-workers' dev",
-		"test": "bun run test:workers",
-		"test:workers": "bun run --filter '@private-landing/cloudflare-workers' test",
+		"build:workers": "bun run --cwd apps/cloudflare-workers wrangler:build",
+		"dev": "bun run --cwd apps/cloudflare-workers dev",
+		"test": "bun run --cwd apps/cloudflare-workers test:run",
+		"test:watch": "bun run --cwd apps/cloudflare-workers test",
 		"typecheck": "bun run --filter '@private-landing/*' typecheck",
+		"lint": "biome lint",
 		"format": "biome check --write .",
 		"format:packages": "biome check --write packages"
 	},

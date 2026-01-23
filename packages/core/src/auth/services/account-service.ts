@@ -14,9 +14,15 @@
 
 import type { ResultSet } from "@libsql/client";
 import { ValidationError } from "@private-landing/errors";
-import { createDbClient } from "@private-landing/infrastructure";
-import { loginSchema, registrationSchema } from "@private-landing/schemas";
-import { formatZodError } from "@private-landing/schemas";
+import {
+	type DbClientFactory,
+	createDbClient as defaultCreateDbClient,
+} from "@private-landing/infrastructure";
+import {
+	formatZodError,
+	loginSchema,
+	registrationSchema,
+} from "@private-landing/schemas";
 import type {
 	AccountTable,
 	AccountTableConfig,
@@ -26,9 +32,8 @@ import type {
 	RegistrationInput,
 } from "@private-landing/types";
 import {
-	hashPassword,
-	rejectPasswordWithConstantTime,
-	verifyPassword,
+	type PasswordService,
+	createPasswordService,
 } from "./password-service";
 
 /**
@@ -59,10 +64,20 @@ export interface AccountService {
 }
 
 /**
+ * Configuration options for account service.
+ */
+export interface AccountServiceConfig extends AccountTableConfig {
+	/** Optional password service instance for dependency injection */
+	passwordService?: PasswordService;
+	/** Optional database client factory for dependency injection */
+	createDbClient?: DbClientFactory;
+}
+
+/**
  * Default table and column names for account management.
  * Can be overridden through AccountTableConfig.
  */
-const DEFAULT_CONFIG: Required<AccountTableConfig> = {
+const DEFAULT_TABLE_CONFIG: Required<AccountTableConfig> = {
 	tableName: "account",
 	emailColumn: "email",
 	passwordColumn: "password_data",
@@ -74,13 +89,20 @@ const DEFAULT_CONFIG: Required<AccountTableConfig> = {
  * Provides methods for account creation and authentication
  * with support for custom table schemas.
  *
- * @param config - Configuration for account table schema
+ * @param config - Configuration for account table schema and dependencies
  * @returns Account management service with CRUD operations
  */
 export function createAccountService(
-	config: AccountTableConfig = {},
+	config: AccountServiceConfig = {},
 ): AccountService {
-	const resolvedConfig = { ...DEFAULT_CONFIG, ...config };
+	const {
+		passwordService: injectedPasswordService,
+		createDbClient: injectedCreateDbClient,
+		...tableConfig
+	} = config;
+	const resolvedConfig = { ...DEFAULT_TABLE_CONFIG, ...tableConfig };
+	const passwords = injectedPasswordService ?? createPasswordService();
+	const createDbClient = injectedCreateDbClient ?? defaultCreateDbClient;
 
 	return {
 		async createAccount(
@@ -95,7 +117,7 @@ export function createAccountService(
 
 			// Schema implements NIST SP 800-63B requirements for memorized secrets
 			const validatedData = parseResult.data;
-			const passwordData = await hashPassword(validatedData.password);
+			const passwordData = await passwords.hashPassword(validatedData.password);
 
 			const dbClient = createDbClient(env);
 			return dbClient.execute({
@@ -132,7 +154,7 @@ export function createAccountService(
 			// doesn't exist. This equalizes response time with actual password
 			// verification to prevent timing-based user enumeration attacks.
 			if (result.rows.length === 0) {
-				await rejectPasswordWithConstantTime(validatedData.password);
+				await passwords.rejectPasswordWithConstantTime(validatedData.password);
 				return {
 					authenticated: false,
 					userId: null,
@@ -145,7 +167,7 @@ export function createAccountService(
 				resolvedConfig.passwordColumn as keyof AccountTable
 			] as string;
 
-			const isValid = await verifyPassword(
+			const isValid = await passwords.verifyPassword(
 				validatedData.password,
 				storedPasswordData,
 			);

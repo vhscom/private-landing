@@ -1,3 +1,10 @@
+/**
+ * @file auth.test.ts
+ * Integration tests for authentication flows including login and protected routes.
+ *
+ * @license Apache-2.0
+ */
+
 import { env } from "cloudflare:test";
 import {
 	type SqliteClient,

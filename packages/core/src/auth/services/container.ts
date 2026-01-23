@@ -7,12 +7,21 @@
 
 import type { AccountService } from "./account-service";
 import { createAccountService } from "./account-service";
+import type { PasswordService } from "./password-service";
+import { createPasswordService } from "./password-service";
 import type { SessionService } from "./session-service";
 import { createSessionService } from "./session-service";
+import type { TokenService } from "./token-service";
+import { createTokenService } from "./token-service";
 
+/**
+ * Registry of all available services.
+ */
 interface ServiceRegistry {
+	passwordService: PasswordService;
 	sessionService: SessionService;
 	accountService: AccountService;
+	tokenService: TokenService;
 }
 
 /**
@@ -37,8 +46,14 @@ export class ServiceContainer {
 	 * Should be called once during application startup.
 	 */
 	initializeServices(): void {
+		const passwordService = createPasswordService();
+		this.services.set("passwordService", passwordService);
 		this.services.set("sessionService", createSessionService());
-		this.services.set("accountService", createAccountService());
+		this.services.set(
+			"accountService",
+			createAccountService({ passwordService }),
+		);
+		this.services.set("tokenService", createTokenService());
 	}
 
 	/**
@@ -50,6 +65,14 @@ export class ServiceContainer {
 			throw new Error(`Service ${key} not initialized`);
 		}
 		return service as ServiceRegistry[K];
+	}
+
+	/**
+	 * Resets the container for testing purposes.
+	 * Clears all registered services.
+	 */
+	reset(): void {
+		this.services.clear();
 	}
 }
 

@@ -9,8 +9,9 @@
 import type { AuthDatabaseConfig } from "@private-landing/types";
 import {
 	createAccountService,
+	createPasswordService,
 	createSessionService,
-	tokenService,
+	createTokenService,
 } from "./services";
 
 /**
@@ -53,10 +54,17 @@ export function createAuthSystem(config: Partial<AuthDatabaseConfig> = {}) {
 		migrations: { ...DEFAULT_CONFIG.migrations, ...config.migrations },
 	};
 
+	// Create services with dependency injection
+	const passwords = createPasswordService();
+
 	return {
-		accounts: createAccountService(resolvedConfig.accounts),
+		passwords,
+		accounts: createAccountService({
+			...resolvedConfig.accounts,
+			passwordService: passwords,
+		}),
 		sessions: createSessionService(resolvedConfig.sessions),
-		tokens: tokenService,
+		tokens: createTokenService(),
 		config: resolvedConfig,
 	};
 }

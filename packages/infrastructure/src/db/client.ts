@@ -10,6 +10,12 @@ import type { Env } from "@private-landing/types";
 
 export type { SqliteClient };
 
+/**
+ * Factory function type for creating database clients.
+ * Used for dependency injection to enable testing with mock clients.
+ */
+export type DbClientFactory = (env: Env) => SqliteClient;
+
 export function createDbClient(env: Env): SqliteClient {
 	const url = env.AUTH_DB_URL?.trim();
 	if (!url) throw new Error("No URL");

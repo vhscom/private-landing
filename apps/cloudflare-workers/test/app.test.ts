@@ -1,3 +1,10 @@
+/**
+ * @file app.test.ts
+ * Integration tests for application routes, headers, and static asset serving.
+ *
+ * @license Apache-2.0
+ */
+
 import { env } from "cloudflare:test";
 import worker from "@private-landing/cloudflare-workers/src/app";
 import { describe, expect, it } from "vitest";

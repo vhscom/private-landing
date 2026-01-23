@@ -5,5 +5,5 @@
  * @license Apache-2.0
  */
 
-export { createDbClient, type SqliteClient } from "./db";
+export { createDbClient, type DbClientFactory, type SqliteClient } from "./db";
 export { serveStatic, type ServeStaticOptions } from "./middleware";

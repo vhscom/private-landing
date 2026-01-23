@@ -13,7 +13,10 @@
  */
 
 import type { Client } from "@libsql/client/web";
-import { createDbClient } from "@private-landing/infrastructure";
+import {
+	type DbClientFactory,
+	createDbClient as defaultCreateDbClient,
+} from "@private-landing/infrastructure";
 import type {
 	AuthContext,
 	SessionConfig,
@@ -71,10 +74,18 @@ export interface SessionService {
 }
 
 /**
+ * Configuration options for session service.
+ */
+export interface SessionServiceConfig extends SessionTableConfig {
+	/** Optional database client factory for dependency injection */
+	createDbClient?: DbClientFactory;
+}
+
+/**
  * Default table and column names for session management.
  * Can be overridden through SessionTableConfig.
  */
-const DEFAULT_CONFIG: Required<SessionTableConfig> = {
+const DEFAULT_TABLE_CONFIG: Required<SessionTableConfig> = {
 	tableName: "session",
 	idColumn: "id",
 	userIdColumn: "user_id",
@@ -89,13 +100,15 @@ const DEFAULT_CONFIG: Required<SessionTableConfig> = {
  * Provides methods for creating, retrieving, and ending user sessions
  * with support for custom table schemas.
  *
- * @param config - Configuration for session table schema
+ * @param config - Configuration for session table schema and dependencies
  * @returns Session management service with CRUD operations
  */
 export function createSessionService(
-	config: SessionTableConfig = {},
+	config: SessionServiceConfig = {},
 ): SessionService {
-	const resolvedConfig = { ...DEFAULT_CONFIG, ...config };
+	const { createDbClient: injectedCreateDbClient, ...tableConfig } = config;
+	const resolvedConfig = { ...DEFAULT_TABLE_CONFIG, ...tableConfig };
+	const createDbClient = injectedCreateDbClient ?? defaultCreateDbClient;
 
 	/**
 	 * Removes expired sessions from the database.

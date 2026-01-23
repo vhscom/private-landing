@@ -31,6 +31,7 @@
 		"format:shell": "shfmt -w src/db/scripts/*.sh",
 		"lint": "biome lint",
 		"test": "vitest",
+		"test:run": "vitest run",
 		"typegen": "wrangler types"
 	},
 	"dependencies": {
