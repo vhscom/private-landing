@@ -13,7 +13,6 @@
  */
 
 import type { ResultSet } from "@libsql/client";
-import { ValidationError } from "@private-landing/errors";
 import {
 	type DbClientFactory,
 	createDbClient as defaultCreateDbClient,
@@ -23,6 +22,7 @@ import {
 	loginSchema,
 	registrationSchema,
 } from "@private-landing/schemas";
+import { ValidationError } from "@private-landing/types";
 import type {
 	AccountTable,
 	AccountTableConfig,

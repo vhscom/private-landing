@@ -13,7 +13,6 @@
 	"references": [
 		{ "path": "../../packages/core" },
 		{ "path": "../../packages/types" },
-		{ "path": "../../packages/errors" },
 		{ "path": "../../packages/schemas" },
 		{ "path": "../../packages/infrastructure" }
 	]

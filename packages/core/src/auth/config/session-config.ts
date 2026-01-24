@@ -9,24 +9,6 @@ import type { SessionConfig } from "@private-landing/types";
 import type { Context } from "hono";
 
 /**
- * Session information stored in database.
- * @property id - 21 character nanoid session identifier
- * @property user_id - Associated user ID
- * @property user_agent - Browser user agent string
- * @property ip_address - Client IP address
- * @property expires_at - Session expiration timestamp
- * @property created_at - Session creation timestamp
- */
-export interface SessionData {
-	id: string;
-	user_id: number;
-	user_agent: string;
-	ip_address: string;
-	expires_at: string;
-	created_at: string;
-}
-
-/**
  * Default session configuration.
  * - 3 max sessions per user (balance between convenience and security)
  * - 7 day session duration (standard duration for remembered sessions)

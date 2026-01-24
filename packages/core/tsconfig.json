@@ -9,7 +9,6 @@
 	"references": [
 		{ "path": "../schemas" },
 		{ "path": "../types" },
-		{ "path": "../infrastructure" },
-		{ "path": "../errors" }
+		{ "path": "../infrastructure" }
 	]
 }

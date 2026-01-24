@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import type { AuthCookieOptions } from "@private-landing/types";
+import type { CookieOptions } from "@private-landing/types";
 import type { Context } from "hono";
 import { setCookie } from "hono/cookie";
 import { tokenConfig } from "../config";
@@ -33,17 +33,14 @@ export function setSecureCookie(
 
 /**
  * Returns core cookie settings used for auth token operations.
- * Includes domain from context for proper cookie deletion.
- * @param ctx - Hono context with auth bindings
+ * Used with deleteCookie to ensure consistent security settings.
  * @returns Cookie options with security settings
  */
-export function getAuthCookieSettings(ctx: Context): AuthCookieOptions {
+export function getAuthCookieSettings(): CookieOptions {
 	return {
-		name: "auth",
 		httpOnly: true,
 		secure: tokenConfig.cookieSecure,
 		sameSite: tokenConfig.cookieSameSite,
 		path: "/",
-		maxAge: tokenConfig.refreshTokenExpiry,
 	};
 }

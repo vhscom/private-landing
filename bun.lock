@@ -13,7 +13,6 @@
       "dependencies": {
         "@libsql/client": "^0.15.0",
         "@private-landing/core": "workspace:*",
-        "@private-landing/errors": "workspace:*",
         "@private-landing/infrastructure": "workspace:*",
         "@private-landing/schemas": "workspace:*",
         "@private-landing/types": "workspace:*",
@@ -48,14 +47,6 @@
         "typescript": "^5.0.0",
       },
     },
-    "packages/errors": {
-      "name": "@private-landing/errors",
-      "version": "1.0.0",
-      "devDependencies": {
-        "bun-types": "^1.2.5",
-        "typescript": "^5.0.0",
-      },
-    },
     "packages/infrastructure": {
       "name": "@private-landing/infrastructure",
       "version": "1.0.0",
@@ -84,7 +75,6 @@
       "name": "@private-landing/types",
       "version": "1.0.0",
       "dependencies": {
-        "@private-landing/schemas": "workspace:*",
         "hono": "^4.7.5",
       },
       "devDependencies": {
@@ -283,8 +273,6 @@
     "@private-landing/cloudflare-workers": ["@private-landing/cloudflare-workers@workspace:apps/cloudflare-workers"],
 
     "@private-landing/core": ["@private-landing/core@workspace:packages/core"],
-
-    "@private-landing/errors": ["@private-landing/errors@workspace:packages/errors"],
 
     "@private-landing/infrastructure": ["@private-landing/infrastructure@workspace:packages/infrastructure"],
 

@@ -58,7 +58,6 @@ These are all excellent reasons to reach for Better Auth instead.
 │   └── cloudflare-workers/    # Example Worker + Hono routes
 ├── packages/
 │   ├── auth/                  # Core hashing, verification, session logic
-│   ├── errors/                # Shared error types
 │   ├── infrastructure/        # DB client + utilities
 │   ├── schemas/               # Zod schemas
 │   └── types/                 # Shared TypeScript types

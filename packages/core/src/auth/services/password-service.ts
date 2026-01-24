@@ -342,6 +342,3 @@ export function createPasswordService(
 		isPasswordCompromised,
 	};
 }
-
-// Export a default instance for convenience (maintains backward compatibility)
-export const passwordService = createPasswordService();

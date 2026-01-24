@@ -6,14 +6,32 @@
  * @license Apache-2.0
  */
 
-import type {
-	LoginInput,
-	RegistrationInput,
-	RegistrationOutput,
-} from "@private-landing/schemas";
+/**
+ * Login credentials input.
+ * Email will be normalized to lowercase, password will be NFKC normalized.
+ */
+export interface LoginInput {
+	email: string;
+	password: string;
+}
 
-// Re-export schema types
-export type { LoginInput, RegistrationInput, RegistrationOutput };
+/**
+ * Registration credentials input.
+ * Same structure as login for this simple auth system.
+ */
+export interface RegistrationInput {
+	email: string;
+	password: string;
+}
+
+/**
+ * Registration output after validation and normalization.
+ * Email is lowercased, password is NFKC normalized.
+ */
+export interface RegistrationOutput {
+	email: string;
+	password: string;
+}
 
 /**
  * Represents a successful authentication with valid user ID

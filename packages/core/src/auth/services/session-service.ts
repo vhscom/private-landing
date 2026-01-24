@@ -96,6 +96,24 @@ const DEFAULT_TABLE_CONFIG: Required<SessionTableConfig> = {
 };
 
 /**
+ * Maps a database row (snake_case) to SessionState (camelCase).
+ * Provides type-safe conversion between database and application layers.
+ *
+ * @param row - Database row with snake_case column names
+ * @returns SessionState with camelCase property names
+ */
+function mapRowToSessionState(row: SessionTable): SessionState {
+	return {
+		id: row.id,
+		userId: row.user_id,
+		userAgent: row.user_agent,
+		ipAddress: row.ip_address,
+		expiresAt: row.expires_at,
+		createdAt: row.created_at,
+	};
+}
+
+/**
  * Creates a configured session management service.
  * Provides methods for creating, retrieving, and ending user sessions
  * with support for custom table schemas.
@@ -254,7 +272,7 @@ export function createSessionService(
 			});
 
 			if (result.rows.length === 0) return null;
-			return result.rows[0] as Partial<SessionTable> as SessionState;
+			return mapRowToSessionState(result.rows[0] as unknown as SessionTable);
 		},
 
 		async endSession(ctx: AuthContext): Promise<void> {
@@ -271,8 +289,8 @@ export function createSessionService(
 				args: [sessionId],
 			});
 
-			deleteCookie(ctx, "access_token", getAuthCookieSettings(ctx));
-			deleteCookie(ctx, "refresh_token", getAuthCookieSettings(ctx));
+			deleteCookie(ctx, "access_token", getAuthCookieSettings());
+			deleteCookie(ctx, "refresh_token", getAuthCookieSettings());
 		},
 	};
 }

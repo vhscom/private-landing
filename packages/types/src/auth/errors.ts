@@ -84,3 +84,18 @@ export class RateLimitError extends AuthenticationError {
 		Object.setPrototypeOf(this, RateLimitError.prototype);
 	}
 }
+
+/**
+ * Custom error for validation failures.
+ * Used to distinguish validation errors that can be shown to users
+ * from other types of errors that should be handled differently.
+ */
+export class ValidationError extends Error {
+	readonly code = "VALIDATION_ERROR" as const;
+
+	constructor(message: string) {
+		super(message);
+		this.name = "ValidationError";
+		Object.setPrototypeOf(this, ValidationError.prototype);
+	}
+}

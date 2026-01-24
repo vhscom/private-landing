@@ -7,7 +7,8 @@
  */
 
 /**
- * Base cookie options matching Hono's CookieOptions interface
+ * Cookie options matching Hono's CookieOptions interface.
+ * Used for setting secure cookie attributes.
  */
 export interface CookieOptions {
 	domain?: string;
@@ -19,12 +20,4 @@ export interface CookieOptions {
 	signingKey?: string;
 	sameSite?: "Strict" | "Lax" | "None";
 	partitioned?: boolean;
-}
-
-/**
- * Extended cookie options specific to authentication system
- */
-export interface AuthCookieOptions extends CookieOptions {
-	name: string;
-	maxAge: number; // Required in auth system, optional in base
 }

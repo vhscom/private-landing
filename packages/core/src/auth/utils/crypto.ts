@@ -1,6 +1,6 @@
 /**
  * @file crypto.ts
- * Exports cryptographic auth utililties.
+ * Exports cryptographic auth utilities.
  *
  * @license Apache-2.0
  */

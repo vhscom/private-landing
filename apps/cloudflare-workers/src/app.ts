@@ -6,50 +6,83 @@
  */
 
 import {
-	getServiceContainer,
-	requireAuth,
+	createAuthSystem,
+	createRequireAuth,
 	securityHeaders,
-	tokenService,
 } from "@private-landing/core";
 import { createDbClient, serveStatic } from "@private-landing/infrastructure";
 import type { Env, Variables } from "@private-landing/types";
 import { Hono } from "hono";
-import {
-	handleLogin,
-	handleLogout,
-	handleRegistration,
-} from "./handlers/auth-handlers";
+
+// Initialize auth system with factory pattern
+const auth = createAuthSystem();
+
+// Create middleware with injected dependencies
+const requireAuth = createRequireAuth({
+	sessionService: auth.sessions,
+	tokenService: auth.tokens,
+});
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
-
-// Initialize services at startup
-const container = getServiceContainer();
-container.initializeServices();
 
 // Global middleware
 app.use("*", securityHeaders);
 app.use("*", serveStatic({ cache: "key" }));
 
 // Authentication endpoints
-app.post("/api/register", handleRegistration);
-app.post("/api/login", async (ctx) => {
-	const sessionService = container.getService("sessionService");
-	const result = await handleLogin(ctx);
-
-	const isAuthenticated =
-		result.status === 302 &&
-		result.headers.get("Location")?.includes("authenticated=true");
-
-	if (isAuthenticated) {
-		const session = await sessionService.getSession(ctx);
-		if (session?.userId) {
-			await tokenService.generateTokens(ctx, session.userId, session.id);
-		}
+app.post("/api/register", async (ctx) => {
+	try {
+		const body = await ctx.req.parseBody();
+		await auth.accounts.createAccount(
+			body as { email: string; password: string },
+			ctx.env,
+		);
+		return ctx.redirect("/?registered=true");
+	} catch (error: unknown) {
+		console.error("Registration error:", error);
+		const message =
+			error instanceof Error ? error.message : "Registration failed";
+		return ctx.redirect(
+			`/?error=${encodeURIComponent(message.includes("UNIQUE") ? "Registration failed. Please try again or use a different email address." : message)}`,
+		);
 	}
-
-	return result;
 });
-app.post("/api/logout", requireAuth, handleLogout);
+
+app.post("/api/login", async (ctx) => {
+	try {
+		const body = await ctx.req.parseBody();
+		const authResult = await auth.accounts.authenticate(
+			body as { email: string; password: string },
+			ctx.env,
+		);
+
+		if (!authResult.authenticated) {
+			return ctx.redirect(
+				`/?error=${encodeURIComponent(authResult.error ?? "Authentication failed")}`,
+			);
+		}
+
+		const sessionId = await auth.sessions.createSession(authResult.userId, ctx);
+		await auth.tokens.generateTokens(ctx, authResult.userId, sessionId);
+
+		return ctx.redirect("/?authenticated=true");
+	} catch (error) {
+		console.error("Authentication error:", error);
+		return ctx.redirect("/?error=Authentication failed. Please try again.");
+	}
+});
+
+app.post("/api/logout", requireAuth, async (ctx) => {
+	try {
+		await auth.sessions.endSession(ctx);
+		return ctx.redirect("/?logged_out=true");
+	} catch (error) {
+		console.error("Logout error:", error);
+		const errorMessage =
+			error instanceof Error ? error.message : "Logout failed";
+		return ctx.redirect(`/?error=${encodeURIComponent(errorMessage)}`);
+	}
+});
 
 // Protected API routes
 app.use("/api/*", requireAuth);
@@ -60,7 +93,7 @@ app.get("/api/ping", async (ctx) => {
 
 	return ctx.json({
 		message: "Authenticated ping success!",
-		userId: payload.user_id,
+		userId: payload.uid,
 		version: result,
 	});
 });
