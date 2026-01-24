@@ -35,6 +35,8 @@
 	"scripts": {
 		"clean": "rm -rf dist tsconfig.tsbuildinfo",
 		"build": "tsc --build",
+		"test": "vitest",
+		"test:run": "vitest run",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
@@ -42,6 +44,7 @@
 	},
 	"devDependencies": {
 		"bun-types": "^1.2.5",
-		"typescript": "^5.0.0"
+		"typescript": "^5.0.0",
+		"vitest": "~3.2.x"
 	}
 }

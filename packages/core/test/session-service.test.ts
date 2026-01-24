@@ -5,13 +5,13 @@
  * @license Apache-2.0
  */
 
-import { createSessionService } from "@private-landing/core";
 import type {
 	AuthContext,
 	SessionConfig,
 	TokenPayload,
 } from "@private-landing/types";
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
+import { createSessionService } from "../src/auth/services/session-service";
 
 // Mock database client
 function createMockDbClient() {

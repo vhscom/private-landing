@@ -5,8 +5,8 @@
  * @license Apache-2.0
  */
 
-import { timingSafeEqual } from "@private-landing/core";
 import { describe, expect, it } from "vitest";
+import { timingSafeEqual } from "../src/auth/utils/crypto";
 
 describe("timingSafeEqual", () => {
 	describe("equal values", () => {

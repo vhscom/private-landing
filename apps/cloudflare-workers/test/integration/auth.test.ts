@@ -19,7 +19,7 @@ import {
 	makeRequest,
 	RESET_SQL,
 	TEST_USER,
-} from "./test-utils";
+} from "../fixtures/test-utils";
 
 let dbClient: SqliteClient;
 

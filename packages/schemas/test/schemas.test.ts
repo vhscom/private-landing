@@ -5,13 +5,10 @@
  * @license Apache-2.0
  */
 
-import {
-	formatZodError,
-	loginSchema,
-	normalizePassword,
-	registrationSchema,
-} from "@private-landing/schemas";
 import { describe, expect, it } from "vitest";
+import { loginSchema, registrationSchema } from "../src/auth/credentials";
+import { normalizePassword } from "../src/auth/password";
+import { formatZodError } from "../src/utils/zod";
 
 describe("Validation Schemas", () => {
 	describe("loginSchema", () => {

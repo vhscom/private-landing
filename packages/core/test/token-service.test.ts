@@ -5,11 +5,14 @@
  * @license Apache-2.0
  */
 
-import { createTokenService, type TokenService } from "@private-landing/core";
 import type { TokenPayload } from "@private-landing/types";
 import { Hono } from "hono";
 import { verify } from "hono/jwt";
 import { beforeEach, describe, expect, it } from "vitest";
+import {
+	createTokenService,
+	type TokenService,
+} from "../src/auth/services/token-service";
 
 // Test secrets for JWT signing
 const TEST_ACCESS_SECRET = "test-access-secret-key-minimum-32-chars";

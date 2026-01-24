@@ -5,12 +5,12 @@
  * @license Apache-2.0
  */
 
+import { beforeEach, describe, expect, it } from "vitest";
 import {
 	createPasswordService,
 	defaultPasswordConfig,
 	type PasswordService,
-} from "@private-landing/core";
-import { beforeEach, describe, expect, it } from "vitest";
+} from "../src/auth/services/password-service";
 
 describe("PasswordService", () => {
 	let passwordService: PasswordService;

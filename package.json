@@ -23,14 +23,17 @@
 		"build": "bun run --filter '@private-landing/*' build && bun run build:workers",
 		"build:workers": "bun run --cwd apps/cloudflare-workers wrangler:build",
 		"dev": "bun run --cwd apps/cloudflare-workers dev",
-		"test": "bun run --cwd apps/cloudflare-workers test:run",
-		"test:watch": "bun run --cwd apps/cloudflare-workers test",
+		"test": "vitest run && bun run test:integration",
+		"test:unit": "vitest run",
+		"test:integration": "bun run --cwd apps/cloudflare-workers test:run",
+		"test:watch": "vitest",
 		"typecheck": "bun run --filter '@private-landing/*' typecheck",
 		"lint": "biome lint",
 		"format": "biome check --write .",
 		"format:packages": "biome check --write packages"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.3.12"
+		"@biomejs/biome": "^2.3.12",
+		"vitest": "~3.2.x"
 	}
 }

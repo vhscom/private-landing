@@ -11,7 +11,8 @@ import {
  */
 export default defineWorkersConfig({
 	test: {
-		globalSetup: ["./test/global-setup.ts"],
+		globalSetup: ["./test/setup.ts"],
+		include: ["test/integration/**/*.test.ts", "test/sanity/**/*.test.ts"],
 		poolOptions: {
 			workers: {
 				wrangler: { configPath: "./wrangler.test.toml", environment: "test" },
