@@ -22,6 +22,9 @@ function createMockDbClient() {
 		executeMultiple: vi.fn(),
 		sync: vi.fn(),
 		close: vi.fn(),
+		migrate: vi.fn(),
+		closed: false,
+		protocol: "http" as const,
 	};
 }
 
@@ -171,11 +174,10 @@ describe("SessionService", () => {
 		});
 
 		it("should enforce session limit for user", async () => {
-			const customConfig: SessionConfig = {
+			const customConfig = {
 				sessionDuration: 3600,
 				maxSessions: 2,
-				slidingExpiration: true,
-			};
+			} as SessionConfig;
 
 			mockDbClient.execute
 				.mockResolvedValueOnce({ rowsAffected: 0 })
@@ -217,11 +219,10 @@ describe("SessionService", () => {
 		});
 
 		it("should set correct expiration time based on config", async () => {
-			const customConfig: SessionConfig = {
+			const customConfig = {
 				sessionDuration: 7200, // 2 hours
 				maxSessions: 3,
-				slidingExpiration: true,
-			};
+			} as SessionConfig;
 
 			mockDbClient.execute
 				.mockResolvedValueOnce({ rowsAffected: 0 })
@@ -314,11 +315,10 @@ describe("SessionService", () => {
 		});
 
 		it("should extend session with sliding expiration", async () => {
-			const customConfig: SessionConfig = {
+			const customConfig = {
 				sessionDuration: 7200,
 				maxSessions: 3,
-				slidingExpiration: true,
-			};
+			} as SessionConfig;
 
 			mockDbClient.execute
 				.mockResolvedValueOnce({ rowsAffected: 1 })

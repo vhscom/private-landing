@@ -18,7 +18,7 @@
 	},
 	"scripts": {
 		"clean": "rm -rf .wrangler",
-		"check": "biome check && tsc",
+		"check": "biome check && bun run typecheck",
 		"build": "echo 'Skipping workers build during main build pass...'",
 		"dev": "wrangler dev --port 8788",
 		"wrangler:build": "wrangler deploy --dry-run --outdir=.wrangler/dist",
@@ -32,6 +32,7 @@
 		"lint": "biome lint",
 		"test": "vitest",
 		"test:run": "vitest run",
+		"typecheck": "tsc --noEmit",
 		"typegen": "wrangler types"
 	},
 	"dependencies": {

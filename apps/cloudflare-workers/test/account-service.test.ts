@@ -10,7 +10,7 @@ import {
 	createAccountService,
 } from "@private-landing/core";
 import { ValidationError } from "@private-landing/errors";
-import type { Env } from "@private-landing/types";
+import type { Env, UnauthenticatedState } from "@private-landing/types";
 import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock database client
@@ -22,6 +22,9 @@ function createMockDbClient() {
 		executeMultiple: vi.fn(),
 		sync: vi.fn(),
 		close: vi.fn(),
+		migrate: vi.fn(),
+		closed: false,
+		protocol: "http" as const,
 	};
 }
 
@@ -33,7 +36,6 @@ function createMockPasswordService(): PasswordService {
 			.mockResolvedValue("$pbkdf2-sha384$v1$100000$salt$hash$digest"),
 		verifyPassword: vi.fn().mockResolvedValue(true),
 		rejectPasswordWithConstantTime: vi.fn().mockResolvedValue(undefined),
-		normalizePassword: vi.fn((p: string) => p.normalize("NFKC")),
 		isPasswordCompromised: vi.fn().mockResolvedValue(false),
 	};
 }
@@ -231,7 +233,7 @@ describe("AccountService", () => {
 
 			expect(result.authenticated).toBe(true);
 			expect(result.userId).toBe(42);
-			expect(result.error).toBeUndefined();
+			expect("error" in result).toBe(false);
 		});
 
 		it("should reject invalid password", async () => {
@@ -255,7 +257,9 @@ describe("AccountService", () => {
 
 			expect(result.authenticated).toBe(false);
 			expect(result.userId).toBeNull();
-			expect(result.error).toBe("Invalid email or password");
+			expect((result as UnauthenticatedState).error).toBe(
+				"Invalid email or password",
+			);
 		});
 
 		it("should reject non-existent user with constant-time operation", async () => {
@@ -273,7 +277,9 @@ describe("AccountService", () => {
 
 			expect(result.authenticated).toBe(false);
 			expect(result.userId).toBeNull();
-			expect(result.error).toBe("Invalid email or password");
+			expect((result as UnauthenticatedState).error).toBe(
+				"Invalid email or password",
+			);
 			expect(
 				mockPasswordService.rejectPasswordWithConstantTime,
 			).toHaveBeenCalledWith("SomePassword123!");
@@ -292,7 +298,7 @@ describe("AccountService", () => {
 
 			expect(result.authenticated).toBe(false);
 			expect(result.userId).toBeNull();
-			expect(result.error).toBeDefined();
+			expect((result as UnauthenticatedState).error).toBeDefined();
 			expect(mockDbClient.execute).not.toHaveBeenCalled();
 		});
 
@@ -309,7 +315,7 @@ describe("AccountService", () => {
 
 			expect(result.authenticated).toBe(false);
 			expect(result.userId).toBeNull();
-			expect(result.error).toBeDefined();
+			expect((result as UnauthenticatedState).error).toBeDefined();
 		});
 
 		it("should use custom column names in SELECT query", async () => {
@@ -364,7 +370,9 @@ describe("AccountService", () => {
 
 			expect(result.authenticated).toBe(false);
 			expect(result.userId).toBeNull();
-			expect(result.error).toBe("Invalid account state");
+			expect((result as UnauthenticatedState).error).toBe(
+				"Invalid account state",
+			);
 		});
 
 		it("should pass password to verifyPassword correctly", async () => {
@@ -492,9 +500,10 @@ describe("AccountService", () => {
 			);
 
 			// Error message should be generic
-			expect(result.error).toBe("Invalid email or password");
-			expect(result.error).not.toContain("not found");
-			expect(result.error).not.toContain("does not exist");
+			const error = (result as UnauthenticatedState).error;
+			expect(error).toBe("Invalid email or password");
+			expect(error).not.toContain("not found");
+			expect(error).not.toContain("does not exist");
 		});
 
 		it("should return same error for wrong password as for non-existent user", async () => {
@@ -522,7 +531,9 @@ describe("AccountService", () => {
 			);
 
 			// Both should return the same generic error
-			expect(notFoundResult.error).toBe(wrongPwdResult.error);
+			expect((notFoundResult as UnauthenticatedState).error).toBe(
+				(wrongPwdResult as UnauthenticatedState).error,
+			);
 		});
 	});
 
