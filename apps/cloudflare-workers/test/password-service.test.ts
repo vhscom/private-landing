@@ -6,9 +6,9 @@
  */
 
 import {
-	type PasswordService,
 	createPasswordService,
 	defaultPasswordConfig,
+	type PasswordService,
 } from "@private-landing/core";
 import { beforeEach, describe, expect, it } from "vitest";
 

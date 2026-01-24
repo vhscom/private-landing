@@ -4,18 +4,12 @@
 	"description": "Database and middleware utilities for Cloudflare Workers",
 	"license": "Apache-2.0",
 	"author": "Josh Habdas <josh@comfus.io>",
-	"homepage": "https://github.com/vhscom/private-landing",
+	"homepage": "https://github.com/vhscom/private-landing/",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/vhscom/private-landing",
 		"directory": "packages/infrastructure"
 	},
-	"keywords": [
-		"infrastructure",
-		"database",
-		"middleware",
-		"cloudflare-workers"
-	],
 	"type": "module",
 	"engines": {
 		"node": ">=24.0.0",
@@ -35,7 +29,9 @@
 			"import": "./dist/middleware/index.js"
 		}
 	},
-	"files": ["dist"],
+	"files": [
+		"dist"
+	],
 	"scripts": {
 		"clean": "rm -rf dist tsconfig.tsbuildinfo",
 		"build": "tsc --build",

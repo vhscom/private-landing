@@ -6,4 +6,4 @@
  */
 
 export { createDbClient, type DbClientFactory, type SqliteClient } from "./db";
-export { serveStatic, type ServeStaticOptions } from "./middleware";
+export { type ServeStaticOptions, serveStatic } from "./middleware";

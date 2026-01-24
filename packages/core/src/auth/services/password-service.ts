@@ -156,8 +156,8 @@ function parsePasswordString(passwordData: string): null | {
 
 	const [, algorithmFull, versionStr, iterationsStr, salt, hash, digest] =
 		parts;
-	const version = Number.parseInt(versionStr.slice(1));
-	const iterations = Number.parseInt(iterationsStr);
+	const version = Number.parseInt(versionStr.slice(1), 10);
+	const iterations = Number.parseInt(iterationsStr, 10);
 
 	if (Number.isNaN(version) || Number.isNaN(iterations)) return null;
 

@@ -9,14 +9,11 @@
 		"url": "https://github.com/vhscom/private-landing",
 		"directory": "."
 	},
-	"keywords": [
-		"authentication",
-		"cloudflare-workers",
-		"typescript",
-		"launchpad"
-	],
 	"private": true,
-	"workspaces": ["packages/*", "apps/*"],
+	"workspaces": [
+		"packages/*",
+		"apps/*"
+	],
 	"engines": {
 		"node": ">=24.0.0",
 		"bun": ">=1.0.0"
@@ -34,7 +31,7 @@
 		"format:packages": "biome check --write packages"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^1.9.4"
+		"@biomejs/biome": "^2.3.12"
 	},
 	"cloudflare": {
 		"bindings": {

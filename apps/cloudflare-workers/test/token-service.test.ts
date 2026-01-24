@@ -5,7 +5,7 @@
  * @license Apache-2.0
  */
 
-import { type TokenService, createTokenService } from "@private-landing/core";
+import { createTokenService, type TokenService } from "@private-landing/core";
 import type { TokenPayload } from "@private-landing/types";
 import { Hono } from "hono";
 import { verify } from "hono/jwt";

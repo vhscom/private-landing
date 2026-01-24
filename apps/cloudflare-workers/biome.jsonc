@@ -1,12 +1,13 @@
 {
-	"$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+	"root": false,
+	"$schema": "https://biomejs.dev/schemas/2.3.12/schema.json",
 	"extends": ["../../biome.jsonc"],
 	"files": {
-		"ignore": [
-			".wrangler",
-			"**/worker-configuration.d.ts",
-			"**/dist/**",
-			"**/node_modules/**"
+		"includes": [
+			"!!**/.wrangler",
+			"!!**/dist",
+			"!**/worker-configuration.d.ts",
+			"!!**/node_modules"
 		]
 	}
 }

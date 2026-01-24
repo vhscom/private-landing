@@ -11,7 +11,7 @@ import type {
 	SessionConfig,
 	TokenPayload,
 } from "@private-landing/types";
-import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 
 // Mock database client
 function createMockDbClient() {
@@ -30,15 +30,12 @@ function createMockDbClient() {
 
 // Mock AuthContext factory
 function createMockAuthContext(
-	options: {
-		sessionId?: string;
-		userAgent?: string;
-		ipAddress?: string;
-	} = {},
+	options: { sessionId?: string; userAgent?: string; ipAddress?: string } = {},
 ): AuthContext {
 	const {
 		sessionId,
 		userAgent = "Test-Agent/1.0",
+		/* biome-ignore lint/correctness/noUnusedVariables: intentional */
 		ipAddress = "127.0.0.1",
 	} = options;
 

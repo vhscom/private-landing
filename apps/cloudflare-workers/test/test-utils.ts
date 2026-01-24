@@ -7,8 +7,8 @@
 
 import { SELF } from "cloudflare:test";
 
+export { executeSQL, initTestDB } from "./db-setup";
 export { RESET_SQL, SCHEMA_SQL, TEST_USER_SQL } from "./sql";
-export { initTestDB, executeSQL } from "./db-setup";
 
 /** Base URL for API requests in test environment */
 export const BASE_URL = "http://localhost";

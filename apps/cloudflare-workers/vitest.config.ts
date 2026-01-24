@@ -1,6 +1,6 @@
 import {
-	type WorkersUserConfigExport,
 	defineWorkersConfig,
+	type WorkersUserConfigExport,
 } from "@cloudflare/vitest-pool-workers/config";
 
 /**

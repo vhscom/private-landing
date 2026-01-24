@@ -6,15 +6,15 @@
  */
 
 import {
-	type PasswordService,
 	createAccountService,
+	type PasswordService,
 } from "@private-landing/core";
 import {
 	type Env,
 	type UnauthenticatedState,
 	ValidationError,
 } from "@private-landing/types";
-import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 
 // Mock database client
 function createMockDbClient() {

@@ -1,5 +1,5 @@
 {
-	"$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.3.12/schema.json",
 	"vcs": {
 		"enabled": true,
 		"clientKind": "git",
@@ -7,14 +7,10 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"ignore": [
-			"**/worker-configuration.d.ts",
-			"**/dist/**"
-			// "**/node_modules/**"
-		]
+		"includes": ["**", "!!**/dist", "!**/worker-configuration.d.ts"]
 	},
 	"formatter": { "enabled": true, "indentStyle": "tab" },
-	"organizeImports": { "enabled": true },
+	"assist": { "actions": { "source": { "organizeImports": "on" } } },
 	"linter": {
 		"enabled": true,
 		"rules": { "recommended": true }

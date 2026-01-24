@@ -4,13 +4,12 @@
 	"description": "Zod validation schemas for authentication system",
 	"license": "Apache-2.0",
 	"author": "Josh Habdas <josh@comfus.io>",
-	"homepage": "https://github.com/vhscom/private-landing",
+	"homepage": "https://github.com/vhscom/private-landing/",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/vhscom/private-landing",
 		"directory": "packages/schemas"
 	},
-	"keywords": ["validation", "schemas", "zod", "typescript"],
 	"type": "module",
 	"engines": {
 		"node": ">=24.0.0",
@@ -30,7 +29,9 @@
 			"import": "./dist/utils/index.js"
 		}
 	},
-	"files": ["dist"],
+	"files": [
+		"dist"
+	],
 	"scripts": {
 		"clean": "rm -rf dist tsconfig.tsbuildinfo",
 		"build": "tsc --build",

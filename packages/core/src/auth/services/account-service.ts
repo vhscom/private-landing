@@ -22,7 +22,6 @@ import {
 	loginSchema,
 	registrationSchema,
 } from "@private-landing/schemas";
-import { ValidationError } from "@private-landing/types";
 import type {
 	AccountTable,
 	AccountTableConfig,
@@ -31,9 +30,10 @@ import type {
 	LoginInput,
 	RegistrationInput,
 } from "@private-landing/types";
+import { ValidationError } from "@private-landing/types";
 import {
-	type PasswordService,
 	createPasswordService,
+	type PasswordService,
 } from "./password-service";
 
 /**

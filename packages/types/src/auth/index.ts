@@ -7,6 +7,6 @@
 
 export * from "./authentication";
 export * from "./database";
+export * from "./errors";
 export * from "./session";
 export * from "./token";
-export * from "./errors";
