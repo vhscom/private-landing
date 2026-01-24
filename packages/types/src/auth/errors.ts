@@ -41,7 +41,7 @@ export class TokenError extends AuthenticationError {
 
 	/** @returns TokenError with 400 Bad Request - Token structure or format invalid */
 	static malformed(message = "Malformed token") {
-		return new TokenError(message, "MALFORMED_TOKEN", 400);
+		return new TokenError(message, "TOKEN_MALFORMED", 400);
 	}
 
 	/** @returns TokenError with 401 Unauthorized - Token has expired or is invalid */
