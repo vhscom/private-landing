@@ -18,8 +18,8 @@ export async function timingSafeEqual(
 	a: BufferSource,
 	b: BufferSource,
 ): Promise<boolean> {
-	const aBytes = ArrayBuffer.isView(a) ? a.buffer : a;
-	const bBytes = ArrayBuffer.isView(b) ? b.buffer : b;
+	const aBytes = (ArrayBuffer.isView(a) ? a.buffer : a) as ArrayBuffer;
+	const bBytes = (ArrayBuffer.isView(b) ? b.buffer : b) as ArrayBuffer;
 
 	if (aBytes.byteLength !== bBytes.byteLength) return false;
 

@@ -15,7 +15,7 @@ import type { ZodError } from "zod";
  * @returns Formatted error message string
  */
 export function formatZodError(error: ZodError): string {
-	return error.errors.map((err) => err.message).join(", ");
+	return error.issues.map((issue) => issue.message).join(", ");
 }
 
 /**
