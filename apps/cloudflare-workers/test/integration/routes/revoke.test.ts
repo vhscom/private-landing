@@ -1,0 +1,78 @@
+/**
+ * @file revoke.test.ts
+ * Integration tests for the /api/logout endpoint (session revocation).
+ *
+ * @remarks
+ * **Known flakiness**: The session invalidation test may intermittently timeout
+ * due to network latency with the remote Turso database. The `--retry 3` flag
+ * handles this. Tests also share database state with other suites.
+ *
+ * @license Apache-2.0
+ */
+
+import type { SqliteClient } from "@private-landing/infrastructure";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+	cleanupSessions,
+	initTestDb,
+	loginAndGetCookies,
+	makeAuthenticatedRequest,
+	makeRequest,
+} from "../../fixtures/mock-env";
+
+let dbClient: SqliteClient;
+
+describe("POST /api/logout", () => {
+	beforeAll(async () => {
+		dbClient = await initTestDb();
+	});
+
+	afterAll(async () => {
+		await cleanupSessions(dbClient);
+		dbClient.close();
+	});
+
+	it("should logout authenticated user", async () => {
+		const cookies = await loginAndGetCookies();
+
+		const response = await makeAuthenticatedRequest("/api/logout", cookies, {
+			method: "POST",
+		});
+
+		expect(response.status).toBe(200);
+		expect(response.url).toContain("/?logged_out=true");
+	});
+
+	it("should invalidate session after logout", async () => {
+		const cookies = await loginAndGetCookies();
+
+		// Logout
+		await makeAuthenticatedRequest("/api/logout", cookies, {
+			method: "POST",
+		});
+
+		// Try to access protected route with the same cookies
+		const response = await makeAuthenticatedRequest("/api/ping", cookies);
+
+		// Should be rejected because session was revoked (401 or 403)
+		expect([401, 403]).toContain(response.status);
+	});
+
+	it("should reject logout without authentication", async () => {
+		const response = await makeRequest("/api/logout", {
+			method: "POST",
+		});
+
+		expect(response.status).toBe(401);
+	});
+
+	it("should reject logout with invalid token", async () => {
+		const response = await makeAuthenticatedRequest(
+			"/api/logout",
+			"access_token=invalid.token.here",
+			{ method: "POST" },
+		);
+
+		expect(response.status).toBe(401);
+	});
+});

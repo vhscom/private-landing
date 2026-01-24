@@ -12,7 +12,7 @@
  * @license Apache-2.0
  */
 
-import type { Client } from "@libsql/client/web";
+import type { Client } from "@libsql/client";
 import {
 	type DbClientFactory,
 	createDbClient as defaultCreateDbClient,

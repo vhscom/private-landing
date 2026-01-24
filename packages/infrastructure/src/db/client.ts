@@ -5,7 +5,7 @@
  * @license Apache-2.0
  */
 
-import { createClient, type Client as SqliteClient } from "@libsql/client/web";
+import { createClient, type Client as SqliteClient } from "@libsql/client";
 import type { Env } from "@private-landing/types";
 
 export type { SqliteClient };

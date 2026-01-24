@@ -1,0 +1,131 @@
+/**
+ * @file requireAuth.test.ts
+ * Integration tests for the requireAuth middleware.
+ *
+ * @remarks
+ * **Known flakiness**: These tests share database state (sessions for user_id=1)
+ * with other test suites. When run in parallel with refresh.test.ts, race
+ * conditions can cause intermittent failures. The `--retry 3` flag handles this.
+ *
+ * @license Apache-2.0
+ */
+
+import type { SqliteClient } from "@private-landing/infrastructure";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+	cleanupSessions,
+	initTestDb,
+	loginAndGetCookies,
+	makeAuthenticatedRequest,
+	makeRequest,
+} from "../../fixtures/mock-env";
+
+let dbClient: SqliteClient;
+
+describe("requireAuth middleware", () => {
+	beforeAll(async () => {
+		dbClient = await initTestDb();
+	});
+
+	afterAll(async () => {
+		await cleanupSessions(dbClient);
+		dbClient.close();
+	});
+
+	describe("without authentication", () => {
+		it("should reject requests without any tokens", async () => {
+			const response = await makeRequest("/api/ping");
+
+			expect(response.status).toBe(401);
+			const data = (await response.json()) as { error: string; code: string };
+			expect(data.error).toBe(
+				"Access token expired and no refresh token present",
+			);
+			expect(data.code).toBe("TOKEN_EXPIRED");
+		});
+
+		it("should reject requests with malformed access token", async () => {
+			const response = await makeAuthenticatedRequest(
+				"/api/ping",
+				"access_token=not.a.valid.jwt",
+			);
+
+			expect(response.status).toBe(401);
+		});
+
+		it("should reject requests with empty cookie header", async () => {
+			const response = await makeAuthenticatedRequest("/api/ping", "");
+
+			expect(response.status).toBe(401);
+		});
+	});
+
+	describe("with valid authentication", () => {
+		it("should allow requests with valid access token", async () => {
+			const cookies = await loginAndGetCookies();
+
+			const response = await makeAuthenticatedRequest("/api/ping", cookies);
+
+			expect(response.status).toBe(200);
+			const data = await response.json();
+			expect(data).toHaveProperty("message", "Authenticated ping success!");
+		});
+
+		it("should set jwtPayload in context", async () => {
+			const cookies = await loginAndGetCookies();
+
+			const response = await makeAuthenticatedRequest("/api/ping", cookies);
+
+			expect(response.status).toBe(200);
+			const data = await response.json();
+			expect(data).toHaveProperty("userId", 1);
+		});
+	});
+
+	describe("token refresh behavior", () => {
+		it("should refresh access token using refresh token", async () => {
+			const cookies = await loginAndGetCookies();
+
+			// Extract only refresh token (simulating expired access token scenario)
+			const refreshTokenOnly = cookies
+				.split("; ")
+				.filter((c) => c.startsWith("refresh_token="))
+				.join("; ");
+
+			const response = await makeAuthenticatedRequest(
+				"/api/ping",
+				refreshTokenOnly,
+			);
+
+			// Middleware should use refresh token to get new access token
+			expect(response.status).toBe(200);
+		});
+
+		it("should reject when both tokens are invalid", async () => {
+			const response = await makeAuthenticatedRequest(
+				"/api/ping",
+				"access_token=bad; refresh_token=also.bad",
+			);
+
+			// 401 for invalid tokens, 400 for malformed tokens
+			expect([400, 401]).toContain(response.status);
+		});
+	});
+
+	describe("session validation", () => {
+		it("should reject revoked sessions", async () => {
+			const cookies = await loginAndGetCookies();
+
+			// Logout to revoke the session
+			await makeAuthenticatedRequest("/api/logout", cookies, {
+				method: "POST",
+			});
+
+			// Try to use the old tokens
+			const response = await makeAuthenticatedRequest("/api/ping", cookies);
+
+			// 401 Unauthorized or 403 Forbidden for revoked sessions
+			expect([401, 403]).toContain(response.status);
+		});
+	});
+});
