@@ -6,3 +6,4 @@
  */
 
 export * from "./credentials";
+export * from "./password";

@@ -21,18 +21,3 @@ export class ValidationError extends Error {
 		Object.setPrototypeOf(this, ValidationError.prototype);
 	}
 }
-
-/**
- * Creates a validation error with proper message.
- *
- * @param message - Error message to display
- * @param field - Optional field that failed validation
- * @returns ValidationError instance
- */
-export function createValidationError(
-	message: string,
-	field?: string,
-): ValidationError {
-	const fullMessage = field ? `${field}: ${message}` : message;
-	return new ValidationError(fullMessage);
-}

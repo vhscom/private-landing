@@ -5,4 +5,4 @@
  * @license Apache-2.0
  */
 
-export * from "./schema";
+export * from "./zod";
