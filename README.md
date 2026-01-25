@@ -3,7 +3,7 @@
 > A clean, educational reference implementation of secure authentication for Cloudflare Workers
 
 [![License](https://badgen.net/badge/License/Apache-2.0/blue?style=flat)](https://opensource.org/licenses/Apache-2.0)
-[![TypeScript](https://badgen.net/badge/TypeScript/5.0+/blue?style=flat)](https://www.typescriptlang.org/)
+[![TypeScript](https://badgen.net/badge/TypeScript/5.8+/blue?style=flat)](https://www.typescriptlang.org/)
 [![Cloudflare Workers](https://badgen.net/badge/Cloudflare/Workers/orange?style=flat)](https://workers.cloudflare.com/)
 [![CI](https://github.com/vhscom/private-landing/actions/workflows/ci.yml/badge.svg)](https://github.com/vhscom/private-landing/actions/workflows/ci.yml)
 
@@ -60,10 +60,32 @@ These are all excellent reasons to reach for Better Auth instead.
 ├── apps/
 │   └── cloudflare-workers/    # Example Worker + Hono routes
 ├── packages/
-│   ├── auth/                  # Core hashing, verification, session logic
+│   ├── core/                  # Auth services, middleware, crypto utilities
 │   ├── infrastructure/        # DB client + utilities
 │   ├── schemas/               # Zod schemas
 │   └── types/                 # Shared TypeScript types
 └── docs/
     ├── adr/                   # Architecture Decision Records
-    └── audits/                # Security audits (generated using Claude)
+    └── audits/                # Security audits
+```
+
+## Getting Started
+
+```bash
+# Clone and install
+git clone https://github.com/vhscom/private-landing.git
+cd private-landing
+bun install
+
+# Build packages
+bun run build
+
+# Start dev server
+bun run dev
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed setup and testing instructions.
+
+## License
+
+[Apache-2.0](LICENSE)
