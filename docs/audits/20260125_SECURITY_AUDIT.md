@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-This audit documents the remediation of a high-severity JWT vulnerability (GHSA-m732-5p4w-x69g) through an update to Hono v4.11.4. The update also introduced a breaking API change requiring explicit algorithm specification for JWT verification, which has been properly addressed.
+This audit documents the remediation of two JWT algorithm confusion vulnerabilities (GHSA-f67f-6cw9-8mq4, GHSA-3vhc-576x-3qv4) through an update to Hono v4.11.5. The fix requires explicit algorithm specification for JWT verification, which has been properly addressed.
 
 **Overall Security Rating:** 🟢 **EXCELLENT**
 
@@ -23,18 +23,18 @@ This audit documents the remediation of a high-severity JWT vulnerability (GHSA-
 
 ## 1. Vulnerability Remediation ✅
 
-### GHSA-m732-5p4w-x69g: Improper Authorization in Hono JWT
+### GHSA-f67f-6cw9-8mq4 & GHSA-3vhc-576x-3qv4: JWT Algorithm Confusion
 
-**Severity:** HIGH (CVSS 8.1)
+**Severity:** HIGH
 **Status:** **REMEDIATED**
 
 **Vulnerability Details:**
-- Hono's JWT authentication middleware did not validate the `aud` (Audience) claim by default
-- Applications using the middleware without explicit audience checks could accept tokens intended for other audiences
-- This could lead to cross-service access (token mix-up attacks)
+- Hono's JWT and JWK/JWKS middleware allowed the verification algorithm to be influenced by untrusted JWT header values
+- An attacker could manipulate the `alg` header to force use of a weaker or different algorithm
+- This could lead to signature bypass or token forgery attacks
 
-**Affected Versions:** >=1.1.0 <4.10.2
-**Fixed Version:** >=4.10.2 (updated to 4.11.5)
+**Affected Versions:** <4.11.4
+**Fixed Version:** >=4.11.4 (updated to 4.11.5)
 
 **Files Updated:**
 ```
@@ -43,7 +43,10 @@ packages/core/package.json              "hono": "^4.7.5" → "^4.11.5"
 packages/types/package.json             "hono": "^4.7.5" → "^4.11.5"
 ```
 
-**Reference:** https://github.com/honojs/hono/security/advisories/GHSA-m732-5p4w-x69g
+**References:**
+- https://github.com/honojs/hono/security/advisories/GHSA-f67f-6cw9-8mq4
+- https://github.com/honojs/hono/security/advisories/GHSA-3vhc-576x-3qv4
+- https://github.com/honojs/hono/releases/tag/v4.11.4
 
 ---
 
@@ -187,8 +190,7 @@ All tests pass after the Hono update, confirming:
 
 3. **Audience Claim Validation**
    - Consider adding explicit `aud` claim to tokens
-   - Configure audience validation in middleware
-   - Provides defense-in-depth against token mix-up
+   - Provides defense-in-depth against cross-service token reuse
 
 ### 🟢 Low Priority
 
@@ -224,11 +226,11 @@ All tests pass after the Hono update, confirming:
 
 ## 8. Conclusion
 
-The Hono security update has been successfully applied, remediating GHSA-m732-5p4w-x69g. The breaking API change requiring explicit algorithm specification has been properly addressed using type-safe constants.
+The Hono security update has been successfully applied, remediating GHSA-f67f-6cw9-8mq4 and GHSA-3vhc-576x-3qv4. Explicit algorithm specification is now required and has been properly addressed using type-safe constants.
 
 **Security Impact:**
-- High-severity JWT vulnerability eliminated
-- Algorithm confusion attacks prevented
+- JWT algorithm confusion vulnerabilities eliminated
+- Signature bypass attacks prevented
 - Code quality improved with type-safe constants
 
 **Production Readiness:** ✅ Recommended for immediate deployment
@@ -239,4 +241,4 @@ The Hono security update has been successfully applied, remediating GHSA-m732-5p
 **Previous Audit:** January 19, 2026
 **Current Audit:** January 25, 2026
 **Next Review:** Quarterly or upon security advisory
-**Reference:** GHSA-m732-5p4w-x69g
+**References:** GHSA-f67f-6cw9-8mq4, GHSA-3vhc-576x-3qv4
