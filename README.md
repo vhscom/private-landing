@@ -7,6 +7,8 @@
 [![Cloudflare Workers](https://badgen.net/badge/Cloudflare/Workers/orange?style=flat)](https://workers.cloudflare.com/)
 [![CI](https://github.com/vhscom/private-landing/actions/workflows/ci.yml/badge.svg)](https://github.com/vhscom/private-landing/actions/workflows/ci.yml)
 
+**[Live Demo](https://private-landing.vhsdev.workers.dev/)**
+
 This repository contains a **minimal, well-documented, standards-compliant authentication foundation** built for Cloudflare Workers using Hono, Turso (libSQL), PBKDF2 password hashing, JWT sessions, and secure session management.
 
 **Important**  
