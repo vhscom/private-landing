@@ -5,6 +5,7 @@
 [![License](https://badgen.net/badge/License/Apache-2.0/blue?style=flat)](https://opensource.org/licenses/Apache-2.0)
 [![TypeScript](https://badgen.net/badge/TypeScript/5.8+/blue?style=flat)](https://www.typescriptlang.org/)
 [![Cloudflare Workers](https://badgen.net/badge/Cloudflare/Workers/orange?style=flat)](https://workers.cloudflare.com/)
+[![AI-Friendly](https://badgen.net/badge/AI/Friendly/purple?style=flat)](CLAUDE.md)
 [![CI](https://github.com/vhscom/private-landing/actions/workflows/ci.yml/badge.svg)](https://github.com/vhscom/private-landing/actions/workflows/ci.yml)
 
 **[Live Demo](https://private-landing.vhsdev.workers.dev/)**
