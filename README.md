@@ -86,6 +86,17 @@ bun run dev
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed setup and testing instructions.
 
+## Using with AI
+
+This repository includes a [`CLAUDE.md`](CLAUDE.md) file that provides context for AI assistants. When using Claude Code, Cursor, or similar AI-powered development tools:
+
+1. The AI will automatically read `CLAUDE.md` for project context
+2. Architecture Decision Records in `docs/adr/` explain design choices
+3. Security audits in `docs/audits/` document the security posture
+4. Tests demonstrate expected behavior and edge cases
+
+The codebase is designed to be AI-readable with clear module boundaries, comprehensive types, and descriptive naming.
+
 ## License
 
 [Apache-2.0](LICENSE)
