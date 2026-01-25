@@ -7,7 +7,7 @@
 
 import type { TokenPayload } from "@private-landing/types";
 import { Hono } from "hono";
-import { verify } from "hono/jwt";
+import { AlgorithmTypes, verify } from "hono/jwt";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
 	createTokenService,
@@ -105,6 +105,7 @@ describe("TokenService", () => {
 			const payload = (await verify(
 				accessToken,
 				TEST_ACCESS_SECRET,
+				AlgorithmTypes.HS256,
 			)) as TokenPayload;
 
 			expect(payload.uid).toBe(userId);
@@ -129,6 +130,7 @@ describe("TokenService", () => {
 			const payload = (await verify(
 				refreshToken,
 				TEST_REFRESH_SECRET,
+				AlgorithmTypes.HS256,
 			)) as TokenPayload;
 
 			expect(payload.uid).toBe(userId);
@@ -151,10 +153,12 @@ describe("TokenService", () => {
 			const accessPayload = (await verify(
 				accessToken,
 				TEST_ACCESS_SECRET,
+				AlgorithmTypes.HS256,
 			)) as TokenPayload;
 			const refreshPayload = (await verify(
 				refreshToken,
 				TEST_REFRESH_SECRET,
+				AlgorithmTypes.HS256,
 			)) as TokenPayload;
 
 			// Access token: ~15 minutes (900 seconds)
@@ -231,6 +235,7 @@ describe("TokenService", () => {
 			const newPayload = (await verify(
 				newAccessToken,
 				TEST_ACCESS_SECRET,
+				AlgorithmTypes.HS256,
 			)) as TokenPayload;
 
 			expect(newPayload.uid).toBe(refreshPayload.uid);
@@ -258,6 +263,7 @@ describe("TokenService", () => {
 			const newPayload = (await verify(
 				newAccessToken,
 				TEST_ACCESS_SECRET,
+				AlgorithmTypes.HS256,
 			)) as TokenPayload;
 
 			// New access token should have fresh expiration
@@ -303,6 +309,7 @@ describe("TokenService", () => {
 			const payload = (await verify(
 				accessToken,
 				TEST_ACCESS_SECRET,
+				AlgorithmTypes.HS256,
 			)) as TokenPayload;
 
 			expect(payload.exp).toBeLessThanOrEqual(now + 60 + 5);
@@ -326,6 +333,7 @@ describe("TokenService", () => {
 			const payload = (await verify(
 				refreshToken,
 				TEST_REFRESH_SECRET,
+				AlgorithmTypes.HS256,
 			)) as TokenPayload;
 
 			expect(payload.exp).toBeLessThanOrEqual(now + 3600 + 5);

@@ -18,7 +18,7 @@
         "@private-landing/infrastructure": "workspace:*",
         "@private-landing/schemas": "workspace:*",
         "@private-landing/types": "workspace:*",
-        "hono": "^4.7.5",
+        "hono": "^4.11.5",
         "nanoid": "^5.1.2",
         "zod": "^4.3.5",
       },
@@ -41,7 +41,7 @@
         "@private-landing/infrastructure": "workspace:*",
         "@private-landing/schemas": "workspace:*",
         "@private-landing/types": "workspace:*",
-        "hono": "^4.7.5",
+        "hono": "^4.11.5",
         "nanoid": "^5.1.5",
       },
       "devDependencies": {
@@ -79,7 +79,7 @@
       "name": "@private-landing/types",
       "version": "1.0.0",
       "dependencies": {
-        "hono": "^4.7.5",
+        "hono": "^4.11.5",
       },
       "devDependencies": {
         "bun-types": "latest",
@@ -438,7 +438,7 @@
 
     "has-flag": ["has-flag@4.0.0", "", {}, "sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ=="],
 
-    "hono": ["hono@4.7.5", "", {}, "sha512-fDOK5W2C1vZACsgLONigdZTRZxuBqFtcKh7bUQ5cVSbwI2RWjloJDcgFOVzbQrlI6pCmhlTsVYZ7zpLj4m4qMQ=="],
+    "hono": ["hono@4.11.5", "", {}, "sha512-WemPi9/WfyMwZs+ZUXdiwcCh9Y+m7L+8vki9MzDw3jJ+W9Lc+12HGsd368Qc1vZi1xwW8BWMMsnK5efYKPdt4g=="],
 
     "html-escaper": ["html-escaper@2.0.2", "", {}, "sha512-H2iMtd0I4Mt5eYiapRdIDjp+XzelXQ0tFE4JS7YFwFevXXMmOp9myNrUvCg0D6ws8iqkRPBfKHgbwig1SmlLfg=="],
 

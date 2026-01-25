@@ -21,7 +21,7 @@ import {
 import { getCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
 import type { HTTPException } from "hono/http-exception";
-import { verify } from "hono/jwt";
+import { AlgorithmTypes, verify } from "hono/jwt";
 import type { MiddlewareHandler } from "hono/types";
 import type { SessionService } from "../services/session-service";
 import type { TokenService } from "../services/token-service";
@@ -140,7 +140,11 @@ async function verifyToken(
 			type === "access"
 				? ctx.env.JWT_ACCESS_SECRET
 				: ctx.env.JWT_REFRESH_SECRET;
-		const payload = (await verify(token, secret)) as TokenPayload;
+		const payload = (await verify(
+			token,
+			secret,
+			AlgorithmTypes.HS256,
+		)) as TokenPayload;
 
 		if (payload.typ !== type) {
 			throw TokenError.malformed("Invalid token type");

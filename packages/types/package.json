@@ -42,7 +42,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"hono": "^4.7.5"
+		"hono": "^4.11.5"
 	},
 	"devDependencies": {
 		"bun-types": "latest",
