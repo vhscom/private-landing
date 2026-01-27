@@ -13,6 +13,7 @@ export default defineWorkersConfig({
 	test: {
 		globalSetup: ["./test/setup.ts"],
 		include: ["test/integration/**/*.test.ts", "test/sanity/**/*.test.ts"],
+		silent: "passed-only",
 		poolOptions: {
 			workers: {
 				wrangler: { configPath: "./wrangler.test.toml", environment: "test" },
