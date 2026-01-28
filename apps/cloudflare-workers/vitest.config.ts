@@ -16,7 +16,7 @@ export default defineWorkersConfig({
 		silent: "passed-only",
 		poolOptions: {
 			workers: {
-				wrangler: { configPath: "./wrangler.test.toml", environment: "test" },
+				wrangler: { configPath: "./wrangler.toml" },
 			},
 		},
 	},

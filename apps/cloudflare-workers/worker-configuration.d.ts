@@ -5,6 +5,7 @@ declare namespace Cloudflare {
 		mainModule: typeof import("./src/app");
 	}
 	interface Env {
+		ENVIRONMENT: string;
 		ASSETS: Fetcher;
 		AUTH_DB_URL: string;
 		AUTH_DB_TOKEN: string;

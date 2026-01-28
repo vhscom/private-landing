@@ -21,7 +21,7 @@
 	"scripts": {
 		"clean": "bun run --filter '@private-landing/*' clean",
 		"build": "bun run --filter '@private-landing/*' build && bun run build:workers",
-		"build:workers": "bun run --cwd apps/cloudflare-workers wrangler:build",
+		"build:workers": "bun run --cwd apps/cloudflare-workers wrangler:build --env=''",
 		"dev": "bun run --cwd apps/cloudflare-workers dev",
 		"test": "vitest run && bun run test:integration",
 		"test:unit": "vitest run",

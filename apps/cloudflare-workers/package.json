@@ -27,7 +27,7 @@
 		"build": "echo 'Skipping workers build during main build pass...'",
 		"dev": "wrangler dev --port 8788",
 		"wrangler:build": "wrangler deploy --dry-run --outdir=.wrangler/dist",
-		"deploy": "bun run check && wrangler deploy --minify",
+		"deploy": "bun run check && wrangler deploy --minify --env=production",
 		"db:backup": "src/db/scripts/backup.sh",
 		"db:migrate": "turso src/db shell private-landing-db < src/db/migrations/001_password_consolidation.sql",
 		"db:migrate-safe": "src/db/scripts/migrate-safe.sh",

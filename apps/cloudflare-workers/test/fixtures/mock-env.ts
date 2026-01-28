@@ -45,12 +45,20 @@ VALUES (1, 'test@example.com', '$pbkdf2-sha384$v1$100000$fW5ySXH4aQnPKYK8b7lGcA=
  * Returns the database client for cleanup in afterAll.
  */
 export async function initTestDb(): Promise<SqliteClient> {
-	// Safety check: Ensure we're using a test database (not production)
-	const dbUrl = env.AUTH_DB_URL;
-	const isTestDb = dbUrl.toLowerCase().includes("test-db");
-	if (!isTestDb) {
+	const envName = env.ENVIRONMENT ?? "unknown";
+
+	// SAFETY: Ensure we're using a test environment (not production)
+	if (!["development", "test"].includes(envName)) {
 		throw new Error(
-			'Safety check failed: AUTH_DB_URL must include "test-db" to run integration tests',
+			`initTestDb() only allowed when ENVIRONMENT is "development" or "test" (got: "${envName}")`,
+		);
+	}
+
+	// SAFETY: Ensure we're using a test database (not production)
+	const dbUrlLower = (env.AUTH_DB_URL ?? "").toLowerCase();
+	if (!["test-db", "dev-db"].some((keyword) => dbUrlLower.includes(keyword))) {
+		throw new Error(
+			`AUTH_DB_URL doesn't look like a test/dev db: ${env.AUTH_DB_URL}`,
 		);
 	}
 

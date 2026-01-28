@@ -37,10 +37,10 @@ jobs:
       - name: Create worker test env file
         working-directory: apps/cloudflare-workers
         run: |
-          echo 'AUTH_DB_URL="${{ secrets.AUTH_DB_URL }}"' > .dev.vars.test
-          echo 'AUTH_DB_TOKEN="${{ secrets.AUTH_DB_TOKEN }}"' >> .dev.vars.test
-          echo 'JWT_ACCESS_SECRET="${{ secrets.JWT_ACCESS_SECRET }}"' >> .dev.vars.test
-          echo 'JWT_REFRESH_SECRET="${{ secrets.JWT_REFRESH_SECRET }}"' >> .dev.vars.test
+          echo 'AUTH_DB_URL="${{ secrets.AUTH_DB_URL }}"' > .dev.vars
+          echo 'AUTH_DB_TOKEN="${{ secrets.AUTH_DB_TOKEN }}"' >> .dev.vars
+          echo 'JWT_ACCESS_SECRET="${{ secrets.JWT_ACCESS_SECRET }}"' >> .dev.vars
+          echo 'JWT_REFRESH_SECRET="${{ secrets.JWT_REFRESH_SECRET }}"' >> .dev.vars
 
       - name: Integration tests
         run: bun run test:integration
