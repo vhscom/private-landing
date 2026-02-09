@@ -39,6 +39,9 @@ const passwordSchema = z
 	.transform(normalizePassword)
 	.refine((normalized) => normalized.length >= 8, {
 		message: "Password must contain at least 8 characters after normalization",
+	})
+	.refine((normalized) => normalized.length <= 64, {
+		message: "Password may not exceed 64 characters after normalization",
 	});
 
 /**

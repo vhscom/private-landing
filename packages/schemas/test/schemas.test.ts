@@ -335,5 +335,22 @@ describe("Validation Schemas", () => {
 			// This should fail because after normalization it's too short
 			expect(result.success).toBe(false);
 		});
+
+		it("should enforce max length after normalization", async () => {
+			// 64 characters pre-normalization, but all single chars so NFKC won't change length
+			const exactlyAt64 = "a".repeat(64);
+			const at64Result = await loginSchema.safeParseAsync({
+				email: "user@example.com",
+				password: exactlyAt64,
+			});
+			expect(at64Result.success).toBe(true);
+
+			// Verify that a 65-char password is rejected
+			const at65Result = await loginSchema.safeParseAsync({
+				email: "user@example.com",
+				password: "a".repeat(65),
+			});
+			expect(at65Result.success).toBe(false);
+		});
 	});
 });
