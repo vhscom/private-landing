@@ -125,16 +125,28 @@ app.post("/api/logout", requireAuth, async (ctx) => {
 
 // Protected API routes
 app.use("/api/*", requireAuth);
-app.get("/api/ping", async (ctx) => {
-	const payload = ctx.get("jwtPayload");
-	const dbClient = createDbClient(ctx.env);
-	const result = await dbClient.execute("SELECT sqlite_version();");
 
-	return ctx.json({
-		message: "Authenticated ping success!",
-		userId: payload.uid,
-		version: result,
-	});
+app.get("/api/health", (ctx) => {
+	return ctx.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+app.get("/api/health/live", (ctx) => {
+	return ctx.json({ status: "alive" });
+});
+
+app.get("/api/health/ready", async (ctx) => {
+	try {
+		const dbClient = createDbClient(ctx.env);
+		await dbClient.execute("SELECT 1");
+		return ctx.json({ status: "ready", database: "reachable" });
+	} catch {
+		return ctx.json({ status: "not_ready", database: "unreachable" }, 503);
+	}
+});
+
+app.get("/api/ping", (ctx) => {
+	const payload = ctx.get("jwtPayload");
+	return ctx.json({ message: "pong", userId: payload.uid });
 });
 
 export default app;

@@ -25,20 +25,21 @@ describe("Application", () => {
 	});
 
 	describe("API Endpoints", () => {
-		it.skip("should handle JSON requests", async () => {
+		it("should reject unauthenticated API requests with JSON", async () => {
 			const response = await worker.request(
-				"/api/hello",
+				"/api/health",
 				{
 					headers: {
-						"Content-Type": "application/json",
+						Accept: "application/json",
 					},
 				},
 				env,
 			);
 
-			expect(response.status).toBe(200);
+			expect(response.status).toBe(401);
 			const data = await response.json();
-			expect(data).toBeDefined();
+			expect(data).toHaveProperty("error");
+			expect(data).toHaveProperty("code");
 		});
 
 		it("should return 404 for non-existent routes", async () => {

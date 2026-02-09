@@ -68,7 +68,7 @@ describe("requireAuth middleware", () => {
 
 			expect(response.status).toBe(200);
 			const data = await response.json();
-			expect(data).toHaveProperty("message", "Authenticated ping success!");
+			expect(data).toHaveProperty("message", "pong");
 		});
 
 		it("should set jwtPayload in context", async () => {

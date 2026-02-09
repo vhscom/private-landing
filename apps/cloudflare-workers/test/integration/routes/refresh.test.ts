@@ -40,7 +40,7 @@ describe("Token Refresh", () => {
 
 		expect(response.status).toBe(200);
 		const data = await response.json();
-		expect(data).toHaveProperty("message", "Authenticated ping success!");
+		expect(data).toHaveProperty("message", "pong");
 		expect(data).toHaveProperty("userId", 1);
 	});
 
