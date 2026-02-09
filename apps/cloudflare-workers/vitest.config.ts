@@ -12,7 +12,11 @@ import {
 export default defineWorkersConfig({
 	test: {
 		globalSetup: ["./test/setup.ts"],
-		include: ["test/integration/**/*.test.ts", "test/sanity/**/*.test.ts"],
+		include: [
+			"src/**/*.test.ts",
+			"test/integration/**/*.test.ts",
+			"test/sanity/**/*.test.ts",
+		],
 		silent: "passed-only",
 		poolOptions: {
 			workers: {
