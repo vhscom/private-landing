@@ -66,6 +66,32 @@ describe("Validation Schemas", () => {
 			expect(result.success).toBe(false);
 		});
 
+		it("should reject email exceeding 254 characters", async () => {
+			const longLocal = "a".repeat(243);
+			const result = await loginSchema.safeParseAsync({
+				email: `${longLocal}@example.com`,
+				password: "ValidPassword123",
+			});
+
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				expect(formatZodError(result.error)).toContain("254 characters");
+			}
+		});
+
+		it("should accept email at 254 character boundary", async () => {
+			const longLocal = "a".repeat(242);
+			const email = `${longLocal}@example.com`;
+			expect(email).toHaveLength(254);
+
+			const result = await loginSchema.safeParseAsync({
+				email,
+				password: "ValidPassword123",
+			});
+
+			expect(result.success).toBe(true);
+		});
+
 		it("should reject password shorter than 8 characters", async () => {
 			const result = await loginSchema.safeParseAsync({
 				email: "user@example.com",

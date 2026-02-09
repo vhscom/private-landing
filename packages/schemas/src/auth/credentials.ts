@@ -21,7 +21,11 @@ import { normalizePassword } from "./password";
  * Email validation schema with normalization.
  * Ensures consistent email format and case handling to prevent duplicate accounts.
  */
-const emailSchema = z.email("Invalid email format").toLowerCase().trim();
+const emailSchema = z
+	.email("Invalid email format")
+	.max(254, "Email must not exceed 254 characters")
+	.toLowerCase()
+	.trim();
 
 /**
  * Password validation schema following NIST SP 800-63B requirements:
