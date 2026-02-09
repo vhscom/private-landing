@@ -258,7 +258,7 @@ export function createPasswordService(
 		const parsed = parsePasswordString(storedPasswordData);
 		if (!parsed) return false;
 
-		const { iterations, salt, hash } = parsed;
+		const { iterations, salt, hash, digest } = parsed;
 		const saltBytes = Uint8Array.from(atob(salt), (c) => c.charCodeAt(0));
 		const passwordAsBytes = new TextEncoder().encode(password);
 
@@ -284,9 +284,24 @@ export function createPasswordService(
 		);
 
 		// Compare hashes using constant-time comparison
-		return await timingSafeEqual(
+		const hashMatch = await timingSafeEqual(
 			hashBuffer,
 			Uint8Array.from(atob(hash), (c) => c.charCodeAt(0)),
+		);
+
+		// Verify integrity digest to detect stored hash tampering
+		const digestBuffer = await crypto.subtle.digest(
+			`SHA-${resolvedConfig.bits}`,
+			hashBuffer,
+		);
+		const digestMatch = await timingSafeEqual(
+			digestBuffer,
+			Uint8Array.from(atob(digest), (c) => c.charCodeAt(0)),
+		);
+
+		// Combine without short-circuit to prevent timing side-channel
+		return !!(
+			(hashMatch as unknown as number) & (digestMatch as unknown as number)
 		);
 	}
 
