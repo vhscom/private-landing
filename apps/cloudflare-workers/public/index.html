@@ -8,34 +8,43 @@
     <meta name="description" content="Build secure APIs at the edge in minutes. Authentication that just works.">
     <style>
         :root {
-            /* Colors */
-            --color-bg: #f5f5f5;
-            --color-text: #2c3e50;
-            --color-border: #ccc;
-            --color-input-bg: #fff;
-            --color-button: #3b82f6;
-            --color-button-focus: #2563eb;
-            --color-focus-ring: rgb(59 130 246 / 0.5);
+            --color-bg: #050a10;
+            --color-surface: #0a1020;
+            --color-text: #e0e8ff;
+            --color-muted: #6b7a99;
+            --color-border: rgb(224 232 255 / 0.08);
+            --color-input-bg: #0d1528;
+            --color-accent: #00e5cc;
+            --color-accent-glow: rgb(0 229 204 / 0.35);
+            --color-danger: #f85149;
+            --color-ok: #3fb950;
+            --color-console-bg: #111827;
+            --color-console-border: rgb(136 146 176 / 0.15);
+            --color-console-text: #f0f4ff;
 
-            /* Spacing */
             --space-xs: 0.5rem;
             --space-sm: 1rem;
+            --space-md: 1.5rem;
 
-            /* Typography */
-            --font-stack: system-ui, -apple-system, BlinkMacSystemFont,
-            'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
-            'Open Sans', 'Helvetica Neue', sans-serif;
+            --font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro',
+            Menlo, Consolas, 'DejaVu Sans Mono', monospace;
         }
 
-        @media (prefers-color-scheme: dark) {
+        @media (prefers-color-scheme: light) {
             :root {
-                --color-bg: #1a1a1a;
-                --color-text: #e0e0e0;
-                --color-border: #444;
-                --color-input-bg: #2c2c2c;
-                --color-button: #1d4ed8;
-                --color-button-focus: #1e40af;
-                --color-focus-ring: rgb(147 197 253 / 0.5);
+                --color-bg: #f5f7fa;
+                --color-surface: #fff;
+                --color-text: #1a2332;
+                --color-muted: #5a6a82;
+                --color-border: rgb(26 35 50 / 0.12);
+                --color-input-bg: #fff;
+                --color-accent: #0d9485;
+                --color-accent-glow: rgb(13 148 133 / 0.25);
+                --color-danger: #dc2626;
+                --color-ok: #16a34a;
+                --color-console-bg: #1e293b;
+                --color-console-border: rgb(26 35 50 / 0.15);
+                --color-console-text: #e2e8f0;
             }
         }
 
@@ -44,18 +53,111 @@
         }
 
         body {
-            font-family: var(--font-stack), sans-serif;
-            line-height: 1.5;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            line-height: 1.6;
             background: var(--color-bg);
             color: var(--color-text);
-            max-width: 70ch;
+            max-width: 64ch;
             margin-inline: auto;
-            padding: var(--space-sm);
+            padding: var(--space-md);
+            -webkit-text-size-adjust: 100%;
         }
 
         h1 {
+            font-size: 1.4rem;
             line-height: 1.2;
+            margin: 0;
+            letter-spacing: -0.02em;
         }
+
+        h2 {
+            font-size: 0.85rem;
+            color: var(--color-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-block: var(--space-md) var(--space-sm);
+        }
+
+        .page-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--space-xs);
+            padding-block-end: var(--space-md);
+            border-block-end: 1px solid var(--color-border);
+        }
+
+        /* Health probe */
+
+        .health-probe {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-xs);
+            padding: 0.3rem 0.7rem;
+            background: transparent;
+            border: 1px solid var(--color-border);
+            border-radius: 9999px;
+            font: inherit;
+            font-size: 0.75rem;
+            color: var(--color-muted);
+            cursor: pointer;
+            transition: color 0.2s, border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .health-probe:is(:hover, :focus) {
+            color: var(--color-accent);
+            border-color: var(--color-accent);
+            background: transparent;
+        }
+
+        .health-probe:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 2px var(--color-accent-glow);
+        }
+
+        .health-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--color-muted);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .health-result {
+            display: flex;
+            margin-block-start: var(--space-xs);
+            padding: 0.75rem 1rem;
+            background: var(--color-console-bg);
+            border: 1px solid var(--color-console-border);
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: var(--color-muted);
+            white-space: pre;
+            overflow-x: auto;
+            opacity: 0;
+            transform: translateY(-6px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .health-result.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .health-result .prompt { color: var(--color-accent); }
+        .health-result .cmd { color: var(--color-console-text); }
+        .health-result .status { font-weight: 700; }
+        .health-result.ok .status { color: var(--color-ok); }
+        .health-result.denied .status { color: var(--color-danger); }
+
+        /* Forms */
 
         form {
             display: flex;
@@ -66,14 +168,18 @@
         label {
             display: flex;
             flex-direction: column;
-            gap: var(--space-xs);
+            gap: 0.3rem;
+            font-size: 0.8rem;
+            color: var(--color-muted);
         }
 
         input {
-            padding: var(--space-xs);
+            min-height: 44px;
+            padding: var(--space-xs) 0.6rem;
             background: var(--color-input-bg);
             border: 1px solid var(--color-border);
             border-radius: 4px;
+            font: inherit;
             font-size: 1rem;
             color: var(--color-text);
             transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -81,47 +187,53 @@
 
         input:focus {
             outline: none;
-            border-color: var(--color-button);
-            box-shadow: 0 0 0 3px var(--color-focus-ring);
+            border-color: var(--color-accent);
+            box-shadow: 0 0 0 2px var(--color-accent-glow);
         }
 
         button {
+            min-height: 44px;
             padding: var(--space-xs) var(--space-sm);
-            background: var(--color-button);
-            color: white;
-            border: none;
+            background: transparent;
+            color: var(--color-accent);
+            border: 1px solid var(--color-accent);
             border-radius: 4px;
-            font-size: 1rem;
+            font: inherit;
+            font-size: 0.85rem;
             cursor: pointer;
-            transition: background 0.2s ease, box-shadow 0.2s ease;
+            transition: background 0.2s, box-shadow 0.2s;
         }
 
         button:is(:hover, :focus) {
-            background: var(--color-button-focus);
+            background: rgb(0 229 204 / 0.08);
         }
 
         button:focus-visible {
             outline: none;
-            box-shadow: 0 0 0 3px var(--color-focus-ring);
+            box-shadow: 0 0 0 2px var(--color-accent-glow);
         }
 
         .logout-button {
-            background: transparent;
-            border: 1px solid var(--color-border);
-            color: var(--color-text);
+            color: var(--color-muted);
+            border-color: var(--color-border);
         }
 
         .logout-button:is(:hover, :focus) {
-            background: rgb(255 255 255 / 0.1);
+            color: var(--color-danger);
+            border-color: var(--color-danger);
+            background: rgb(248 81 73 / 0.08);
         }
 
+        /* Messages */
+
         .message {
-            padding: var(--space-sm);
-            margin-top: var(--space-sm);
-            background: var(--color-button);
-            color: white;
+            padding: var(--space-xs) var(--space-sm);
+            margin-block-start: var(--space-sm);
+            background: var(--color-surface);
+            border: 1px solid var(--color-accent);
             border-radius: 4px;
-            margin-bottom: var(--space-sm);
+            color: var(--color-accent);
+            font-size: 0.85rem;
             opacity: 0;
             transform: translateY(-10px);
             transition: opacity 0.3s ease, transform 0.3s ease;
@@ -133,13 +245,21 @@
         }
 
         .message.error {
-            background: #dc2626;
+            color: var(--color-danger);
+            border-color: var(--color-danger);
         }
     </style>
 </head>
 
 <body>
-<h1>Private Landing</h1>
+<header class="page-header">
+    <h1>Private Landing</h1>
+    <button type="button" class="health-probe" id="health-probe" title="Query protected API">
+        <span class="health-dot" id="health-dot"></span>
+        /api/health
+    </button>
+</header>
+<output id="health-result" class="health-result" aria-live="polite"></output>
 
 <section>
     <h2>Registration</h2>
@@ -205,6 +325,50 @@
                 break;
         }
     }
+
+    const probe = document.getElementById('health-probe');
+    const dot = document.getElementById('health-dot');
+    const result = document.getElementById('health-result');
+
+    probe.addEventListener('click', async () => {
+        probe.disabled = true;
+        dot.style.animation = 'none';
+        dot.style.background = 'var(--color-muted)';
+        result.classList.remove('visible', 'ok', 'denied');
+        result.replaceChildren();
+
+        try {
+            const res = await fetch('/api/health', {
+                headers: { 'Accept': 'application/json' }
+            });
+            const body = await res.json();
+            const ok = res.ok;
+
+            dot.style.background = ok ? 'var(--color-ok)' : 'var(--color-danger)';
+
+            const prompt = document.createElement('span');
+            prompt.className = 'prompt';
+            prompt.textContent = '$ ';
+
+            const cmd = document.createElement('span');
+            cmd.className = 'cmd';
+            cmd.textContent = 'GET /api/health ';
+
+            const status = document.createElement('span');
+            status.className = 'status';
+            status.textContent = res.status;
+
+            result.append(prompt, cmd, '\n', status, ` ${JSON.stringify(body)}`);
+            result.classList.add(ok ? 'ok' : 'denied');
+        } catch {
+            dot.style.background = 'var(--color-danger)';
+            result.textContent = '$ GET /api/health\nNetwork error';
+            result.classList.add('denied');
+        }
+
+        requestAnimationFrame(() => result.classList.add('visible'));
+        probe.disabled = false;
+    });
 </script>
 </body>
 </html>
