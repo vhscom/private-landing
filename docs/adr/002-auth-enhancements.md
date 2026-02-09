@@ -132,15 +132,11 @@ interface LockoutConfig {
 
 #### 5. CSRF Protection
 
-For non-GET endpoints not using Authorization header:
-
-```typescript
-const csrfConfig = {
-    tokenLength: 32,
-    cookieName: '__Host-csrf',
-    headerName: 'X-CSRF-Token'
-};
-```
+**Status: Not needed.** All auth cookies use `SameSite=Strict`, which prevents the
+browser from sending cookies on cross-origin requests — the exact vector CSRF tokens
+protect against. OWASP's [CSRF Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)
+lists `SameSite` cookies as a sufficient standalone defense. Adding CSRF tokens on top
+would be redundant complexity with no security benefit.
 
 #### 6. Concurrent Session Management
 
