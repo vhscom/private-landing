@@ -34,7 +34,7 @@
 		"format:packages": "biome check --write packages"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.3.12",
+		"@biomejs/biome": "^2.3.14",
 		"@vitest/coverage-v8": "~3.2.x",
 		"vitest": "~3.2.x"
 	}
