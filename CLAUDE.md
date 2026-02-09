@@ -27,6 +27,7 @@ packages/types/             # Shared TypeScript types and error classes
 - **PBKDF2-SHA384**: 100,000 iterations with 128-bit salts per NIST SP 800-132
 - **Timing-safe comparison**: Uses `crypto.subtle.verify()` for constant-time equality checks
 - **No composition rules**: Password policy follows NIST guidance (length only, no complexity requirements)
+- **Content negotiation**: Auth endpoints return JSON when `Accept: application/json` is sent, redirects otherwise
 
 ## Commands
 
