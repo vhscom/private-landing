@@ -111,10 +111,10 @@ export function createRequireAuth(
 			}
 			return ctx.json(
 				{
-					error: "Authentication failed",
-					code: "UNKNOWN_ERROR",
+					error: "Internal server error",
+					code: "INTERNAL_ERROR",
 				},
-				401 as HTTPException["status"],
+				500 as HTTPException["status"],
 			);
 		}
 	});

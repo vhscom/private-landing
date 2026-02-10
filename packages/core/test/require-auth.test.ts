@@ -427,12 +427,12 @@ describe("createRequireAuth", () => {
 	});
 
 	describe("error handling", () => {
-		it("should return 401 for unknown errors", async () => {
+		it("should return 500 for non-auth errors", async () => {
 			const services = createMockServices({ sessionId: "session-123" });
-			// Make getSession throw on second call (during refresh flow)
-			services.sessionService.getSession
-				.mockResolvedValueOnce(null) // First call for access token check
-				.mockRejectedValueOnce(new Error("Database error")); // Fail during refresh
+			// getSession throws a plain Error (not AuthenticationError) during refresh
+			services.sessionService.getSession.mockRejectedValue(
+				new Error("Database error"),
+			);
 
 			const middleware = createRequireAuth(services);
 
@@ -461,9 +461,10 @@ describe("createRequireAuth", () => {
 				},
 			);
 
-			expect(res.status).toBe(403);
+			expect(res.status).toBe(500);
 			const body = await res.json();
-			expect(body.code).toBe("SESSION_REVOKED");
+			expect(body.code).toBe("INTERNAL_ERROR");
+			expect(body.error).toBe("Internal server error");
 		});
 	});
 });
