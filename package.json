@@ -19,6 +19,9 @@
 		"bun": ">=1.0.0"
 	},
 	"scripts": {
+		"cli:build": "go build -C tools/cli -o plctl ./cmd/plctl",
+		"cli:start": "./tools/cli/plctl",
+		"cli:test": "cd tools/cli && go run gotest.tools/gotestsum ./...",
 		"clean": "bun run --filter '@private-landing/*' clean",
 		"build": "bun run --filter '@private-landing/*' build && bun run build:workers",
 		"build:workers": "bun run --cwd apps/cloudflare-workers wrangler:build --env=''",
