@@ -68,7 +68,7 @@ type model struct {
 	state    state
 	cursor   int
 	scope    session.Scope
-	input    string
+	input    session.InputBuffer
 	result   session.InvalidateResult
 	sessions []session.ActiveSession
 	sessErr  error
@@ -144,7 +144,7 @@ func (m model) handleMenu(key string) (tea.Model, tea.Cmd) {
 			m.state = stateConfirm
 		} else {
 			m.state = stateInput
-			m.input = ""
+			m.input.Clear()
 		}
 	case "q":
 		m.quitting = true
@@ -156,20 +156,16 @@ func (m model) handleMenu(key string) (tea.Model, tea.Cmd) {
 func (m model) handleInput(key string, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch key {
 	case "enter":
-		if strings.TrimSpace(m.input) == "" {
+		if strings.TrimSpace(m.input.Value) == "" {
 			return m, nil
 		}
 		m.state = stateConfirm
 	case "backspace":
-		if len(m.input) > 0 {
-			m.input = m.input[:len(m.input)-1]
-		}
+		m.input.Backspace()
 	case "esc":
 		m.state = stateMenu
 	default:
-		if len(msg.Runes) > 0 {
-			m.input += string(msg.Runes)
-		}
+		m.input.Append(msg.Runes)
 	}
 	return m, nil
 }
@@ -180,7 +176,7 @@ func (m model) handleConfirm(key string) (tea.Model, tea.Cmd) {
 		return m, m.executeInvalidation()
 	case "n", "N", "esc":
 		m.state = stateMenu
-		m.input = ""
+		m.input.Clear()
 	}
 	return m, nil
 }
@@ -189,7 +185,7 @@ func (m model) handleResult(key string) (tea.Model, tea.Cmd) {
 	switch key {
 	case "enter", "esc":
 		m.state = stateMenu
-		m.input = ""
+		m.input.Clear()
 	case "q":
 		m.quitting = true
 		return m, tea.Quit
@@ -206,7 +202,7 @@ func (m model) fetchSessions() tea.Cmd {
 
 func (m model) executeInvalidation() tea.Cmd {
 	return func() tea.Msg {
-		r := session.Invalidate(context.Background(), m.db, m.scope, strings.TrimSpace(m.input))
+		r := session.Invalidate(context.Background(), m.db, m.scope, strings.TrimSpace(m.input.Value))
 		return resultMsg(r)
 	}
 }
@@ -263,7 +259,7 @@ func (m model) viewInput() string {
 		label = "Session ID"
 	}
 	b.WriteString(promptStyle.Render(fmt.Sprintf("Enter %s: ", label)))
-	b.WriteString(m.input)
+	b.WriteString(m.input.Value)
 	b.WriteString("█")
 	b.WriteString(dimStyle.Render("\n\nenter confirm • esc back"))
 	return b.String()
@@ -277,9 +273,9 @@ func (m model) viewConfirm() string {
 	case session.ScopeAll:
 		target = "ALL active sessions"
 	case session.ScopeUser:
-		target = fmt.Sprintf("all sessions for account %s", m.input)
+		target = fmt.Sprintf("all sessions for account %s", m.input.Value)
 	case session.ScopeSession:
-		target = fmt.Sprintf("session %s", m.input)
+		target = fmt.Sprintf("session %s", m.input.Value)
 	}
 
 	b.WriteString(errorStyle.Render(fmt.Sprintf("Invalidate %s?", target)))
