@@ -38,9 +38,7 @@ describe("requireAuth middleware", () => {
 
 			expect(response.status).toBe(401);
 			const data = (await response.json()) as { error: string; code: string };
-			expect(data.error).toBe(
-				"Access token expired and no refresh token present",
-			);
+			expect(data.error).toBe("Token expired");
 			expect(data.code).toBe("TOKEN_EXPIRED");
 		});
 

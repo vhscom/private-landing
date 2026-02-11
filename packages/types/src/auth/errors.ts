@@ -33,20 +33,25 @@ export class AuthenticationError extends Error {
  * Handles both validation failures and token lifecycle issues.
  */
 export class TokenError extends AuthenticationError {
-	constructor(message: string, code = "INVALID_TOKEN", statusCode = 401) {
+	constructor(message: string, code = "TOKEN_INVALID", statusCode = 401) {
 		super(message, code, statusCode);
 		this.name = "TokenError";
 		Object.setPrototypeOf(this, TokenError.prototype);
 	}
 
 	/** @returns TokenError with 400 Bad Request - Token structure or format invalid */
-	static malformed(message = "Malformed token") {
-		return new TokenError(message, "TOKEN_MALFORMED", 400);
+	static malformed() {
+		return new TokenError("Token malformed", "TOKEN_MALFORMED", 400);
 	}
 
-	/** @returns TokenError with 401 Unauthorized - Token has expired or is invalid */
-	static expired(message = "Token expired") {
-		return new TokenError(message, "TOKEN_EXPIRED", 401);
+	/** @returns TokenError with 401 Unauthorized - Token has expired */
+	static expired() {
+		return new TokenError("Token expired", "TOKEN_EXPIRED", 401);
+	}
+
+	/** @returns TokenError with 401 Unauthorized - Token is invalid */
+	static invalid() {
+		return new TokenError("Token invalid", "TOKEN_INVALID", 401);
 	}
 }
 

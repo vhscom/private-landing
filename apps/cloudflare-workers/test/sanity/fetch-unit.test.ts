@@ -14,6 +14,6 @@ it("dispatches fetch event", async () => {
 	expect(response.status).toBe(401);
 	expect(await response.json()).toStrictEqual({
 		code: "TOKEN_EXPIRED",
-		error: "Access token expired and no refresh token present",
+		error: "Token expired",
 	});
 });

@@ -23,6 +23,11 @@ import { createMiddleware } from "hono/factory";
 import type { HTTPException } from "hono/http-exception";
 import { AlgorithmTypes, verify } from "hono/jwt";
 import type { MiddlewareHandler } from "hono/types";
+import {
+	JwtTokenExpired,
+	JwtTokenInvalid,
+	JwtTokenSignatureMismatched,
+} from "hono/utils/jwt/types";
 import type { SessionService } from "../services/session-service";
 import type { TokenService } from "../services/token-service";
 
@@ -80,9 +85,7 @@ export function createRequireAuth(
 			// Second attempt: Try refresh token flow
 			const refreshToken = getCookie(ctx, "refresh_token");
 			if (!refreshToken) {
-				throw TokenError.expired(
-					"Access token expired and no refresh token present",
-				);
+				throw TokenError.expired();
 			}
 
 			const refreshPayload = await verifyToken(ctx, refreshToken, "refresh");
@@ -121,6 +124,33 @@ export function createRequireAuth(
 }
 
 /**
+ * Converts hono/jwt errors into domain-specific TokenError instances.
+ * Never leaks cryptographic details.
+ *
+ * @param error - JWT verification error object
+ * @throws TokenError based on hono
+ */
+function normalizeJwtError(error: unknown): never {
+	// Token expired (exp claim)
+	if (error instanceof JwtTokenExpired) {
+		throw TokenError.expired();
+	}
+
+	// Signature mismatch (wrong secret / tampered token)
+	if (error instanceof JwtTokenSignatureMismatched) {
+		throw TokenError.invalid();
+	}
+
+	// Structurally invalid / corrupted
+	if (error instanceof JwtTokenInvalid) {
+		throw TokenError.malformed();
+	}
+
+	// Fallback: anything unexpected
+	throw TokenError.invalid();
+}
+
+/**
  * Verifies a JWT token and ensures it matches the expected type.
  * Also sets the payload in the context for downstream middleware/handlers.
  *
@@ -147,7 +177,7 @@ async function verifyToken(
 		)) as TokenPayload;
 
 		if (payload.typ !== type) {
-			throw TokenError.malformed("Invalid token type");
+			throw TokenError.malformed();
 		}
 
 		ctx.set("jwtPayload", payload);
@@ -156,7 +186,6 @@ async function verifyToken(
 		if (error instanceof TokenError) {
 			throw error;
 		}
-		// Handle JWT verification errors from hono/jwt
-		throw TokenError.malformed("Invalid token structure");
+		normalizeJwtError(error);
 	}
 }
