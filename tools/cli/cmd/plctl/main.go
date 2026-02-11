@@ -33,21 +33,35 @@ const (
 	stateInput
 	stateConfirm
 	stateResult
+	stateSessions
+)
+
+type action int
+
+const (
+	actionInvalidate action = iota
+	actionViewSessions
 )
 
 type menuItem struct {
-	label string
-	scope session.Scope
+	label  string
+	scope  session.Scope
+	action action
 }
 
 var menuItems = []menuItem{
-	{"Invalidate all sessions", session.ScopeAll},
-	{"Invalidate sessions for a user (account ID)", session.ScopeUser},
-	{"Invalidate a specific session (session ID)", session.ScopeSession},
+	{"View active sessions", session.ScopeAll, actionViewSessions},
+	{"Invalidate all sessions", session.ScopeAll, actionInvalidate},
+	{"Invalidate sessions for a user (account ID)", session.ScopeUser, actionInvalidate},
+	{"Invalidate a specific session (session ID)", session.ScopeSession, actionInvalidate},
 }
 
 // messages
 type resultMsg session.InvalidateResult
+type sessionsMsg struct {
+	sessions []session.ActiveSession
+	err      error
+}
 
 type model struct {
 	db       *sql.DB
@@ -56,6 +70,8 @@ type model struct {
 	scope    session.Scope
 	input    string
 	result   session.InvalidateResult
+	sessions []session.ActiveSession
+	sessErr  error
 	quitting bool
 }
 
@@ -74,6 +90,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case resultMsg:
 		m.result = session.InvalidateResult(msg)
 		m.state = stateResult
+		return m, nil
+	case sessionsMsg:
+		m.sessions = msg.sessions
+		m.sessErr = msg.err
+		m.state = stateSessions
 		return m, nil
 	}
 	return m, nil
@@ -97,6 +118,8 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleConfirm(key)
 	case stateResult:
 		return m.handleResult(key)
+	case stateSessions:
+		return m.handleResult(key)
 	}
 	return m, nil
 }
@@ -112,7 +135,11 @@ func (m model) handleMenu(key string) (tea.Model, tea.Cmd) {
 			m.cursor++
 		}
 	case "enter":
-		m.scope = menuItems[m.cursor].scope
+		item := menuItems[m.cursor]
+		m.scope = item.scope
+		if item.action == actionViewSessions {
+			return m, m.fetchSessions()
+		}
 		if m.scope == session.ScopeAll {
 			m.state = stateConfirm
 		} else {
@@ -170,6 +197,13 @@ func (m model) handleResult(key string) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m model) fetchSessions() tea.Cmd {
+	return func() tea.Msg {
+		s, err := session.ListActive(context.Background(), m.db)
+		return sessionsMsg{sessions: s, err: err}
+	}
+}
+
 func (m model) executeInvalidation() tea.Cmd {
 	return func() tea.Msg {
 		r := session.Invalidate(context.Background(), m.db, m.scope, strings.TrimSpace(m.input))
@@ -195,6 +229,8 @@ func (m model) View() string {
 		b.WriteString(m.viewConfirm())
 	case stateResult:
 		b.WriteString(m.viewResult())
+	case stateSessions:
+		b.WriteString(m.viewSessions())
 	}
 
 	b.WriteString("\n")
@@ -259,6 +295,39 @@ func (m model) viewResult() string {
 		b.WriteString(successStyle.Render(fmt.Sprintf("Done. %d session(s) invalidated.", m.result.RowsAffected)))
 	}
 	b.WriteString(dimStyle.Render("\n\nenter continue • q quit"))
+	return b.String()
+}
+
+func (m model) viewSessions() string {
+	var b strings.Builder
+
+	if m.sessErr != nil {
+		b.WriteString(errorStyle.Render(fmt.Sprintf("Error: %v", m.sessErr)))
+		b.WriteString(dimStyle.Render("\n\nenter continue • q quit"))
+		return b.String()
+	}
+
+	if len(m.sessions) == 0 {
+		b.WriteString(dimStyle.Render("No active sessions."))
+		b.WriteString(dimStyle.Render("\n\nenter continue • q quit"))
+		return b.String()
+	}
+
+	b.WriteString(fmt.Sprintf("Active Sessions (%d)\n", len(m.sessions)))
+
+	for i, s := range m.sessions {
+		b.WriteString("\n")
+		b.WriteString(activeStyle.Render(fmt.Sprintf("  Session %d", i+1)))
+		b.WriteString("\n")
+		b.WriteString(fmt.Sprintf("  %s  %s\n", promptStyle.Render("ID:"), s.ID))
+		b.WriteString(fmt.Sprintf("  %s  %s\n", promptStyle.Render("User:"), s.UserID))
+		b.WriteString(fmt.Sprintf("  %s  %s\n", promptStyle.Render("Agent:"), s.UserAgent))
+		b.WriteString(fmt.Sprintf("  %s  %s\n", promptStyle.Render("IP:"), s.IPAddress))
+		b.WriteString(fmt.Sprintf("  %s  %s\n", promptStyle.Render("Expires:"), s.ExpiresAt))
+		b.WriteString(fmt.Sprintf("  %s  %s\n", promptStyle.Render("Created:"), s.CreatedAt))
+	}
+
+	b.WriteString(dimStyle.Render("\nenter continue • q quit"))
 	return b.String()
 }
 
