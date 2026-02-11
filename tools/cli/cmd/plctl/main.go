@@ -167,8 +167,8 @@ func (m model) handleInput(key string, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "esc":
 		m.state = stateMenu
 	default:
-		if len(key) == 1 {
-			m.input += key
+		if len(msg.Runes) > 0 {
+			m.input += string(msg.Runes)
 		}
 	}
 	return m, nil
