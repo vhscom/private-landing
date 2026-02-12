@@ -144,7 +144,7 @@ sequenceDiagram
   RH-->>U: 200 {message: "pong", userId: 1}
 ```
 
-**Source:** [`require-auth.ts:62-121`](../packages/core/src/auth/middleware/require-auth.ts) | [`require-auth.ts:133-162`](../packages/core/src/auth/middleware/require-auth.ts) (verifyToken) | [`session-service.ts:250-276`](../packages/core/src/auth/services/session-service.ts)
+**Source:** [`require-auth.ts:67-124`](../packages/core/src/auth/middleware/require-auth.ts) | [`require-auth.ts:163-191`](../packages/core/src/auth/middleware/require-auth.ts) (verifyToken) | [`session-service.ts:250-276`](../packages/core/src/auth/services/session-service.ts)
 
 ---
 
@@ -200,7 +200,7 @@ sequenceDiagram
   MW-->>U: 200 (original request succeeds)
 ```
 
-**Source:** [`require-auth.ts:80-100`](../packages/core/src/auth/middleware/require-auth.ts) | [`token-service.ts:116-143`](../packages/core/src/auth/services/token-service.ts)
+**Source:** [`require-auth.ts:85-103`](../packages/core/src/auth/middleware/require-auth.ts) | [`token-service.ts:116-143`](../packages/core/src/auth/services/token-service.ts)
 
 ---
 
