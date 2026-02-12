@@ -1,14 +1,16 @@
 # ADR-001: Authentication Implementation
 
-## Status
+- **Status:** Accepted
+- **Date:** 2025-01-10
+- **Decision-makers:** @vhscom
 
-Accepted
-
-## Context
+## Context and Problem Statement
 
 We need to implement a secure authentication system for our web application targeting ~100 users. While we have no specific compliance requirements, the system should follow security best practices and provide a good user experience. This aligns with typical early-stage startup needs.
 
-## Decision
+How should we implement an authentication system to follow security best practices and provide a good UX?
+
+## Decision Outcome
 
 Our authentication system combines secure password storage, robust session management, and JWT-based API authentication to create a comprehensive solution that provides both security and good UX.
 

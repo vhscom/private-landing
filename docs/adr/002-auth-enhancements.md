@@ -1,16 +1,18 @@
 # ADR-002: Authentication Security Enhancements
 
-## Status
+- **Status:** Accepted
+- **Date:** 2025-01-10
+- **Decision-makers:** @vhscom
 
-Draft
-
-## Context
+## Context and Problem Statement
 
 [ADR-001](001-auth-implementation.md) established our core authentication system with JWT + session-based hybrid
 authentication. As we move towards production, we need to enhance security against common attack vectors while
 maintaining the system's performance characteristics for our ~100 user target.
 
-## Decision
+How should we build on ADR-001 to enhance authentication security while maintaining a good UX?
+
+## Decision Outcome
 
 We will implement security enhancements in three phases, prioritized by security impact vs. implementation complexity.
 
