@@ -32,7 +32,7 @@ Our authentication system combines secure password storage, robust session manag
   - ~121 bits of randomness (sufficient for session IDs)
   - Efficient cookie storage
   - Fast generation
-- Server-side session storage in SQLite database
+- Server-side session storage in SQLite database (optionally cache-backed — see [ADR-003](003-cache-layer-valkey.md))
 - Session limits per user (default: 3)
 - IP address and user agent tracking
 - Automatic cleanup of expired sessions

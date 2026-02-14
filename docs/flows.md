@@ -2,6 +2,8 @@
 
 Sequence diagrams for every authentication flow in Private Landing. Each diagram maps directly to source code in `packages/core/`.
 
+> **Note:** The diagrams below show the default SQL-backed session path. Sessions can optionally be stored in Valkey/Redis cache instead, replacing SQL round-trips with cache GET/SET operations. See [ADR-003](adr/003-cache-layer-valkey.md) for details.
+
 > **Rendering:** GitHub renders Mermaid natively. For local preview, use the [Mermaid Live Editor](https://mermaid.live) or a VS Code extension.
 
 ---

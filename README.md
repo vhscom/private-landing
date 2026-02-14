@@ -17,7 +17,7 @@
 
 ---
 
-A from-scratch authentication reference implementation for Cloudflare Workers — PBKDF2 password hashing, JWT dual-token sessions, constant-time comparison, and sliding expiration — all wired together with Hono, Turso, and strict TypeScript.
+A from-scratch authentication reference implementation for Cloudflare Workers — PBKDF2 password hashing, JWT dual-token sessions, constant-time comparison, and sliding expiration — all wired together with Hono, Turso (with optional Valkey/Redis caching), and strict TypeScript.
 
 Every design choice traces back to a standard: [NIST SP 800-63B](https://pages.nist.gov/800-63-3/sp800-63b.html) for credentials, [NIST SP 800-132](https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-132.pdf) for key derivation, [OWASP ASVS](https://owasp.org/www-project-application-security-verification-standard/) for verification, and [RFC 8725](https://datatracker.ietf.org/doc/html/rfc8725) for JWT best practices.
 
@@ -54,7 +54,7 @@ This project intentionally omits features that are outside its educational scope
 
 | Feature | Why It Matters | Standard / Reference |
 |---------|---------------|---------------------|
-| Rate limiting | Prevents brute-force login and credential-stuffing attacks — the cache layer ([ADR-003](docs/adr/003-cache-layer.md)) is available as a foundation | [OWASP ASVS V2.2.1](https://owasp.org/www-project-application-security-verification-standard/) |
+| Rate limiting | Prevents brute-force login and credential-stuffing attacks — the cache layer ([ADR-003](docs/adr/003-cache-layer-valkey.md)) is available as a foundation | [OWASP ASVS V2.2.1](https://owasp.org/www-project-application-security-verification-standard/) |
 | Account lockout / throttling | Slows automated attacks without full rate-limiting infra | [NIST SP 800-63B §5.2.2](https://pages.nist.gov/800-63-3/sp800-63b.html) |
 | Password change endpoint | Users cannot recover from compromised credentials without it | [OWASP ASVS V2.1.6](https://owasp.org/www-project-application-security-verification-standard/) |
 | Breached-password checking | Prevents use of passwords known to be in public breach dumps | [NIST SP 800-63B §5.1.1.2](https://pages.nist.gov/800-63-3/sp800-63b.html), [HIBP API](https://haveibeenpwned.com/API/v3) |
