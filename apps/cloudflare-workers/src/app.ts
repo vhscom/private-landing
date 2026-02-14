@@ -10,11 +10,7 @@ import {
 	createRequireAuth,
 	securityHeaders,
 } from "@private-landing/core";
-import {
-	createDbClient,
-	createValkeyClient,
-	serveStatic,
-} from "@private-landing/infrastructure";
+import { createDbClient, serveStatic } from "@private-landing/infrastructure";
 import {
 	type Env,
 	ValidationError,
@@ -24,7 +20,7 @@ import { Hono } from "hono";
 import { parseRequestBody, wantsJson } from "./utils/negotiate";
 
 // Initialize auth system with factory pattern
-const auth = createAuthSystem({ createCacheClient: createValkeyClient });
+const auth = createAuthSystem();
 
 // Create middleware with injected dependencies
 const requireAuth = createRequireAuth({
