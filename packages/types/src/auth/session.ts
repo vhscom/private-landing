@@ -37,7 +37,7 @@ export interface SessionState {
  * Configuration for session management.
  * @property maxSessions - Maximum active sessions per user
  * @property sessionDuration - Session duration in seconds
- * @property maintenanceWindow - Age of sessions to clean up in days
+ * @property maintenanceWindow - Age of sessions to clean up in days (SQL-backed sessions only; cache-backed sessions use TTL-based expiration)
  * @property cookie - Cookie configuration options
  */
 export interface SessionConfig {
