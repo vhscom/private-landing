@@ -7,6 +7,7 @@ Thank you for your interest in contributing! This guide will help you get starte
 - [Bun](https://bun.sh/) >= 1.0.0
 - [Node.js](https://nodejs.org/) >= 24.0.0
 - A [Turso](https://turso.tech/) database (for integration tests)
+- An [Upstash](https://upstash.com/) Redis database (optional, for cache-backed session testing)
 
 ## Getting Started
 
@@ -45,7 +46,7 @@ Thank you for your interest in contributing! This guide will help you get starte
 │   └── cloudflare-workers/    # Hono app deployed to Cloudflare Workers
 ├── packages/
 │   ├── core/                  # Auth middleware, services, crypto utilities
-│   ├── infrastructure/        # Database client, static file serving
+│   ├── infrastructure/        # Database client, cache client, static file serving
 │   ├── schemas/               # Zod validation schemas
 │   └── types/                 # Shared TypeScript types and errors
 └── docs/
@@ -76,15 +77,34 @@ Integration tests require a Turso database. Copy the example env file and config
 
 ```bash
 cd apps/cloudflare-workers
-cp .dev.vars.test.example .dev.vars.test
-# Edit .dev.vars.test with your Turso credentials
+cp .dev.vars.example .dev.vars
+# Edit .dev.vars with your Turso credentials
 ```
+
+The same `.dev.vars` file is used for both local development and integration tests. A separate `.dev.vars.production` (see `.dev.vars.production.example`) is used for the deployed Workers environment.
 
 Then run:
 
 ```bash
 bun run test:integration
 ```
+
+#### Cache-backed sessions (optional)
+
+To test cache-backed sessions locally, create an [Upstash](https://upstash.com/) Redis database and add the REST credentials to `.dev.vars`:
+
+```
+CACHE_URL="https://your-db.upstash.io"
+CACHE_TOKEN="your-upstash-token"
+```
+
+To choose the best region, check where your Turso database is located:
+
+```bash
+turso db list && turso db show <your-db-name>
+```
+
+Pick the Upstash region closest to your Turso primary. The free tier (10k commands/day) is sufficient for development and testing. Without these variables, the app uses SQL-backed sessions by default.
 
 ### Adding Tests
 

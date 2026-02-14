@@ -2,3 +2,7 @@ AUTH_DB_URL="libsql://your-test-db.turso.io"
 AUTH_DB_TOKEN="your-auth-token"
 JWT_ACCESS_SECRET="your-access-secret"
 JWT_REFRESH_SECRET="your-refresh-secret"
+
+# Optional: cache-backed sessions (https://upstash.com/)
+# CACHE_URL="https://your-test-db.upstash.io"
+# CACHE_TOKEN="your-upstash-token"
