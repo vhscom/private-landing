@@ -139,10 +139,13 @@ export function createCachedSessionService(
 			const raw = await cache.get(sessionKey(sessionId));
 			if (!raw) return null;
 
-			// Sliding expiration: reset TTL on every valid read
-			await cache.expire(sessionKey(sessionId), sessionConfig.sessionDuration);
+			// Sliding expiration: reset TTL and update expiresAt to stay in sync
+			const ttl = sessionConfig.sessionDuration;
+			const state = JSON.parse(raw) as SessionState;
+			state.expiresAt = new Date(Date.now() + ttl * 1000).toISOString();
+			await cache.set(sessionKey(sessionId), JSON.stringify(state), ttl);
 
-			return JSON.parse(raw) as SessionState;
+			return state;
 		},
 
 		async endSession(ctx: AuthContext): Promise<void> {
