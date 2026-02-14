@@ -6,7 +6,7 @@ This file provides context for AI assistants working with this codebase.
 
 Private Landing is an educational authentication reference implementation for Cloudflare Workers. It demonstrates secure authentication patterns following NIST SP 800-63B/SP 800-132 guidelines and OWASP recommendations.
 
-**Stack:** Hono, Turso (libSQL), TypeScript, Bun, Zod
+**Stack:** Hono, Turso (libSQL), Valkey (optional), TypeScript, Bun, Zod
 
 ## Architecture
 
@@ -15,7 +15,7 @@ This is a Bun workspace monorepo:
 ```
 apps/cloudflare-workers/    # Hono app deployed to Cloudflare Workers
 packages/core/              # Auth services, middleware, crypto utilities
-packages/infrastructure/    # Database client, static file serving
+packages/infrastructure/    # Database client, cache client, static file serving
 packages/schemas/           # Zod validation schemas
 packages/types/             # Shared TypeScript types and error classes
 ```
@@ -28,6 +28,7 @@ packages/types/             # Shared TypeScript types and error classes
 - **Timing-safe comparison**: Uses `crypto.subtle.verify()` for constant-time equality checks
 - **No composition rules**: Password policy follows NIST guidance (length only, no complexity requirements)
 - **Content negotiation**: Auth endpoints return JSON when `Accept: application/json` is sent, redirects otherwise
+- **Optional cache-backed sessions**: `CacheClient` abstraction (ADR-003) enables Valkey/Redis for session storage via `createCachedSessionService`; SQL remains the default when no cache is configured
 
 ## Commands
 
@@ -46,7 +47,8 @@ bun run format           # Format with Biome
 ## Testing
 
 - Unit tests are co-located with source files (`*.test.ts`)
-- Integration tests require a Turso database configured in `apps/cloudflare-workers/.dev.vars.test`
+- Integration tests require a Turso database configured in `apps/cloudflare-workers/.dev.vars`
+- Cache-backed session tests use `createMemoryCacheClient()` from `packages/infrastructure` — no external Redis/Valkey needed
 - Security-focused tests cover timing attacks, Unicode handling, and tampering resistance
 
 ## Security Considerations
@@ -57,6 +59,7 @@ When modifying authentication code:
 2. **JWT verification requires explicit algorithm** - always use `AlgorithmTypes.HS256`
 3. **Parameterize all database queries** - never concatenate user input into SQL
 4. **Return generic error messages** - avoid leaking whether users exist
+5. **Cache keys are not secrets but are sensitive** - session data stored in cache contains userId, IP, and user agent; treat the cache endpoint as a trusted internal service
 
 ## Documentation
 
