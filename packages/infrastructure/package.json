@@ -24,6 +24,10 @@
 			"types": "./dist/db/index.d.ts",
 			"import": "./dist/db/index.js"
 		},
+		"./cache": {
+			"types": "./dist/cache/index.d.ts",
+			"import": "./dist/cache/index.js"
+		},
 		"./middleware": {
 			"types": "./dist/middleware/index.d.ts",
 			"import": "./dist/middleware/index.js"

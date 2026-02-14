@@ -19,17 +19,18 @@ import {
 } from "@private-landing/infrastructure";
 import type {
 	AuthContext,
+	GetClientIpFn,
 	SessionConfig,
 	SessionState,
 	SessionTable,
 	SessionTableConfig,
 	TokenPayload,
 } from "@private-landing/types";
-import { getConnInfo } from "hono/cloudflare-workers";
 import { deleteCookie } from "hono/cookie";
 import { nanoid } from "nanoid";
 import { defaultSessionConfig } from "../config";
 import { getAuthCookieSettings } from "../utils";
+import { defaultGetClientIp } from "../utils/get-client-ip";
 
 /**
  * Interface defining the session service API.
@@ -79,6 +80,8 @@ export interface SessionService {
 export interface SessionServiceConfig extends SessionTableConfig {
 	/** Optional database client factory for dependency injection */
 	createDbClient?: DbClientFactory;
+	/** Optional function to extract client IP from request context */
+	getClientIp?: GetClientIpFn;
 }
 
 /**
@@ -124,9 +127,14 @@ function mapRowToSessionState(row: SessionTable): SessionState {
 export function createSessionService(
 	config: SessionServiceConfig = {},
 ): SessionService {
-	const { createDbClient: injectedCreateDbClient, ...tableConfig } = config;
+	const {
+		createDbClient: injectedCreateDbClient,
+		getClientIp: injectedGetClientIp,
+		...tableConfig
+	} = config;
 	const resolvedConfig = { ...DEFAULT_TABLE_CONFIG, ...tableConfig };
 	const createDbClient = injectedCreateDbClient ?? defaultCreateDbClient;
+	const getClientIp = injectedGetClientIp ?? defaultGetClientIp;
 
 	/**
 	 * Removes expired sessions from the database.
@@ -212,13 +220,12 @@ export function createSessionService(
 			await enforceSessionLimit(userId, dbClient, sessionConfig.maxSessions);
 
 			const sessionId = nanoid();
-			const connInfo = getConnInfo(ctx);
 
 			const sessionData: SessionState = {
 				id: sessionId,
 				userId,
 				userAgent: ctx.req.header("user-agent") || "unknown",
-				ipAddress: connInfo.remote?.address || "unknown",
+				ipAddress: getClientIp(ctx),
 				expiresAt: new Date(
 					Date.now() + sessionConfig.sessionDuration * 1000,
 				).toISOString(),

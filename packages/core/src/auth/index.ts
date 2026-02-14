@@ -6,9 +6,14 @@
  * @license Apache-2.0
  */
 
-import type { AuthDatabaseConfig } from "@private-landing/types";
+import type { CacheClientFactory } from "@private-landing/infrastructure";
+import type {
+	AuthDatabaseConfig,
+	GetClientIpFn,
+} from "@private-landing/types";
 import {
 	createAccountService,
+	createCachedSessionService,
 	createPasswordService,
 	createSessionService,
 	createTokenService,
@@ -47,7 +52,17 @@ const DEFAULT_CONFIG: Required<AuthDatabaseConfig> = {
  * @param config - Database configuration for auth system
  * @returns Configured authentication system
  */
-export function createAuthSystem(config: Partial<AuthDatabaseConfig> = {}) {
+/**
+ * Extended configuration that optionally enables the cache-backed session service.
+ */
+export interface AuthSystemConfig extends Partial<AuthDatabaseConfig> {
+	/** When provided, sessions are stored in cache instead of SQL */
+	createCacheClient?: CacheClientFactory;
+	/** Optional function to extract client IP from request context */
+	getClientIp?: GetClientIpFn;
+}
+
+export function createAuthSystem(config: AuthSystemConfig = {}) {
 	const resolvedConfig = {
 		accounts: { ...DEFAULT_CONFIG.accounts, ...config.accounts },
 		sessions: { ...DEFAULT_CONFIG.sessions, ...config.sessions },
@@ -57,13 +72,23 @@ export function createAuthSystem(config: Partial<AuthDatabaseConfig> = {}) {
 	// Create services with dependency injection
 	const passwords = createPasswordService();
 
+	const sessions = config.createCacheClient
+		? createCachedSessionService({
+				createCacheClient: config.createCacheClient,
+				getClientIp: config.getClientIp,
+			})
+		: createSessionService({
+				...resolvedConfig.sessions,
+				getClientIp: config.getClientIp,
+			});
+
 	return {
 		passwords,
 		accounts: createAccountService({
 			...resolvedConfig.accounts,
 			passwordService: passwords,
 		}),
-		sessions: createSessionService(resolvedConfig.sessions),
+		sessions,
 		tokens: createTokenService(),
 		config: resolvedConfig,
 	};

@@ -7,6 +7,13 @@
  */
 
 import type { CookieOptions } from "hono/utils/cookie";
+import type { AuthContext } from "../http/context";
+
+/**
+ * Function that extracts the client IP address from a request context.
+ * Allows runtime-specific IP extraction to be injected.
+ */
+export type GetClientIpFn = (ctx: AuthContext) => string;
 
 /**
  * Session state information stored in database.
