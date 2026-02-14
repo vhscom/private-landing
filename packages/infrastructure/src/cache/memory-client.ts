@@ -63,12 +63,10 @@ export function createMemoryCacheClient(): CacheClient {
 		async del(...keys) {
 			let count = 0;
 			for (const key of keys) {
-				if (store.delete(key)) count++;
-				if (sets.delete(key)) {
-					setExpiry.delete(key);
-					// Count set keys if not already counted from store
-					if (!store.has(key)) count++;
-				}
+				const inStore = store.delete(key);
+				const inSets = sets.delete(key);
+				if (inSets) setExpiry.delete(key);
+				if (inStore || inSets) count++;
 			}
 			return count;
 		},
