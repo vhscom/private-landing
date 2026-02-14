@@ -61,9 +61,9 @@ const defaultLimits = {
 
 Implementation:
 
-- Use Cloudflare KV for rate limit counters
+- Use `CacheClient` abstraction backed by Valkey — see [ADR-003](003-cache-layer-valkey.md)
 - Scope limits by IP + action type
-- Auto-expiring KV entries match window size
+- Auto-expiring entries via TTL match window size
 - Minimal impact on successful auth flows
 
 #### 3. Token Rotation
@@ -234,6 +234,10 @@ const securityHeaders = {
 
 ### Valkey vs KV for Rate Limiting
 
+> **Superseded by [ADR-003](003-cache-layer-valkey.md)** — Valkey was chosen as the backing store for all ephemeral
+> state (sessions, rate limiting, nonces) via a portable `CacheClient` abstraction, replacing the KV-first approach
+> originally decided here.
+
 - Pros of Valkey:
     - Redis-compatible API
     - Built-in TTL and atomic operations
@@ -250,7 +254,8 @@ const securityHeaders = {
     - Globally consistent
     - No memory limits
     - Simpler deployment
-- Decision: Start with KV for MVP, design for easy migration to Valkey if performance becomes critical
+- ~~Decision: Start with KV for MVP, design for easy migration to Valkey if performance becomes critical~~
+- Decision: Use Valkey via `CacheClient` abstraction — see [ADR-003](003-cache-layer-valkey.md)
 
 ### JWT Blacklist vs Token Rotation
 
