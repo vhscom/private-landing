@@ -1,6 +1,6 @@
 # ADR-003: Cache Layer with Valkey for Session and Ephemeral State
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-02-14
 - **Decision-makers:** @vhscom
 
