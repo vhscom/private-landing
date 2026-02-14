@@ -7,10 +7,7 @@
  */
 
 import type { CacheClientFactory } from "@private-landing/infrastructure";
-import type {
-	AuthDatabaseConfig,
-	GetClientIpFn,
-} from "@private-landing/types";
+import type { AuthDatabaseConfig, GetClientIpFn } from "@private-landing/types";
 import {
 	createAccountService,
 	createCachedSessionService,
