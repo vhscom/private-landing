@@ -91,7 +91,17 @@ bun run test:integration
 
 #### Cache-backed sessions (optional)
 
-To test cache-backed sessions locally, create an [Upstash](https://upstash.com/) Redis database and add the REST credentials to `.dev.vars`:
+Enabling cache-backed sessions requires both a code change and environment credentials. Adding env vars alone is not enough — the app defaults to SQL sessions unless explicitly wired.
+
+**1. Wire the cache client in `apps/cloudflare-workers/src/app.ts`:**
+
+```ts
+import { createDbClient, createValkeyClient, serveStatic } from "@private-landing/infrastructure";
+
+const auth = createAuthSystem({ createCacheClient: createValkeyClient });
+```
+
+**2. Create an [Upstash](https://upstash.com/) Redis database** and add the REST credentials to `.dev.vars`:
 
 ```
 CACHE_URL="https://your-db.upstash.io"
@@ -104,7 +114,7 @@ To choose the best region, check where your Turso database is located:
 turso db list && turso db show <your-db-name>
 ```
 
-Pick the Upstash region closest to your Turso primary. The free tier (10k commands/day) is sufficient for development and testing. Without these variables, the app uses SQL-backed sessions by default.
+Pick the Upstash region closest to your Turso primary. Without both steps, the app uses SQL-backed sessions.
 
 ### Adding Tests
 
