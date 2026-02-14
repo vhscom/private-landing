@@ -47,7 +47,7 @@ depends on Valkey directly — only on the `CacheClient` interface.
 
 ### Consequences
 
-* Good, because session validation drops from 2 SQL round-trips to 1 GET + 1 EXPIRE (~5ms vs ~30ms+)
+* Good, because session validation drops from 2 SQL round-trips to 1 GET + 1 SET (~5–10ms vs ~20–40ms)
 * Good, because TTL-based expiration eliminates `cleanupExpiredSessions` entirely
 * Good, because rate limiting ([ADR-002](002-auth-enhancements.md) Phase 1) becomes a single atomic INCR + EXPIRE
 * Good, because session limiting per user replaces the window query with SADD/SCARD on a set
