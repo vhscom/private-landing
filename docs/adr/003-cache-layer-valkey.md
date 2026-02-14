@@ -131,6 +131,31 @@ The `getConnInfo` import from `hono/cloudflare-workers` in `session-service.ts` 
 should be abstracted as a `getClientIp: (ctx: AuthContext) => string` dependency injected into the session service
 config, allowing Hono's runtime-specific adapters (`hono/bun`, `hono/deno`, etc.) to be swapped without modifying core.
 
+### Deployment and Rollback
+
+Cache-backed sessions require an explicit code change — setting `CACHE_URL` alone does not activate the feature. This is
+intentional: the auth system is initialized at module level as a singleton, before any request `env` is available, so
+runtime auto-detection is not possible without restructuring app initialization.
+
+**Deploying:**
+
+1. Provision a Valkey-compatible endpoint (Upstash, self-hosted Valkey, etc.)
+2. Add `CACHE_URL` and `CACHE_TOKEN` as Worker secrets (`wrangler secret put`)
+3. Wire `createValkeyClient` into `createAuthSystem` in `app.ts`
+4. Deploy — new sessions are stored in cache; existing SQL sessions continue to work via the JWT refresh flow
+   (users re-authenticate naturally as access tokens expire)
+
+**Rolling back:**
+
+1. Revert the `app.ts` change to `createAuthSystem()` (no cache factory)
+2. Deploy — the app returns to SQL-backed sessions immediately
+3. Active cache-backed sessions become invalid; affected users must re-authenticate
+4. Cache credentials can be removed from Worker secrets at any time after rollback
+
+**Note:** The SQL session table should be retained during the migration period. It serves as the fallback path and
+requires no schema changes. Cache-backed sessions stored in Valkey expire via TTL and require no manual cleanup after
+rollback.
+
 ### Relationship to ADR-002
 
 This decision supersedes the "Start with KV" conclusion in [ADR-002 § Valkey vs KV](002-auth-enhancements.md). The rate
