@@ -11,7 +11,7 @@
 deferring the choice between Cloudflare KV and Valkey.
 
 Every protected endpoint currently performs two SQL round-trips to Turso: an UPDATE for sliding expiration and a SELECT
-to return the session ([session-service.ts:250-276](../../packages/core/src/auth/services/session-service.ts)). This is
+to return the session ([session-service.ts](../../packages/core/src/auth/services/session-service.ts)). This is
 the cost of server-side revocation — the JWT `sid` claim alone cannot confirm a session hasn't been invalidated.
 
 Additionally, the `enforceSessionLimit` function uses a `ROW_NUMBER() OVER (PARTITION BY ...)` window query and

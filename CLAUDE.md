@@ -37,7 +37,7 @@ bun install              # Install dependencies
 bun run build            # Build all packages
 bun run dev              # Start dev server (port 8788)
 bun run test:unit        # Run unit tests
-bun run test:integration # Run integration tests (requires .dev.vars.test)
+bun run test:integration # Run integration tests (requires .dev.vars)
 bun run test:coverage    # Run tests with coverage
 bun run typecheck        # Type check all packages
 bun run lint             # Lint with Biome

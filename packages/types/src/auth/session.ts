@@ -16,7 +16,7 @@ import type { AuthContext } from "../http/context";
 export type GetClientIpFn = (ctx: AuthContext) => string;
 
 /**
- * Session state information stored in database.
+ * Session state information stored in database or cache.
  * @property id - 21 character nanoid session identifier
  * @property userId - Associated user ID
  * @property userAgent - Browser user agent string
