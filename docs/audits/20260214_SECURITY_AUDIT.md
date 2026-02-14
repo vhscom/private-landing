@@ -72,8 +72,8 @@ No `console.log` or logging statements were added. Session state stored in cache
 
 ### 5. Network Security
 
-**HTTPS Enforcement**
-The `CACHE_URL` is expected to be an HTTPS endpoint (documented in `.dev.vars.example` and `CONTRIBUTING.md`). The fetch API follows standard TLS certificate validation. No certificate pinning bypass or custom TLS configuration is introduced.
+**Transport Protocol Choice**
+The client uses the Redis REST protocol (fetch over HTTPS) rather than a native TCP connection. Cloudflare Workers do support outbound TCP via `connect()`, but REST was chosen for cross-runtime portability (Workers, Bun, Deno, Node) and because Upstash's own SDK uses fetch internally. The `CACHE_URL` is expected to be an HTTPS endpoint (documented in `.dev.vars.example` and `CONTRIBUTING.md`). The fetch API follows standard TLS certificate validation. No certificate pinning bypass or custom TLS configuration is introduced.
 
 **No SSRF Vector**
 The cache URL is sourced from an environment variable (trusted value), not from user input. No user-controlled data influences the fetch target host or protocol.

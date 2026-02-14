@@ -77,7 +77,9 @@ counters, and nonces are stored as key-value pairs with TTLs. The interface expo
 * Good, because atomic operations (INCR, SADD/SCARD) map directly to rate limiting and session limiting
 * Good, because the `CacheClient` interface decouples core from any specific client library
 * Good, because Valkey is open-source (BSD-3-Clause) with no licensing concerns
-* Neutral, because edge-runtime compatibility requires an HTTP-based client (e.g., Upstash REST) rather than TCP
+* Neutral, because the client uses the Redis REST protocol (fetch over HTTP) rather than TCP — Cloudflare Workers
+  support outbound TCP via `connect()`, but REST was chosen for cross-runtime portability (Workers, Bun, Deno, Node)
+  and because Upstash's own SDK uses fetch internally
 * Bad, because it adds an infrastructure dependency beyond libSQL
 
 ### Cloudflare KV
