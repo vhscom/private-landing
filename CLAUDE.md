@@ -29,6 +29,7 @@ packages/types/             # Shared TypeScript types and error classes
 - **No composition rules**: Password policy follows NIST guidance (length only, no complexity requirements)
 - **Content negotiation**: Auth endpoints return JSON when `Accept: application/json` is sent, redirects otherwise
 - **Optional cache-backed sessions**: `CacheClient` abstraction (ADR-003) enables Valkey/Redis for session storage via `createCachedSessionService`; SQL remains the default when no cache is configured
+- **Password change with full revocation**: `POST /api/account/password` verifies the current password, updates the hash, and revokes all sessions via `endAllSessionsForUser` (ADR-004)
 
 ## Commands
 
