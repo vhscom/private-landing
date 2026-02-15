@@ -55,7 +55,7 @@ This project intentionally omits features that are outside its educational scope
 
 | Feature | Why It Matters | Standard / Reference |
 |---------|---------------|---------------------|
-| Rate limiting | Prevents brute-force login and credential-stuffing attacks — the cache layer ([ADR-003](docs/adr/003-cache-layer-valkey.md)) is available as a foundation | [OWASP ASVS V2.2.1](https://owasp.org/www-project-application-security-verification-standard/) |
+| Rate limiting | Prevents brute-force login and credential-stuffing attacks — the cache layer ([ADR-003](docs/adr/003-cache-layer-valkey.md)) is available as a foundation | [OWASP ASVS v5.0 §6.3.1](https://github.com/OWASP/ASVS/blob/v5.0.0/5.0/en/0x15-V6-Authentication.md#v63-authentication-lifecycle) |
 | Account lockout / throttling | Slows automated attacks without full rate-limiting infra | [NIST SP 800-63B §5.2.2](https://pages.nist.gov/800-63-3/sp800-63b.html) |
 | Breached-password checking | Prevents use of passwords known to be in public breach dumps | [NIST SP 800-63B §5.1.1.2](https://pages.nist.gov/800-63-3/sp800-63b.html), [HIBP API](https://haveibeenpwned.com/API/v3) |
 
@@ -86,7 +86,7 @@ This project intentionally omits features that are outside its educational scope
 |---------|---------------|---------------------|
 | DPoP / token binding | Binds tokens to the client's TLS connection, preventing exfiltration replay | [RFC 9449 (DPoP)](https://datatracker.ietf.org/doc/html/rfc9449) |
 | Multi-tenancy | Isolates user pools, secrets, and policies per tenant | Application-specific |
-| Geo-fencing / IP reputation | Blocks logins from unexpected regions or known-bad IPs | [OWASP ASVS V2.2.3](https://owasp.org/www-project-application-security-verification-standard/) |
+| Geo-fencing / IP reputation | Blocks logins from unexpected regions or known-bad IPs | [OWASP ASVS v5.0 §6.3.5](https://github.com/OWASP/ASVS/blob/v5.0.0/5.0/en/0x15-V6-Authentication.md#v63-authentication-lifecycle) |
 | Adaptive authentication | Steps up auth requirements based on risk signals (device, location, behavior) | [NIST SP 800-63B §6](https://pages.nist.gov/800-63-3/sp800-63b.html) |
 | PBKDF2 iteration upgrade or Argon2id | OWASP recommends 210,000 PBKDF2-SHA512 iterations (Cloudflare limits to 100k); Argon2id is memory-hard | [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) |
 

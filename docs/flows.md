@@ -49,7 +49,7 @@ sequenceDiagram
   H-->>U: 201 {success: true} or redirect
 ```
 
-**Source:** [`account-service.ts:108-130`](../packages/core/src/auth/services/account-service.ts) | [`password-service.ts:203-249`](../packages/core/src/auth/services/password-service.ts)
+**Source:** [`account-service.ts:125-147`](../packages/core/src/auth/services/account-service.ts) | [`password-service.ts:203-249`](../packages/core/src/auth/services/password-service.ts)
 
 ---
 
@@ -107,7 +107,7 @@ sequenceDiagram
   H-->>U: 200 {success: true} or redirect
 ```
 
-**Source:** [`account-service.ts:132-196`](../packages/core/src/auth/services/account-service.ts) | [`session-service.ts:204-248`](../packages/core/src/auth/services/session-service.ts) | [`token-service.ts:67-114`](../packages/core/src/auth/services/token-service.ts) | [`app.ts:67-105`](../apps/cloudflare-workers/src/app.ts)
+**Source:** [`account-service.ts:149-213`](../packages/core/src/auth/services/account-service.ts) | [`session-service.ts:221-264`](../packages/core/src/auth/services/session-service.ts) | [`token-service.ts:67-114`](../packages/core/src/auth/services/token-service.ts) | [`app.ts:67-105`](../apps/cloudflare-workers/src/app.ts)
 
 ---
 
@@ -146,7 +146,7 @@ sequenceDiagram
   RH-->>U: 200 {message: "pong", userId: 1}
 ```
 
-**Source:** [`require-auth.ts:67-124`](../packages/core/src/auth/middleware/require-auth.ts) | [`require-auth.ts:163-191`](../packages/core/src/auth/middleware/require-auth.ts) (verifyToken) | [`session-service.ts:250-276`](../packages/core/src/auth/services/session-service.ts)
+**Source:** [`require-auth.ts:67-124`](../packages/core/src/auth/middleware/require-auth.ts) | [`require-auth.ts:163-191`](../packages/core/src/auth/middleware/require-auth.ts) (verifyToken) | [`session-service.ts:266-292`](../packages/core/src/auth/services/session-service.ts)
 
 ---
 
