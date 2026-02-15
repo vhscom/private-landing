@@ -65,6 +65,20 @@ export const loginSchema = z.object({
  */
 export const registrationSchema = loginSchema.extend({});
 
+/**
+ * Password change schema.
+ * Validates current and new passwords independently, then ensures they differ.
+ */
+export const passwordChangeSchema = z
+	.object({
+		currentPassword: passwordSchema,
+		newPassword: passwordSchema,
+	})
+	.refine((data) => data.currentPassword !== data.newPassword, {
+		message: "New password must be different from current password",
+		path: ["newPassword"],
+	});
+
 /** Type for login credentials input validated by the login schema. */
 export type LoginInput = z.infer<typeof loginSchema>;
 
@@ -73,3 +87,6 @@ export type RegistrationInput = z.input<typeof registrationSchema>;
 
 /** Type for normalized registration output returned by the registration schema. */
 export type RegistrationOutput = z.output<typeof registrationSchema>;
+
+/** Type for password change input validated by the password change schema. */
+export type PasswordChangeInput = z.infer<typeof passwordChangeSchema>;

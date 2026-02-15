@@ -164,5 +164,23 @@ export function createCachedSessionService(
 			deleteCookie(ctx, "access_token", getAuthCookieSettings());
 			deleteCookie(ctx, "refresh_token", getAuthCookieSettings());
 		},
+
+		async endAllSessionsForUser(
+			userId: number,
+			ctx: AuthContext,
+		): Promise<void> {
+			const cache = injectedFactory(ctx.env);
+			const members = await cache.smembers(userSessionsKey(userId));
+
+			if (members.length > 0) {
+				for (const id of members) {
+					await cache.del(sessionKey(id));
+				}
+				await cache.del(userSessionsKey(userId));
+			}
+
+			deleteCookie(ctx, "access_token", getAuthCookieSettings());
+			deleteCookie(ctx, "refresh_token", getAuthCookieSettings());
+		},
 	};
 }

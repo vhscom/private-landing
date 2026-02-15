@@ -432,6 +432,39 @@ describe("SessionService", () => {
 		});
 	});
 
+	describe("endAllSessionsForUser", () => {
+		it("should expire all active sessions for a user", async () => {
+			mockDbClient.execute.mockResolvedValueOnce({ rowsAffected: 3 });
+
+			const service = createSessionService({
+				createDbClient: mockCreateDbClient,
+			});
+			const ctx = createMockAuthContext({ sessionId: "any-session" });
+
+			await service.endAllSessionsForUser(42, ctx);
+
+			const updateCall = mockDbClient.execute.mock.calls[0];
+			expect(updateCall[0].sql).toContain("UPDATE session");
+			expect(updateCall[0].sql).toContain("expires_at = datetime('now')");
+			expect(updateCall[0].sql).toContain("user_id = ?");
+			expect(updateCall[0].sql).toContain("expires_at > datetime('now')");
+			expect(updateCall[0].args).toContain(42);
+		});
+
+		it("should handle user with no active sessions", async () => {
+			mockDbClient.execute.mockResolvedValueOnce({ rowsAffected: 0 });
+
+			const service = createSessionService({
+				createDbClient: mockCreateDbClient,
+			});
+			const ctx = createMockAuthContext({ sessionId: "any-session" });
+
+			await expect(
+				service.endAllSessionsForUser(99, ctx),
+			).resolves.not.toThrow();
+		});
+	});
+
 	describe("session ID generation", () => {
 		it("should generate unique session IDs", async () => {
 			mockDbClient.execute.mockResolvedValue({ rowsAffected: 0 });

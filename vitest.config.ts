@@ -7,7 +7,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
 	test: {
 		include: ["packages/*/test/**/*.test.ts"],
-		reporters: ["dot"],
+		reporters: [process.env.CI ? "default" : "dot"],
 		silent: "passed-only",
 		coverage: {
 			provider: "v8",

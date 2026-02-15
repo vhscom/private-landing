@@ -34,6 +34,15 @@ export interface RegistrationOutput {
 }
 
 /**
+ * Password change input.
+ * Both passwords will be NFKC normalized before comparison.
+ */
+export interface PasswordChangeInput {
+	currentPassword: string;
+	newPassword: string;
+}
+
+/**
  * Represents a successful authentication with valid user ID
  */
 export interface AuthenticatedState {

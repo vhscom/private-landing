@@ -406,6 +406,118 @@ describe("AccountService", () => {
 		});
 	});
 
+	describe("changePassword", () => {
+		it("should change password with valid current password", async () => {
+			// SELECT returns the stored hash
+			mockDbClient.execute
+				.mockResolvedValueOnce({
+					rows: [
+						{
+							password_data: "$pbkdf2-sha384$v1$100000$salt$hash$digest",
+						},
+					],
+				})
+				// UPDATE succeeds
+				.mockResolvedValueOnce({ rowsAffected: 1 });
+
+			const service = createAccountService({
+				createDbClient: mockCreateDbClient,
+				passwordService: mockPasswordService,
+			});
+
+			await service.changePassword(
+				{
+					currentPassword: "OldPassword123!",
+					newPassword: "NewPassword456!",
+				},
+				42,
+				testEnv,
+			);
+
+			expect(mockPasswordService.verifyPassword).toHaveBeenCalledWith(
+				"OldPassword123!",
+				"$pbkdf2-sha384$v1$100000$salt$hash$digest",
+			);
+			expect(mockPasswordService.hashPassword).toHaveBeenCalledWith(
+				"NewPassword456!",
+			);
+
+			const updateCall = mockDbClient.execute.mock.calls[1];
+			expect(updateCall[0].sql).toContain("UPDATE account");
+			expect(updateCall[0].sql).toContain("password_data = ?");
+			expect(updateCall[0].args[1]).toBe(42);
+		});
+
+		it("should throw ValidationError for incorrect current password", async () => {
+			mockDbClient.execute.mockResolvedValueOnce({
+				rows: [
+					{
+						password_data: "$pbkdf2-sha384$v1$100000$salt$hash$digest",
+					},
+				],
+			});
+			(mockPasswordService.verifyPassword as Mock).mockResolvedValueOnce(false);
+
+			const service = createAccountService({
+				createDbClient: mockCreateDbClient,
+				passwordService: mockPasswordService,
+			});
+
+			await expect(
+				service.changePassword(
+					{
+						currentPassword: "WrongPassword1!",
+						newPassword: "NewPassword456!",
+					},
+					42,
+					testEnv,
+				),
+			).rejects.toThrow(ValidationError);
+		});
+
+		it("should throw ValidationError when new equals current (schema refine)", async () => {
+			const service = createAccountService({
+				createDbClient: mockCreateDbClient,
+				passwordService: mockPasswordService,
+			});
+
+			await expect(
+				service.changePassword(
+					{
+						currentPassword: "SamePassword1!",
+						newPassword: "SamePassword1!",
+					},
+					42,
+					testEnv,
+				),
+			).rejects.toThrow(ValidationError);
+		});
+
+		it("should perform timing-safe rejection for non-existent user", async () => {
+			mockDbClient.execute.mockResolvedValueOnce({ rows: [] });
+
+			const service = createAccountService({
+				createDbClient: mockCreateDbClient,
+				passwordService: mockPasswordService,
+			});
+
+			await expect(
+				service.changePassword(
+					{
+						currentPassword: "OldPassword123!",
+						newPassword: "NewPassword456!",
+					},
+					999,
+					testEnv,
+				),
+			).rejects.toThrow(ValidationError);
+
+			expect(
+				mockPasswordService.rejectPasswordWithConstantTime,
+			).toHaveBeenCalledWith("OldPassword123!");
+		});
+	});
+
 	describe("dependency injection", () => {
 		it("should use injected password service", async () => {
 			const customPasswordService = createMockPasswordService();

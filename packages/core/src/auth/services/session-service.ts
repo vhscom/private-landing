@@ -72,6 +72,15 @@ export interface SessionService {
 	 * @param ctx - Auth context containing session to end
 	 */
 	endSession(ctx: AuthContext): Promise<void>;
+
+	/**
+	 * Ends all active sessions for a user.
+	 * Expires all sessions immediately and clears auth cookies.
+	 *
+	 * @param userId - User whose sessions should be ended
+	 * @param ctx - Auth context for cookie clearing
+	 */
+	endAllSessionsForUser(userId: number, ctx: AuthContext): Promise<void>;
 }
 
 /**
@@ -294,6 +303,23 @@ export function createSessionService(
 					  SET ${resolvedConfig.expiresAtColumn} = datetime('now')
 					  WHERE ${resolvedConfig.idColumn} = ?`,
 				args: [sessionId],
+			});
+
+			deleteCookie(ctx, "access_token", getAuthCookieSettings());
+			deleteCookie(ctx, "refresh_token", getAuthCookieSettings());
+		},
+
+		async endAllSessionsForUser(
+			userId: number,
+			ctx: AuthContext,
+		): Promise<void> {
+			const dbClient = createDbClient(ctx.env);
+			await dbClient.execute({
+				sql: `UPDATE ${resolvedConfig.tableName}
+					  SET ${resolvedConfig.expiresAtColumn} = datetime('now')
+					  WHERE ${resolvedConfig.userIdColumn} = ?
+					    AND ${resolvedConfig.expiresAtColumn} > datetime('now')`,
+				args: [userId],
 			});
 
 			deleteCookie(ctx, "access_token", getAuthCookieSettings());

@@ -104,6 +104,46 @@ app.post("/api/login", async (ctx) => {
 	}
 });
 
+app.post("/api/account/password", requireAuth, async (ctx) => {
+	const json = wantsJson(ctx);
+	try {
+		const body = await parseRequestBody(ctx);
+		const payload = ctx.get("jwtPayload");
+		const userId = payload.uid;
+
+		await auth.accounts.changePassword(
+			body as { currentPassword: string; newPassword: string },
+			userId,
+			ctx.env,
+		);
+		await auth.sessions.endAllSessionsForUser(userId, ctx);
+
+		if (json) {
+			return ctx.json(
+				{ success: true, message: "Password changed successfully" },
+				200,
+			);
+		}
+		return ctx.redirect("/?password_changed=true");
+	} catch (error) {
+		console.error("Password change error:", error);
+		if (json) {
+			if (error instanceof ValidationError) {
+				return ctx.json({ error: error.message, code: error.code }, 400);
+			}
+			return ctx.json(
+				{ error: "Password change failed", code: "PASSWORD_CHANGE_ERROR" },
+				400,
+			);
+		}
+		const message =
+			error instanceof ValidationError
+				? error.message
+				: "Password change failed";
+		return ctx.redirect(`/?error=${encodeURIComponent(message)}`);
+	}
+});
+
 app.post("/api/logout", requireAuth, async (ctx) => {
 	const json = wantsJson(ctx);
 	try {

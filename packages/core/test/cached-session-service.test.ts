@@ -240,6 +240,65 @@ describe("CachedSessionService", () => {
 		});
 	});
 
+	describe("endAllSessionsForUser", () => {
+		it("should delete all session keys and user_sessions set", async () => {
+			const ctx = createMockAuthContext();
+			const id1 = await service.createSession(1, ctx, {
+				...shortSessionConfig,
+				maxSessions: 10,
+			});
+			const id2 = await service.createSession(1, ctx, {
+				...shortSessionConfig,
+				maxSessions: 10,
+			});
+			const id3 = await service.createSession(1, ctx, {
+				...shortSessionConfig,
+				maxSessions: 10,
+			});
+
+			const endCtx = createMockAuthContext({ sessionId: id1 });
+			await service.endAllSessionsForUser(1, endCtx);
+
+			expect(await memoryCache.get(`session:${id1}`)).toBeNull();
+			expect(await memoryCache.get(`session:${id2}`)).toBeNull();
+			expect(await memoryCache.get(`session:${id3}`)).toBeNull();
+			const members = await memoryCache.smembers("user_sessions:1");
+			expect(members.length).toBe(0);
+		});
+
+		it("should handle user with no sessions", async () => {
+			const ctx = createMockAuthContext();
+			await expect(
+				service.endAllSessionsForUser(999, ctx),
+			).resolves.not.toThrow();
+		});
+
+		it("should not affect other users sessions", async () => {
+			const ctx1 = createMockAuthContext();
+			const user1Session = await service.createSession(1, ctx1, {
+				...shortSessionConfig,
+				maxSessions: 10,
+			});
+
+			const ctx2 = createMockAuthContext();
+			const user2Session = await service.createSession(2, ctx2, {
+				...shortSessionConfig,
+				maxSessions: 10,
+			});
+
+			const endCtx = createMockAuthContext({ sessionId: user1Session });
+			await service.endAllSessionsForUser(1, endCtx);
+
+			// User 1's session should be gone
+			expect(await memoryCache.get(`session:${user1Session}`)).toBeNull();
+
+			// User 2's session should still exist
+			expect(await memoryCache.get(`session:${user2Session}`)).not.toBeNull();
+			const user2Members = await memoryCache.smembers("user_sessions:2");
+			expect(user2Members).toContain(user2Session);
+		});
+	});
+
 	describe("session ID generation", () => {
 		it("should generate unique session IDs", async () => {
 			const ctx = createMockAuthContext();

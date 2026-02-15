@@ -20,6 +20,7 @@ import {
 import {
 	formatZodError,
 	loginSchema,
+	passwordChangeSchema,
 	registrationSchema,
 } from "@private-landing/schemas";
 import type {
@@ -28,6 +29,7 @@ import type {
 	AuthResult,
 	Env,
 	LoginInput,
+	PasswordChangeInput,
 	RegistrationInput,
 } from "@private-landing/types";
 import { ValidationError } from "@private-landing/types";
@@ -61,6 +63,21 @@ export interface AccountService {
 	 * @returns Authentication result with success status and user ID
 	 */
 	authenticate(input: LoginInput, env: Env): Promise<AuthResult>;
+
+	/**
+	 * Changes the password for an authenticated user.
+	 * Verifies the current password before updating.
+	 *
+	 * @param input - Current and new passwords
+	 * @param userId - Authenticated user's ID
+	 * @param env - Environment containing database connection
+	 * @throws ValidationError if current password is incorrect or input is invalid
+	 */
+	changePassword(
+		input: PasswordChangeInput,
+		userId: number,
+		env: Env,
+	): Promise<void>;
 }
 
 /**
@@ -193,6 +210,61 @@ export function createAccountService(
 				authenticated: true,
 				userId: accountRow.id,
 			};
+		},
+
+		async changePassword(
+			input: PasswordChangeInput,
+			userId: number,
+			env: Env,
+		): Promise<void> {
+			const parseResult = await passwordChangeSchema.safeParseAsync(input);
+
+			if (!parseResult.success) {
+				throw new ValidationError(formatZodError(parseResult.error));
+			}
+
+			// Schema implements NIST SP 800-63B requirements for memorized secrets
+			const validatedData = parseResult.data;
+			const dbClient = createDbClient(env);
+
+			const result = await dbClient.execute({
+				sql: `SELECT ${resolvedConfig.passwordColumn}
+					  FROM ${resolvedConfig.tableName}
+					  WHERE ${resolvedConfig.idColumn} = ?`,
+				args: [userId],
+			});
+
+			if (result.rows.length === 0) {
+				await passwords.rejectPasswordWithConstantTime(
+					validatedData.currentPassword,
+				);
+				throw new ValidationError("Password change failed");
+			}
+
+			const [accountRow] = result.rows as Partial<AccountTable>[];
+			const storedPasswordData = accountRow[
+				resolvedConfig.passwordColumn as keyof AccountTable
+			] as string;
+
+			const isValid = await passwords.verifyPassword(
+				validatedData.currentPassword,
+				storedPasswordData,
+			);
+
+			if (!isValid) {
+				throw new ValidationError("Password change failed");
+			}
+
+			const newPasswordData = await passwords.hashPassword(
+				validatedData.newPassword,
+			);
+
+			await dbClient.execute({
+				sql: `UPDATE ${resolvedConfig.tableName}
+					  SET ${resolvedConfig.passwordColumn} = ?
+					  WHERE ${resolvedConfig.idColumn} = ?`,
+				args: [newPasswordData, userId],
+			});
 		},
 	};
 }
