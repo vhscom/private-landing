@@ -23,6 +23,8 @@ STRIDE analysis and JWT pitfall catalogue for Private Landing. This document is 
 | 11 | **Information Disclosure** | Server header fingerprinting | `security.ts:122-125` | `Server`, `X-Powered-By`, `X-AspNet-Version`, `X-AspNetMvc-Version` headers explicitly deleted | None — headers removed after every response |
 | 12 | **Information Disclosure** | Secrets in JWT payload | `token-service.ts:77-94` | Payload contains only `uid`, `sid`, `typ`, `exp` — no email, role, or sensitive data | None — minimal claims |
 | 13 | **Denial of Service** | Brute-force login | — | **Gap**: No rate limiting, no account lockout | Implement Cloudflare Rate Limiting or middleware-based throttling |
+| 17 | **Spoofing** | Credential takeover via stolen session | `account-service.ts:215-262` | `changePassword()` requires current password re-verification even for authenticated users; `endAllSessionsForUser()` revokes all sessions after change ([ADR-004](adr/004-password-change-endpoint.md)) | Rate limiting depends on optional cache layer (ADR-003); without it, current password requirement + constant-time comparison are the only brute-force controls |
+| 18 | **Tampering** | Race condition during password change | `account-service.ts:247-251` | Password update is a single `UPDATE ... WHERE id = ?` — SQLite serializes writes; `endAllSessionsForUser` runs after the update ensuring no session outlives the old credential | None — write serialization prevents concurrent hash corruption |
 | 14 | **Denial of Service** | Session exhaustion | `session-service.ts:154-177` | `enforceSessionLimit()` caps sessions at 3 per user via CTE + ROW_NUMBER; expired sessions cleaned before each create | An attacker with valid credentials can only hold 3 sessions |
 | 15 | **Elevation of Privilege** | Missing `aud` claim in JWT | `token-service.ts:77-94` | **Gap**: No `aud` (audience) claim in tokens | If multiple services share the same secret, a token from one service could be accepted by another |
 | 16 | **Elevation of Privilege** | Cross-secret token acceptance | `require-auth.ts:169-172` | Access tokens verified with `JWT_ACCESS_SECRET`, refresh tokens with `JWT_REFRESH_SECRET` — separate secrets | None — secrets are isolated per token type |
@@ -46,7 +48,7 @@ STRIDE analysis and JWT pitfall catalogue for Private Landing. This document is 
 
 ## References
 
-- [OWASP ASVS v4.0](https://owasp.org/www-project-application-security-verification-standard/) — Application Security Verification Standard
+- [OWASP ASVS v5.0](https://github.com/OWASP/ASVS/tree/v5.0.0) — Application Security Verification Standard
 - [NIST SP 800-63B](https://pages.nist.gov/800-63-3/sp800-63b.html) — Digital Identity Guidelines: Authentication and Lifecycle Management
 - [STRIDE Threat Model](https://learn.microsoft.com/en-us/azure/security/develop/threat-modeling-tool-threats) — Microsoft Threat Modeling methodology
 - [RFC 7519](https://datatracker.ietf.org/doc/html/rfc7519) — JSON Web Token (JWT)

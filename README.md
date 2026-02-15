@@ -27,7 +27,7 @@ Every design choice traces back to a standard: [NIST SP 800-63B](https://pages.n
 
 - **Read the code, not just the docs** — every security property (timing-safe rejection, session-linked revocation, algorithm pinning) is implemented and tested, not just described
 - **NIST + OWASP + RFC references** throughout — learn the *why* behind each decision
-- **250+ tests** including attack-vector suites (token tampering, algorithm confusion, unicode edge cases)
+- **370+ tests** including attack-vector suites (token tampering, algorithm confusion, unicode edge cases)
 - **Built for the edge** — runs on Cloudflare Workers with Web Crypto API, no Node.js dependencies
 - **Apache-2.0** — fork it, teach with it, learn from it
 
@@ -37,6 +37,7 @@ Every design choice traces back to a standard: [NIST SP 800-63B](https://pages.n
 |-------|-------------|
 | **Password storage** | PBKDF2-SHA384 with 128-bit salts, integrity digest, version tracking ([`password-service.ts`](packages/core/src/auth/services/password-service.ts)) |
 | **Session management** | Server-side sessions with device tracking, sliding expiration, max-3-per-user enforcement; optional cache-backed sessions via Valkey/Redis ([`session-service.ts`](packages/core/src/auth/services/session-service.ts), [`cached-session-service.ts`](packages/core/src/auth/services/cached-session-service.ts)) |
+| **Password change** | Current-password re-verification, full PBKDF2 rehash, atomic revocation of all sessions ([`account-service.ts`](packages/core/src/auth/services/account-service.ts), [ADR-004](docs/adr/004-password-change-endpoint.md)) |
 | **JWT dual-token pattern** | 15-min access + 7-day refresh tokens, session-linked for revocation ([`token-service.ts`](packages/core/src/auth/services/token-service.ts)) |
 | **Auth middleware** | Automatic refresh flow, explicit HS256 pinning, `typ` claim validation ([`require-auth.ts`](packages/core/src/auth/middleware/require-auth.ts)) |
 | **Secure cookies** | HttpOnly, Secure, SameSite=Strict, Path=/ ([`cookie.ts`](packages/core/src/auth/utils/cookie.ts)) |
@@ -56,7 +57,6 @@ This project intentionally omits features that are outside its educational scope
 |---------|---------------|---------------------|
 | Rate limiting | Prevents brute-force login and credential-stuffing attacks — the cache layer ([ADR-003](docs/adr/003-cache-layer-valkey.md)) is available as a foundation | [OWASP ASVS V2.2.1](https://owasp.org/www-project-application-security-verification-standard/) |
 | Account lockout / throttling | Slows automated attacks without full rate-limiting infra | [NIST SP 800-63B §5.2.2](https://pages.nist.gov/800-63-3/sp800-63b.html) |
-| Password change endpoint | Users cannot recover from compromised credentials without it | [OWASP ASVS V2.1.6](https://owasp.org/www-project-application-security-verification-standard/) |
 | Breached-password checking | Prevents use of passwords known to be in public breach dumps | [NIST SP 800-63B §5.1.1.2](https://pages.nist.gov/800-63-3/sp800-63b.html), [HIBP API](https://haveibeenpwned.com/API/v3) |
 
 ### High Priority — Production Confidence

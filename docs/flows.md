@@ -234,15 +234,13 @@ sequenceDiagram
   H-->>U: 200 {success: true} or redirect
 ```
 
-**Source:** [`session-service.ts:278-294`](../packages/core/src/auth/services/session-service.ts) | [`app.ts:107-124`](../apps/cloudflare-workers/src/app.ts)
+**Source:** [`session-service.ts:294-310`](../packages/core/src/auth/services/session-service.ts) | [`app.ts:147-164`](../apps/cloudflare-workers/src/app.ts)
 
 ---
 
-## 6. Password Change (Not Yet Implemented)
+## 6. Password Change
 
-> **Gap:** Password change is not yet implemented. See [ADR-002](adr/002-future-enhancements.md) for planned work and the [threat model](threat-model.md) for security implications.
-
-The expected flow when implemented:
+User changes their password. Requires re-verification of the current password even though the user is authenticated. All sessions are revoked afterward, forcing re-authentication on every device.
 
 ```mermaid
 sequenceDiagram
@@ -254,26 +252,48 @@ sequenceDiagram
   participant SS as SessionService
   participant DB as Turso DB
 
-  U->>H: POST /api/change-password {currentPassword, newPassword}
+  U->>H: POST /api/account/password {currentPassword, newPassword}
   H->>MW: requireAuth (verify existing session)
-  MW-->>H: Authenticated (userId from token)
+  MW-->>H: Authenticated (userId from JWT payload)
 
-  H->>AS: verifyCurrentPassword(userId, currentPassword)
-  AS->>DB: SELECT password_data WHERE id = ?
-  AS->>PS: verifyPassword(currentPassword, stored)
-  Note over PS: Must re-verify current password<br/>even though user is authenticated
+  H->>AS: changePassword(input, userId, env)
 
-  alt Current password incorrect
-    AS-->>H: 401 Unauthorized
+  AS->>AS: passwordChangeSchema.safeParseAsync(input)
+  Note over AS: Zod validates both passwords (8–64 chars,<br/>NFKC normalization) and rejects<br/>newPassword === currentPassword
+
+  alt Validation fails
+    AS-->>H: throw ValidationError
+    H-->>U: 400 {error, code: "VALIDATION_ERROR"}
   end
 
-  H->>PS: hashPassword(newPassword)
+  AS->>DB: SELECT password_data FROM account WHERE id = ?
+
+  alt User not found (0 rows)
+    AS->>PS: rejectPasswordWithConstantTime(currentPassword)
+    Note over PS: Runs full PBKDF2 against dummy hash<br/>to equalize response time
+    AS-->>H: throw ValidationError("Password change failed")
+  end
+
+  AS->>PS: verifyPassword(currentPassword, stored)
+  Note over PS: PBKDF2 + timingSafeEqual via<br/>crypto.subtle.verify()
+
+  alt Current password incorrect
+    AS-->>H: throw ValidationError("Password change failed")
+    Note over H: Same error as "user not found"
+  end
+
+  AS->>PS: hashPassword(newPassword)
   Note over PS: Full PBKDF2 hash with fresh salt
+  AS->>DB: UPDATE account SET password_data = ? WHERE id = ?
+  AS-->>H: Success
 
-  H->>DB: UPDATE account SET password_data = ? WHERE id = ?
+  H->>SS: endAllSessionsForUser(userId, ctx)
+  SS->>DB: UPDATE session SET expires_at = datetime('now')<br/>WHERE user_id = ? AND expires_at > datetime('now')
+  Note over SS,DB: All sessions expired atomically —<br/>including the current one
+  SS->>U: Set-Cookie: access_token="" (delete)
+  SS->>U: Set-Cookie: refresh_token="" (delete)
 
-  H->>SS: Revoke all other sessions for userId
-  Note over SS: Force re-authentication on other devices
-
-  H-->>U: 200 {success: true}
+  H-->>U: 200 {success: true} or redirect
 ```
+
+**Source:** [`account-service.ts:215-262`](../packages/core/src/auth/services/account-service.ts) | [`session-service.ts:312-330`](../packages/core/src/auth/services/session-service.ts) | [`app.ts:107-145`](../apps/cloudflare-workers/src/app.ts) | [ADR-004](adr/004-password-change-endpoint.md)
