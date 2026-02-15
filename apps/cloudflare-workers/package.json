@@ -1,6 +1,6 @@
 {
 	"name": "@private-landing/cloudflare-workers",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"description": "Example Cloudflare Workers implementation with authentication",
 	"license": "Apache-2.0",
 	"author": "Josh Habdas <josh@comfus.io>",
