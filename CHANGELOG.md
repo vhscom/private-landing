@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-02-15
+
+### Added
+
+- Password change endpoint `POST /api/account/password` with current password re-verification ([ADR-004](docs/adr/004-password-change-endpoint.md))
+- `endAllSessionsForUser` on `SessionService` interface — atomic revocation of all sessions for a user (SQL and cache-backed implementations)
+- `changePassword` on `AccountService` — validates input, verifies current password with timing-safe comparison, rehashes with fresh salt
+- `passwordChangeSchema` Zod schema with cross-field refinement (rejects no-op changes)
+- `PasswordChangeInput` type in `@private-landing/types`
+- Integration tests for password change critical path (8 tests covering success, revocation, re-login, error cases)
+- Unit tests for `endAllSessionsForUser` and `changePassword` across SQL and cache-backed services
+
+### Documentation
+
+- ADR-004: password change endpoint decision record with OWASP ASVS v5.0 and NIST SP 800-63B references
+- Updated auth flow diagrams with password change sequence
+- Added password change threats to STRIDE threat model
+- Updated OWASP ASVS references from v4.0 to v5.0 in threat model
+- Updated README: moved password change from production next steps to implemented features, added to feature table
+- CLAUDE.md: added password change to key design decisions, added cache enablement shortcut
+- Security audit report for ADR-004 password change implementation
+
 ## [1.1.0] - 2026-02-15
 
 ### Added
@@ -59,5 +81,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Architecture Decision Records in `docs/adr/`
 - Security audit reports in `docs/audits/`
 
+[1.2.0]: https://github.com/vhscom/private-landing/compare/1.1.0...1.2.0
 [1.1.0]: https://github.com/vhscom/private-landing/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/vhscom/private-landing/commits/1.0.0
