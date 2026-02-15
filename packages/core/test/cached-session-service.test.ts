@@ -243,18 +243,9 @@ describe("CachedSessionService", () => {
 	describe("endAllSessionsForUser", () => {
 		it("should delete all session keys and user_sessions set", async () => {
 			const ctx = createMockAuthContext();
-			const id1 = await service.createSession(1, ctx, {
-				...shortSessionConfig,
-				maxSessions: 10,
-			});
-			const id2 = await service.createSession(1, ctx, {
-				...shortSessionConfig,
-				maxSessions: 10,
-			});
-			const id3 = await service.createSession(1, ctx, {
-				...shortSessionConfig,
-				maxSessions: 10,
-			});
+			const id1 = await service.createSession(1, ctx, shortSessionConfig);
+			const id2 = await service.createSession(1, ctx, shortSessionConfig);
+			const id3 = await service.createSession(1, ctx, shortSessionConfig);
 
 			const endCtx = createMockAuthContext({ sessionId: id1 });
 			await service.endAllSessionsForUser(1, endCtx);
@@ -275,16 +266,18 @@ describe("CachedSessionService", () => {
 
 		it("should not affect other users sessions", async () => {
 			const ctx1 = createMockAuthContext();
-			const user1Session = await service.createSession(1, ctx1, {
-				...shortSessionConfig,
-				maxSessions: 10,
-			});
+			const user1Session = await service.createSession(
+				1,
+				ctx1,
+				shortSessionConfig,
+			);
 
 			const ctx2 = createMockAuthContext();
-			const user2Session = await service.createSession(2, ctx2, {
-				...shortSessionConfig,
-				maxSessions: 10,
-			});
+			const user2Session = await service.createSession(
+				2,
+				ctx2,
+				shortSessionConfig,
+			);
 
 			const endCtx = createMockAuthContext({ sessionId: user1Session });
 			await service.endAllSessionsForUser(1, endCtx);
