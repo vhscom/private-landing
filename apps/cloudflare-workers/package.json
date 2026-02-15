@@ -36,7 +36,7 @@
 		"format:shell": "shfmt -w src/db/scripts/*.sh",
 		"lint": "biome lint",
 		"test": "vitest",
-		"test:run": "vitest run --retry 3",
+		"test:run": "vitest run",
 		"typecheck": "tsc --noEmit",
 		"typegen": "wrangler types"
 	},

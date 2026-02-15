@@ -2,38 +2,42 @@
  * @file revoke.test.ts
  * Integration tests for the /api/logout endpoint (session revocation).
  *
- * @remarks
- * **Known flakiness**: The session invalidation test may intermittently timeout
- * due to network latency with the remote Turso database. The `--retry 3` flag
- * handles this. Tests also share database state with other suites.
- *
  * @license Apache-2.0
  */
 
 import type { SqliteClient } from "@private-landing/infrastructure";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
-	cleanupSessions,
+	cleanupSuiteUser,
+	createSuiteUser,
 	initTestDb,
 	loginAndGetCookies,
 	makeAuthenticatedRequest,
 	makeRequest,
+	TEST_USER,
 } from "../../fixtures/mock-env";
+
+const SUITE_EMAIL = "revoke-suite@example.com";
 
 let dbClient: SqliteClient;
 
 describe("POST /api/logout", () => {
 	beforeAll(async () => {
 		dbClient = await initTestDb();
+		await createSuiteUser(dbClient, SUITE_EMAIL);
 	});
 
 	afterAll(async () => {
-		await cleanupSessions(dbClient);
+		await cleanupSuiteUser(dbClient, SUITE_EMAIL);
 		dbClient.close();
 	});
 
 	it("should logout authenticated user", async () => {
-		const cookies = await loginAndGetCookies();
+		const cookies = await loginAndGetCookies(
+			dbClient,
+			SUITE_EMAIL,
+			TEST_USER.password,
+		);
 
 		const response = await makeAuthenticatedRequest("/api/logout", cookies, {
 			method: "POST",
@@ -44,7 +48,11 @@ describe("POST /api/logout", () => {
 	});
 
 	it("should invalidate session after logout", async () => {
-		const cookies = await loginAndGetCookies();
+		const cookies = await loginAndGetCookies(
+			dbClient,
+			SUITE_EMAIL,
+			TEST_USER.password,
+		);
 
 		// Logout
 		await makeAuthenticatedRequest("/api/logout", cookies, {

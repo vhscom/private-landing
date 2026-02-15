@@ -8,31 +8,32 @@
 import type { SqliteClient } from "@private-landing/infrastructure";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
-	cleanupSessions,
+	cleanupSuiteUser,
 	createCredentialsFormData,
+	createSuiteUser,
 	extractCookies,
 	initTestDb,
 	makeRequest,
 	TEST_USER,
 } from "../../fixtures/mock-env";
 
+const SUITE_EMAIL = "login-suite@example.com";
+
 let dbClient: SqliteClient;
 
 describe("POST /api/login", () => {
 	beforeAll(async () => {
 		dbClient = await initTestDb();
+		await createSuiteUser(dbClient, SUITE_EMAIL);
 	});
 
 	afterAll(async () => {
-		await cleanupSessions(dbClient);
+		await cleanupSuiteUser(dbClient, SUITE_EMAIL);
 		dbClient.close();
 	});
 
 	it("should authenticate valid credentials", async () => {
-		const formData = createCredentialsFormData(
-			TEST_USER.email,
-			TEST_USER.password,
-		);
+		const formData = createCredentialsFormData(SUITE_EMAIL, TEST_USER.password);
 
 		const response = await makeRequest("/api/login", {
 			method: "POST",
@@ -44,10 +45,7 @@ describe("POST /api/login", () => {
 	});
 
 	it("should set auth cookies on successful login", async () => {
-		const formData = createCredentialsFormData(
-			TEST_USER.email,
-			TEST_USER.password,
-		);
+		const formData = createCredentialsFormData(SUITE_EMAIL, TEST_USER.password);
 
 		const response = await makeRequest("/api/login", {
 			method: "POST",
@@ -61,10 +59,7 @@ describe("POST /api/login", () => {
 	});
 
 	it("should reject invalid password", async () => {
-		const formData = createCredentialsFormData(
-			TEST_USER.email,
-			"wrongpassword",
-		);
+		const formData = createCredentialsFormData(SUITE_EMAIL, "wrongpassword");
 
 		const response = await makeRequest("/api/login", {
 			method: "POST",

@@ -3,8 +3,6 @@ import {
 	type WorkersUserConfigExport,
 } from "@cloudflare/vitest-pool-workers/config";
 
-const isCI = process.env.CI === "true";
-
 /**
  * Define workers config for testing
  * @see https://developers.cloudflare.com/workers/testing/vitest-integration/
@@ -13,7 +11,6 @@ const isCI = process.env.CI === "true";
  */
 export default defineWorkersConfig({
 	test: {
-		...(isCI ? {} : { maxConcurrency: 1 }),
 		globalSetup: ["./test/setup.ts"],
 		include: [
 			"src/**/*.test.ts",

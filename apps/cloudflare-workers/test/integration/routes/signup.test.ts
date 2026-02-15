@@ -21,17 +21,19 @@ describe("POST /api/register", () => {
 	});
 
 	afterAll(async () => {
-		// Clean up test accounts (keep the seeded test user)
+		// Clean up test accounts created during this suite (keep the seeded test user)
 		await dbClient.execute(
-			"DELETE FROM account WHERE email != 'test@example.com'",
+			"DELETE FROM account WHERE email NOT IN ('test@example.com') AND email LIKE '%signup-suite%'",
 		);
-		await dbClient.execute("DELETE FROM session");
+		await dbClient.execute(
+			"DELETE FROM session WHERE user_id NOT IN (SELECT id FROM account)",
+		);
 		dbClient.close();
 	});
 
 	it("should register a new user with valid credentials", async () => {
 		const formData = createCredentialsFormData(
-			"newuser@example.com",
+			`signup-suite-new-${Date.now()}@example.com`,
 			"SecurePassword123!",
 		);
 
@@ -72,8 +74,7 @@ describe("POST /api/register", () => {
 	});
 
 	it("should reject duplicate email registration", async () => {
-		// Use unique email to avoid conflicts with other test runs
-		const uniqueEmail = `duplicate-${Date.now()}@example.com`;
+		const uniqueEmail = `signup-suite-dup-${Date.now()}@example.com`;
 		const formData = createCredentialsFormData(
 			uniqueEmail,
 			"SecurePassword123!",

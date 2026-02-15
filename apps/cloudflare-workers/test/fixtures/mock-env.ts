@@ -35,10 +35,14 @@ CREATE TABLE IF NOT EXISTS session (
 CREATE INDEX IF NOT EXISTS idx_session_user ON session(user_id);
 CREATE INDEX IF NOT EXISTS idx_session_expiry ON session(expires_at);`;
 
+/** Pre-computed PBKDF2-SHA384 hash for "Test123!@#" — reused by all suite users */
+const TEST_PASSWORD_HASH =
+	"$pbkdf2-sha384$v1$100000$fW5ySXH4aQnPKYK8b7lGcA==$xE6bLhkhkXbmhMGYYInoBXOdHGZwzkpUtNdKcM0OjwSxi7oh0OfBl18OnAE4aNQe$KDLmfcH0/kcSIYmpc9vlE2LPtHCCB7ew234vojdYGfpW3H49nd3fISuDZ24uMRKr";
+
 /** SQL to insert the test user (password: Test123!@#) */
 export const TEST_USER_SQL = `
 INSERT OR REPLACE INTO account (id, email, password_data, created_at)
-VALUES (1, 'test@example.com', '$pbkdf2-sha384$v1$100000$fW5ySXH4aQnPKYK8b7lGcA==$xE6bLhkhkXbmhMGYYInoBXOdHGZwzkpUtNdKcM0OjwSxi7oh0OfBl18OnAE4aNQe$KDLmfcH0/kcSIYmpc9vlE2LPtHCCB7ew234vojdYGfpW3H49nd3fISuDZ24uMRKr', '2025-01-20 04:10:35');`;
+VALUES (1, 'test@example.com', '${TEST_PASSWORD_HASH}', '2025-01-20 04:10:35');`;
 
 /**
  * Initializes the test database with schema and test user.
@@ -80,6 +84,55 @@ export async function initTestDb(): Promise<SqliteClient> {
  */
 export async function cleanupSessions(dbClient: SqliteClient): Promise<void> {
 	await dbClient.execute("DELETE FROM session");
+}
+
+/**
+ * Creates an isolated user for a test suite, avoiding cross-suite session
+ * contention. Uses the same pre-computed password hash so the password is
+ * always TEST_USER.password ("Test123!@#").
+ *
+ * Cleans up any leftover rows first in case a previous run crashed.
+ *
+ * @returns The auto-generated user ID
+ */
+export async function createSuiteUser(
+	dbClient: SqliteClient,
+	email: string,
+): Promise<number> {
+	await dbClient.execute({
+		sql: "DELETE FROM session WHERE user_id IN (SELECT id FROM account WHERE email = ?)",
+		args: [email],
+	});
+	await dbClient.execute({
+		sql: "DELETE FROM account WHERE email = ?",
+		args: [email],
+	});
+	await dbClient.execute({
+		sql: "INSERT INTO account (email, password_data, created_at) VALUES (?, ?, CURRENT_TIMESTAMP)",
+		args: [email, TEST_PASSWORD_HASH],
+	});
+	const result = await dbClient.execute({
+		sql: "SELECT id FROM account WHERE email = ?",
+		args: [email],
+	});
+	return result.rows[0].id as number;
+}
+
+/**
+ * Removes a suite user and all its sessions.
+ */
+export async function cleanupSuiteUser(
+	dbClient: SqliteClient,
+	email: string,
+): Promise<void> {
+	await dbClient.execute({
+		sql: "DELETE FROM session WHERE user_id IN (SELECT id FROM account WHERE email = ?)",
+		args: [email],
+	});
+	await dbClient.execute({
+		sql: "DELETE FROM account WHERE email = ?",
+		args: [email],
+	});
 }
 
 /**
@@ -147,16 +200,19 @@ export function extractCookies(response: Response): string {
 
 /**
  * Performs a login and returns the authentication cookies.
- * Cleans up existing sessions first to avoid hitting the max sessions limit.
+ * Cleans up existing sessions for the given user first to avoid hitting the
+ * max sessions limit. Requires the caller's dbClient so it targets only that
+ * user's sessions — no cross-suite interference.
  */
 export async function loginAndGetCookies(
-	email = TEST_USER.email,
-	password = TEST_USER.password,
+	dbClient: SqliteClient,
+	email: string = TEST_USER.email,
+	password: string = TEST_USER.password,
 ): Promise<string> {
-	// Clean up existing sessions to avoid hitting max sessions limit
-	const dbClient = createDbClient(env);
-	await dbClient.execute("DELETE FROM session WHERE user_id = 1");
-	dbClient.close();
+	await dbClient.execute({
+		sql: "DELETE FROM session WHERE user_id IN (SELECT id FROM account WHERE email = ?)",
+		args: [email],
+	});
 
 	const formData = createCredentialsFormData(email, password);
 	const response = await makeRequest("/api/login", {

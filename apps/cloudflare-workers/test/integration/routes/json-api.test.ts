@@ -10,8 +10,8 @@
 import type { SqliteClient } from "@private-landing/infrastructure";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
-	cleanupSessions,
 	createCredentialsFormData,
+	createSuiteUser,
 	extractCookies,
 	initTestDb,
 	loginAndGetCookies,
@@ -19,6 +19,8 @@ import {
 	makeRequest,
 	TEST_USER,
 } from "../../fixtures/mock-env";
+
+const SUITE_EMAIL = "json-api-suite@example.com";
 
 const JSON_HEADERS = {
 	Accept: "application/json",
@@ -43,13 +45,17 @@ let dbClient: SqliteClient;
 
 beforeAll(async () => {
 	dbClient = await initTestDb();
+	await createSuiteUser(dbClient, SUITE_EMAIL);
 });
 
 afterAll(async () => {
+	// Delete sessions first (FK: session.user_id -> account.id)
 	await dbClient.execute(
-		"DELETE FROM account WHERE email != 'test@example.com'",
+		"DELETE FROM session WHERE user_id IN (SELECT id FROM account WHERE email LIKE '%json-api-suite%')",
 	);
-	await cleanupSessions(dbClient);
+	await dbClient.execute(
+		"DELETE FROM account WHERE email LIKE '%json-api-suite%'",
+	);
 	dbClient.close();
 });
 
@@ -58,7 +64,10 @@ describe("POST /api/register (JSON)", () => {
 		const response = await makeRequest("/api/register", {
 			method: "POST",
 			headers: JSON_HEADERS,
-			body: jsonBody(`json-reg-${Date.now()}@example.com`, "SecurePass123!"),
+			body: jsonBody(
+				`json-api-suite-reg-${Date.now()}@example.com`,
+				"SecurePass123!",
+			),
 		});
 
 		expect(response.status).toBe(201);
@@ -93,7 +102,7 @@ describe("POST /api/register (JSON)", () => {
 	});
 
 	it("returns generic error for duplicate email (anti-enumeration)", async () => {
-		const email = `dup-json-${Date.now()}@example.com`;
+		const email = `json-api-suite-dup-${Date.now()}@example.com`;
 
 		// First registration succeeds
 		const first = await makeRequest("/api/register", {
@@ -117,7 +126,7 @@ describe("POST /api/register (JSON)", () => {
 
 	it("still redirects without Accept: application/json", async () => {
 		const formData = createCredentialsFormData(
-			`redirect-${Date.now()}@example.com`,
+			`json-api-suite-redirect-${Date.now()}@example.com`,
 			"SecurePass123!",
 		);
 
@@ -133,12 +142,10 @@ describe("POST /api/register (JSON)", () => {
 
 describe("POST /api/login (JSON)", () => {
 	it("returns 200 with cookies on successful login", async () => {
-		await cleanupSessions(dbClient);
-
 		const response = await makeRequest("/api/login", {
 			method: "POST",
 			headers: JSON_HEADERS,
-			body: jsonBody(TEST_USER.email, TEST_USER.password),
+			body: jsonBody(SUITE_EMAIL, TEST_USER.password),
 			redirect: "manual",
 		});
 
@@ -156,7 +163,7 @@ describe("POST /api/login (JSON)", () => {
 		const response = await makeRequest("/api/login", {
 			method: "POST",
 			headers: JSON_HEADERS,
-			body: jsonBody(TEST_USER.email, "wrongpassword"),
+			body: jsonBody(SUITE_EMAIL, "wrongpassword"),
 		});
 
 		expect(response.status).toBe(401);
@@ -179,12 +186,7 @@ describe("POST /api/login (JSON)", () => {
 	});
 
 	it("still redirects without Accept: application/json", async () => {
-		await cleanupSessions(dbClient);
-
-		const formData = createCredentialsFormData(
-			TEST_USER.email,
-			TEST_USER.password,
-		);
+		const formData = createCredentialsFormData(SUITE_EMAIL, TEST_USER.password);
 
 		const response = await makeRequest("/api/login", {
 			method: "POST",
@@ -198,7 +200,11 @@ describe("POST /api/login (JSON)", () => {
 
 describe("POST /api/logout (JSON)", () => {
 	it("returns 200 on successful logout", async () => {
-		const cookies = await loginAndGetCookies();
+		const cookies = await loginAndGetCookies(
+			dbClient,
+			SUITE_EMAIL,
+			TEST_USER.password,
+		);
 
 		const response = await makeAuthenticatedRequest("/api/logout", cookies, {
 			method: "POST",
@@ -212,7 +218,11 @@ describe("POST /api/logout (JSON)", () => {
 	});
 
 	it("still redirects without Accept: application/json", async () => {
-		const cookies = await loginAndGetCookies();
+		const cookies = await loginAndGetCookies(
+			dbClient,
+			SUITE_EMAIL,
+			TEST_USER.password,
+		);
 
 		const response = await makeAuthenticatedRequest("/api/logout", cookies, {
 			method: "POST",

@@ -3,49 +3,58 @@
  * Integration tests for token refresh functionality.
  * Token refresh happens automatically via the requireAuth middleware.
  *
- * @remarks
- * **Known flakiness**: These tests share database state (sessions for user_id=1)
- * with other test suites. When run in parallel with requireAuth.test.ts, race
- * conditions can cause intermittent failures. The `--retry 3` flag handles this.
- *
  * @license Apache-2.0
  */
 
 import type { SqliteClient } from "@private-landing/infrastructure";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
-	cleanupSessions,
+	cleanupSuiteUser,
+	createSuiteUser,
 	extractCookies,
 	initTestDb,
 	loginAndGetCookies,
 	makeAuthenticatedRequest,
+	TEST_USER,
 } from "../../fixtures/mock-env";
 
+const SUITE_EMAIL = "refresh-suite@example.com";
+
 let dbClient: SqliteClient;
+let suiteUserId: number;
 
 describe("Token Refresh", () => {
 	beforeAll(async () => {
 		dbClient = await initTestDb();
+		suiteUserId = await createSuiteUser(dbClient, SUITE_EMAIL);
 	});
 
 	afterAll(async () => {
-		await cleanupSessions(dbClient);
+		await cleanupSuiteUser(dbClient, SUITE_EMAIL);
 		dbClient.close();
 	});
 
 	it("should access protected route with valid tokens", async () => {
-		const cookies = await loginAndGetCookies();
+		const cookies = await loginAndGetCookies(
+			dbClient,
+			SUITE_EMAIL,
+			TEST_USER.password,
+		);
 
 		const response = await makeAuthenticatedRequest("/api/ping", cookies);
 
 		expect(response.status).toBe(200);
 		const data = await response.json();
 		expect(data).toHaveProperty("message", "pong");
-		expect(data).toHaveProperty("userId", 1);
+		expect(data).toHaveProperty("userId", suiteUserId);
 	});
 
 	it("should refresh tokens when accessing protected route with valid refresh token", async () => {
-		const cookies = await loginAndGetCookies();
+		const cookies = await loginAndGetCookies(
+			dbClient,
+			SUITE_EMAIL,
+			TEST_USER.password,
+		);
 
 		// Access a protected route - this may trigger a token refresh if access token is near expiry
 		const response = await makeAuthenticatedRequest("/api/ping", cookies);
@@ -61,7 +70,11 @@ describe("Token Refresh", () => {
 	});
 
 	it("should refresh access token using only refresh token", async () => {
-		const cookies = await loginAndGetCookies();
+		const cookies = await loginAndGetCookies(
+			dbClient,
+			SUITE_EMAIL,
+			TEST_USER.password,
+		);
 
 		// Extract only the refresh token (simulating expired access token scenario)
 		const refreshTokenOnly = cookies
