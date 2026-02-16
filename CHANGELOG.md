@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-02-16
+
+### Changed
+
+- Reorganized all routes from `/api/*` into semantic groups: `/health`, `/auth/*`, `/account/*` ([ADR-005](docs/adr/005-url-reorganization.md))
+- Replaced `app.use("/api/*", requireAuth)` catch-all with explicit per-route `requireAuth` middleware
+- Replaced `/api/ping` with `GET /account/me` returning `{ userId }`
+- Health endpoint is now public (no auth required)
+- Removed `/health/live` and `/health/ready` — single `/health` endpoint is sufficient for Workers
+- Suppressed `noImportantStyles` lint rule for `prefers-reduced-motion` overrides in HTML
+
+### Added
+
+- Tabbed wizard UI with four steps: Register, Login, Password, Logout
+- Auth status badge with click-to-check against `/account/me`
+- Console stays visible during fetch with "waiting..." indicator
+- No-JS progressive enhancement: native form submissions with fragment-based status banners via CSS `:target`
+- `<main>` landmark for accessibility
+- `<meta name="theme-color">` for dark and light modes
+
+### Documentation
+
+- ADR-005: URL reorganization decision record
+- Updated route paths across all ADRs, flow diagrams, CLAUDE.md, and integration tests
+
 ## [1.2.0] - 2026-02-15
 
 ### Added
@@ -81,6 +106,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Architecture Decision Records in `docs/adr/`
 - Security audit reports in `docs/audits/`
 
+[1.3.0]: https://github.com/vhscom/private-landing/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/vhscom/private-landing/compare/1.1.0...1.2.0
 [1.1.0]: https://github.com/vhscom/private-landing/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/vhscom/private-landing/commits/1.0.0
