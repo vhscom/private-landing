@@ -35,7 +35,7 @@ describe("requireAuth middleware", () => {
 
 	describe("without authentication", () => {
 		it("should reject requests without any tokens", async () => {
-			const response = await makeRequest("/api/ping");
+			const response = await makeRequest("/account/me");
 
 			expect(response.status).toBe(401);
 			const data = (await response.json()) as { error: string; code: string };
@@ -45,7 +45,7 @@ describe("requireAuth middleware", () => {
 
 		it("should reject requests with malformed access token", async () => {
 			const response = await makeAuthenticatedRequest(
-				"/api/ping",
+				"/account/me",
 				"access_token=not.a.valid.jwt",
 			);
 
@@ -53,7 +53,7 @@ describe("requireAuth middleware", () => {
 		});
 
 		it("should reject requests with empty cookie header", async () => {
-			const response = await makeAuthenticatedRequest("/api/ping", "");
+			const response = await makeAuthenticatedRequest("/account/me", "");
 
 			expect(response.status).toBe(401);
 		});
@@ -67,11 +67,11 @@ describe("requireAuth middleware", () => {
 				TEST_USER.password,
 			);
 
-			const response = await makeAuthenticatedRequest("/api/ping", cookies);
+			const response = await makeAuthenticatedRequest("/account/me", cookies);
 
 			expect(response.status).toBe(200);
 			const data = await response.json();
-			expect(data).toHaveProperty("message", "pong");
+			expect(data).toHaveProperty("userId");
 		});
 
 		it("should set jwtPayload in context", async () => {
@@ -81,7 +81,7 @@ describe("requireAuth middleware", () => {
 				TEST_USER.password,
 			);
 
-			const response = await makeAuthenticatedRequest("/api/ping", cookies);
+			const response = await makeAuthenticatedRequest("/account/me", cookies);
 
 			expect(response.status).toBe(200);
 			const data = await response.json();
@@ -104,7 +104,7 @@ describe("requireAuth middleware", () => {
 				.join("; ");
 
 			const response = await makeAuthenticatedRequest(
-				"/api/ping",
+				"/account/me",
 				refreshTokenOnly,
 			);
 
@@ -114,7 +114,7 @@ describe("requireAuth middleware", () => {
 
 		it("should reject when both tokens are invalid", async () => {
 			const response = await makeAuthenticatedRequest(
-				"/api/ping",
+				"/account/me",
 				"access_token=bad; refresh_token=also.bad",
 			);
 
@@ -132,12 +132,12 @@ describe("requireAuth middleware", () => {
 			);
 
 			// Logout to revoke the session
-			await makeAuthenticatedRequest("/api/logout", cookies, {
+			await makeAuthenticatedRequest("/auth/logout", cookies, {
 				method: "POST",
 			});
 
 			// Try to use the old tokens
-			const response = await makeAuthenticatedRequest("/api/ping", cookies);
+			const response = await makeAuthenticatedRequest("/account/me", cookies);
 
 			// 401 Unauthorized or 403 Forbidden for revoked sessions
 			expect([401, 403]).toContain(response.status);

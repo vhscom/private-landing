@@ -1,6 +1,6 @@
 /**
  * @file revoke.test.ts
- * Integration tests for the /api/logout endpoint (session revocation).
+ * Integration tests for the /auth/logout endpoint (session revocation).
  *
  * @license Apache-2.0
  */
@@ -21,7 +21,7 @@ const SUITE_EMAIL = "revoke-suite@example.com";
 
 let dbClient: SqliteClient;
 
-describe("POST /api/logout", () => {
+describe("POST /auth/logout", () => {
 	beforeAll(async () => {
 		dbClient = await initTestDb();
 		await createSuiteUser(dbClient, SUITE_EMAIL);
@@ -39,12 +39,12 @@ describe("POST /api/logout", () => {
 			TEST_USER.password,
 		);
 
-		const response = await makeAuthenticatedRequest("/api/logout", cookies, {
+		const response = await makeAuthenticatedRequest("/auth/logout", cookies, {
 			method: "POST",
 		});
 
 		expect(response.status).toBe(200);
-		expect(response.url).toContain("/?logged_out=true");
+		expect(response.url).toMatch(/\/$/);
 	});
 
 	it("should invalidate session after logout", async () => {
@@ -55,19 +55,19 @@ describe("POST /api/logout", () => {
 		);
 
 		// Logout
-		await makeAuthenticatedRequest("/api/logout", cookies, {
+		await makeAuthenticatedRequest("/auth/logout", cookies, {
 			method: "POST",
 		});
 
 		// Try to access protected route with the same cookies
-		const response = await makeAuthenticatedRequest("/api/ping", cookies);
+		const response = await makeAuthenticatedRequest("/account/me", cookies);
 
 		// Should be rejected because session was revoked (401 or 403)
 		expect([401, 403]).toContain(response.status);
 	});
 
 	it("should reject logout without authentication", async () => {
-		const response = await makeRequest("/api/logout", {
+		const response = await makeRequest("/auth/logout", {
 			method: "POST",
 		});
 
@@ -76,7 +76,7 @@ describe("POST /api/logout", () => {
 
 	it("should reject logout with invalid token", async () => {
 		const response = await makeAuthenticatedRequest(
-			"/api/logout",
+			"/auth/logout",
 			"access_token=invalid.token.here",
 			{ method: "POST" },
 		);

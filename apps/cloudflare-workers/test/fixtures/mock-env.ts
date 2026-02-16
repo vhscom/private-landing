@@ -215,7 +215,7 @@ export async function loginAndGetCookies(
 	});
 
 	const formData = createCredentialsFormData(email, password);
-	const response = await makeRequest("/api/login", {
+	const response = await makeRequest("/auth/login", {
 		method: "POST",
 		body: formData,
 		redirect: "manual",

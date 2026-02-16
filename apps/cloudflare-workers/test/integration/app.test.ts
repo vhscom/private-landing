@@ -25,9 +25,9 @@ describe("Application", () => {
 	});
 
 	describe("API Endpoints", () => {
-		it("should reject unauthenticated API requests with JSON", async () => {
+		it("should return health status without authentication", async () => {
 			const response = await worker.request(
-				"/api/health",
+				"/health",
 				{
 					headers: {
 						Accept: "application/json",
@@ -36,10 +36,10 @@ describe("Application", () => {
 				env,
 			);
 
-			expect(response.status).toBe(401);
+			expect(response.status).toBe(200);
 			const data = await response.json();
-			expect(data).toHaveProperty("error");
-			expect(data).toHaveProperty("code");
+			expect(data).toHaveProperty("status", "ok");
+			expect(data).toHaveProperty("timestamp");
 		});
 
 		it("should return 404 for non-existent routes", async () => {

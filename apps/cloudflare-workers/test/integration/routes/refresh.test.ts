@@ -41,11 +41,10 @@ describe("Token Refresh", () => {
 			TEST_USER.password,
 		);
 
-		const response = await makeAuthenticatedRequest("/api/ping", cookies);
+		const response = await makeAuthenticatedRequest("/account/me", cookies);
 
 		expect(response.status).toBe(200);
 		const data = await response.json();
-		expect(data).toHaveProperty("message", "pong");
 		expect(data).toHaveProperty("userId", suiteUserId);
 	});
 
@@ -57,7 +56,7 @@ describe("Token Refresh", () => {
 		);
 
 		// Access a protected route - this may trigger a token refresh if access token is near expiry
-		const response = await makeAuthenticatedRequest("/api/ping", cookies);
+		const response = await makeAuthenticatedRequest("/account/me", cookies);
 
 		expect(response.status).toBe(200);
 
@@ -83,7 +82,7 @@ describe("Token Refresh", () => {
 			.join("; ");
 
 		const response = await makeAuthenticatedRequest(
-			"/api/ping",
+			"/account/me",
 			refreshTokenOnly,
 		);
 
@@ -94,7 +93,7 @@ describe("Token Refresh", () => {
 
 	it("should reject request with invalid refresh token", async () => {
 		const response = await makeAuthenticatedRequest(
-			"/api/ping",
+			"/account/me",
 			"refresh_token=invalid.token.here",
 		);
 

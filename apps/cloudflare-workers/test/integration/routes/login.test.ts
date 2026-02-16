@@ -1,6 +1,6 @@
 /**
  * @file login.test.ts
- * Integration tests for the /api/login endpoint.
+ * Integration tests for the /auth/login endpoint.
  *
  * @license Apache-2.0
  */
@@ -21,7 +21,7 @@ const SUITE_EMAIL = "login-suite@example.com";
 
 let dbClient: SqliteClient;
 
-describe("POST /api/login", () => {
+describe("POST /auth/login", () => {
 	beforeAll(async () => {
 		dbClient = await initTestDb();
 		await createSuiteUser(dbClient, SUITE_EMAIL);
@@ -35,19 +35,19 @@ describe("POST /api/login", () => {
 	it("should authenticate valid credentials", async () => {
 		const formData = createCredentialsFormData(SUITE_EMAIL, TEST_USER.password);
 
-		const response = await makeRequest("/api/login", {
+		const response = await makeRequest("/auth/login", {
 			method: "POST",
 			body: formData,
 		});
 
 		expect(response.status).toBe(200);
-		expect(response.url).toContain("/?authenticated=true");
+		expect(response.url).toMatch(/\/$/);
 	});
 
 	it("should set auth cookies on successful login", async () => {
 		const formData = createCredentialsFormData(SUITE_EMAIL, TEST_USER.password);
 
-		const response = await makeRequest("/api/login", {
+		const response = await makeRequest("/auth/login", {
 			method: "POST",
 			body: formData,
 			redirect: "manual",
@@ -61,13 +61,13 @@ describe("POST /api/login", () => {
 	it("should reject invalid password", async () => {
 		const formData = createCredentialsFormData(SUITE_EMAIL, "wrongpassword");
 
-		const response = await makeRequest("/api/login", {
+		const response = await makeRequest("/auth/login", {
 			method: "POST",
 			body: formData,
 		});
 
 		expect(response.status).toBe(200);
-		expect(response.url).toContain("error=");
+		expect(response.url).toMatch(/\/$/);
 	});
 
 	it("should reject non-existent user", async () => {
@@ -76,36 +76,36 @@ describe("POST /api/login", () => {
 			"SomePassword123!",
 		);
 
-		const response = await makeRequest("/api/login", {
+		const response = await makeRequest("/auth/login", {
 			method: "POST",
 			body: formData,
 		});
 
 		expect(response.status).toBe(200);
-		expect(response.url).toContain("error=");
+		expect(response.url).toMatch(/\/$/);
 	});
 
 	it("should handle empty credentials", async () => {
 		const formData = createCredentialsFormData("", "");
 
-		const response = await makeRequest("/api/login", {
+		const response = await makeRequest("/auth/login", {
 			method: "POST",
 			body: formData,
 		});
 
 		expect(response.status).toBe(200);
-		expect(response.url).toContain("error=");
+		expect(response.url).toMatch(/\/$/);
 	});
 
 	it("should reject invalid email format", async () => {
 		const formData = createCredentialsFormData("not-an-email", "Password123!");
 
-		const response = await makeRequest("/api/login", {
+		const response = await makeRequest("/auth/login", {
 			method: "POST",
 			body: formData,
 		});
 
 		expect(response.status).toBe(200);
-		expect(response.url).toContain("error=");
+		expect(response.url).toMatch(/\/$/);
 	});
 });

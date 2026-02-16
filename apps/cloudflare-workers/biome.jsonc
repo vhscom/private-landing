@@ -9,5 +9,18 @@
 			"!**/worker-configuration.d.ts",
 			"!!**/node_modules"
 		]
-	}
+	},
+	"overrides": [
+		{
+			"includes": ["public/**/*.html"],
+			"linter": {
+				"rules": {
+					"complexity": {
+						// !important is correct for prefers-reduced-motion overrides
+						"noImportantStyles": "off"
+					}
+				}
+			}
+		}
+	]
 }

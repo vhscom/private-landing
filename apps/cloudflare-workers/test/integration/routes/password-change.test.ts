@@ -1,6 +1,6 @@
 /**
  * @file password-change.test.ts
- * Integration tests for the POST /api/account/password endpoint.
+ * Integration tests for the POST /account/password endpoint.
  *
  * @license Apache-2.0
  */
@@ -35,7 +35,7 @@ async function resetSuiteUserPassword(): Promise<void> {
 	await createSuiteUser(dbClient, SUITE_EMAIL);
 }
 
-describe("POST /api/account/password", () => {
+describe("POST /account/password", () => {
 	beforeAll(async () => {
 		dbClient = await initTestDb();
 	});
@@ -57,7 +57,7 @@ describe("POST /api/account/password", () => {
 		);
 
 		const response = await makeAuthenticatedRequest(
-			"/api/account/password",
+			"/account/password",
 			cookies,
 			{
 				method: "POST",
@@ -86,7 +86,7 @@ describe("POST /api/account/password", () => {
 		);
 
 		// Change password
-		await makeAuthenticatedRequest("/api/account/password", cookies, {
+		await makeAuthenticatedRequest("/account/password", cookies, {
 			method: "POST",
 			headers: JSON_HEADERS,
 			body: JSON.stringify({
@@ -97,9 +97,13 @@ describe("POST /api/account/password", () => {
 		});
 
 		// Old cookies should no longer work
-		const pingResponse = await makeAuthenticatedRequest("/api/ping", cookies, {
-			headers: { Accept: "application/json" },
-		});
+		const pingResponse = await makeAuthenticatedRequest(
+			"/account/me",
+			cookies,
+			{
+				headers: { Accept: "application/json" },
+			},
+		);
 
 		// 403: the JWT is still valid but the session has been revoked
 		expect(pingResponse.status).toBe(403);
@@ -115,7 +119,7 @@ describe("POST /api/account/password", () => {
 		const newPassword = "FreshPassword99!";
 
 		// Change password
-		await makeAuthenticatedRequest("/api/account/password", cookies, {
+		await makeAuthenticatedRequest("/account/password", cookies, {
 			method: "POST",
 			headers: JSON_HEADERS,
 			body: JSON.stringify({
@@ -133,7 +137,7 @@ describe("POST /api/account/password", () => {
 		);
 
 		const pingResponse = await makeAuthenticatedRequest(
-			"/api/ping",
+			"/account/me",
 			newCookies,
 			{
 				headers: { Accept: "application/json" },
@@ -151,7 +155,7 @@ describe("POST /api/account/password", () => {
 		);
 
 		const response = await makeAuthenticatedRequest(
-			"/api/account/password",
+			"/account/password",
 			cookies,
 			{
 				method: "POST",
@@ -175,7 +179,7 @@ describe("POST /api/account/password", () => {
 		);
 
 		const response = await makeAuthenticatedRequest(
-			"/api/account/password",
+			"/account/password",
 			cookies,
 			{
 				method: "POST",
@@ -192,7 +196,7 @@ describe("POST /api/account/password", () => {
 	}, 15_000);
 
 	it("should require authentication (no cookies -> 401)", async () => {
-		const response = await makeRequest("/api/account/password", {
+		const response = await makeRequest("/account/password", {
 			method: "POST",
 			headers: JSON_HEADERS,
 			body: JSON.stringify({
@@ -212,7 +216,7 @@ describe("POST /api/account/password", () => {
 		);
 
 		const response = await makeAuthenticatedRequest(
-			"/api/account/password",
+			"/account/password",
 			cookies,
 			{
 				method: "POST",
@@ -242,7 +246,7 @@ describe("POST /api/account/password", () => {
 		formData.set("newPassword", "RedirectTestP1!");
 
 		const response = await makeAuthenticatedRequest(
-			"/api/account/password",
+			"/account/password",
 			cookies,
 			{
 				method: "POST",
@@ -251,6 +255,6 @@ describe("POST /api/account/password", () => {
 		);
 
 		expect(response.status).toBe(200);
-		expect(response.url).toContain("/?password_changed=true");
+		expect(response.url).toMatch(/\/$/);
 	}, 15_000);
 });

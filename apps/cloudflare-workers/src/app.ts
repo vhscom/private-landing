@@ -10,7 +10,7 @@ import {
 	createRequireAuth,
 	securityHeaders,
 } from "@private-landing/core";
-import { createDbClient, serveStatic } from "@private-landing/infrastructure";
+import { serveStatic } from "@private-landing/infrastructure";
 import {
 	type Env,
 	ValidationError,
@@ -34,8 +34,13 @@ const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 app.use("*", securityHeaders);
 app.use("*", serveStatic({ cache: "key" }));
 
-// Authentication endpoints
-app.post("/api/register", async (ctx) => {
+// Health probe (public)
+app.get("/health", (ctx) => {
+	return ctx.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// Auth lifecycle (public)
+app.post("/auth/register", async (ctx) => {
 	const json = wantsJson(ctx);
 	try {
 		const body = await parseRequestBody(ctx);
@@ -46,7 +51,7 @@ app.post("/api/register", async (ctx) => {
 		if (json) {
 			return ctx.json({ success: true, message: "Account created" }, 201);
 		}
-		return ctx.redirect("/?registered=true");
+		return ctx.redirect("/#registered");
 	} catch (error: unknown) {
 		console.error("Registration error:", error);
 		if (json) {
@@ -58,13 +63,11 @@ app.post("/api/register", async (ctx) => {
 				400,
 			);
 		}
-		const message =
-			error instanceof ValidationError ? error.message : "Registration failed";
-		return ctx.redirect(`/?error=${encodeURIComponent(message)}`);
+		return ctx.redirect("/#error");
 	}
 });
 
-app.post("/api/login", async (ctx) => {
+app.post("/auth/login", async (ctx) => {
 	const json = wantsJson(ctx);
 	try {
 		const body = await parseRequestBody(ctx);
@@ -80,9 +83,7 @@ app.post("/api/login", async (ctx) => {
 					401,
 				);
 			}
-			return ctx.redirect(
-				`/?error=${encodeURIComponent(authResult.error ?? "Authentication failed")}`,
-			);
+			return ctx.redirect("/#error");
 		}
 
 		const sessionId = await auth.sessions.createSession(authResult.userId, ctx);
@@ -91,7 +92,7 @@ app.post("/api/login", async (ctx) => {
 		if (json) {
 			return ctx.json({ success: true, message: "Login successful" }, 200);
 		}
-		return ctx.redirect("/?authenticated=true");
+		return ctx.redirect("/#logged-in");
 	} catch (error) {
 		console.error("Authentication error:", error);
 		if (json) {
@@ -100,11 +101,30 @@ app.post("/api/login", async (ctx) => {
 				500,
 			);
 		}
-		return ctx.redirect("/?error=Authentication failed. Please try again.");
+		return ctx.redirect("/#error");
 	}
 });
 
-app.post("/api/account/password", requireAuth, async (ctx) => {
+// Auth lifecycle (protected)
+app.post("/auth/logout", requireAuth, async (ctx) => {
+	const json = wantsJson(ctx);
+	try {
+		await auth.sessions.endSession(ctx);
+		if (json) {
+			return ctx.json({ success: true, message: "Logged out" }, 200);
+		}
+		return ctx.redirect("/#logged-out");
+	} catch (error) {
+		console.error("Logout error:", error);
+		if (json) {
+			return ctx.json({ error: "Logout failed", code: "INTERNAL_ERROR" }, 500);
+		}
+		return ctx.redirect("/#error");
+	}
+});
+
+// Account management (protected)
+app.post("/account/password", requireAuth, async (ctx) => {
 	const json = wantsJson(ctx);
 	try {
 		const body = await parseRequestBody(ctx);
@@ -124,7 +144,7 @@ app.post("/api/account/password", requireAuth, async (ctx) => {
 				200,
 			);
 		}
-		return ctx.redirect("/?password_changed=true");
+		return ctx.redirect("/#password-changed");
 	} catch (error) {
 		console.error("Password change error:", error);
 		if (json) {
@@ -136,57 +156,13 @@ app.post("/api/account/password", requireAuth, async (ctx) => {
 				400,
 			);
 		}
-		const message =
-			error instanceof ValidationError
-				? error.message
-				: "Password change failed";
-		return ctx.redirect(`/?error=${encodeURIComponent(message)}`);
+		return ctx.redirect("/#error");
 	}
 });
 
-app.post("/api/logout", requireAuth, async (ctx) => {
-	const json = wantsJson(ctx);
-	try {
-		await auth.sessions.endSession(ctx);
-		if (json) {
-			return ctx.json({ success: true, message: "Logged out" }, 200);
-		}
-		return ctx.redirect("/?logged_out=true");
-	} catch (error) {
-		console.error("Logout error:", error);
-		if (json) {
-			return ctx.json({ error: "Logout failed", code: "INTERNAL_ERROR" }, 500);
-		}
-		const errorMessage =
-			error instanceof Error ? error.message : "Logout failed";
-		return ctx.redirect(`/?error=${encodeURIComponent(errorMessage)}`);
-	}
-});
-
-// Protected API routes
-app.use("/api/*", requireAuth);
-
-app.get("/api/health", (ctx) => {
-	return ctx.json({ status: "ok", timestamp: new Date().toISOString() });
-});
-
-app.get("/api/health/live", (ctx) => {
-	return ctx.json({ status: "alive" });
-});
-
-app.get("/api/health/ready", async (ctx) => {
-	try {
-		const dbClient = createDbClient(ctx.env);
-		await dbClient.execute("SELECT 1");
-		return ctx.json({ status: "ready", database: "reachable" });
-	} catch {
-		return ctx.json({ status: "not_ready", database: "unreachable" }, 503);
-	}
-});
-
-app.get("/api/ping", (ctx) => {
+app.get("/account/me", requireAuth, (ctx) => {
 	const payload = ctx.get("jwtPayload");
-	return ctx.json({ message: "pong", userId: payload.uid });
+	return ctx.json({ userId: payload.uid });
 });
 
 export default app;

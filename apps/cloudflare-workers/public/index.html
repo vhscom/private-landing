@@ -4,13 +4,14 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Private Landing</title>
-    <meta name="description" content="Build secure APIs at the edge in minutes. Authentication that just works.">
+    <title>Auth Demo — Private Landing</title>
+    <meta name="description" content="Edge authentication reference implementation built on Cloudflare Workers, Hono, and Turso.">
     <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+    <meta name="theme-color" content="#050a10" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#f5f7fa" media="(prefers-color-scheme: light)">
     <style>
         :root {
             --color-bg: #050a10;
-            --color-surface: #0a1020;
             --color-text: #e0e8ff;
             --color-muted: #6b7a99;
             --color-border: rgb(224 232 255 / 0.08);
@@ -34,7 +35,6 @@
         @media (prefers-color-scheme: light) {
             :root {
                 --color-bg: #f5f7fa;
-                --color-surface: #fff;
                 --color-text: #1a2332;
                 --color-muted: #5a6a82;
                 --color-border: rgb(26 35 50 / 0.12);
@@ -71,94 +71,6 @@
             margin: 0;
             letter-spacing: -0.02em;
         }
-
-        h2 {
-            font-size: 0.85rem;
-            color: var(--color-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            margin-block: var(--space-md) var(--space-sm);
-        }
-
-        .page-header {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: space-between;
-            gap: var(--space-xs);
-            padding-block-end: var(--space-md);
-            border-block-end: 1px solid var(--color-border);
-        }
-
-        /* Health probe */
-
-        .health-probe {
-            display: inline-flex;
-            align-items: center;
-            gap: var(--space-xs);
-            padding: 0.3rem 0.7rem;
-            background: transparent;
-            border: 1px solid var(--color-border);
-            border-radius: 9999px;
-            font: inherit;
-            font-size: 0.75rem;
-            color: var(--color-muted);
-            cursor: pointer;
-            transition: color 0.2s, border-color 0.2s, box-shadow 0.2s;
-        }
-
-        .health-probe:is(:hover, :focus) {
-            color: var(--color-accent);
-            border-color: var(--color-accent);
-            background: transparent;
-        }
-
-        .health-probe:focus-visible {
-            outline: none;
-            box-shadow: 0 0 0 2px var(--color-accent-glow);
-        }
-
-        .health-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: var(--color-muted);
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
-
-        .health-result {
-            display: flex;
-            margin-block-start: var(--space-xs);
-            padding: 0.75rem 1rem;
-            background: var(--color-console-bg);
-            border: 1px solid var(--color-console-border);
-            border-radius: 8px;
-            font-size: 0.8rem;
-            color: var(--color-muted);
-            white-space: pre;
-            overflow-x: auto;
-            opacity: 0;
-            transform: translateY(-6px);
-            transition: opacity 0.3s ease, transform 0.3s ease;
-        }
-
-        .health-result.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .health-result .prompt { color: var(--color-accent); }
-        .health-result .cmd { color: var(--color-console-text); }
-        .health-result .status { font-weight: 700; }
-        .health-result.ok .status { color: var(--color-ok); }
-        .health-result.denied .status { color: var(--color-danger); }
-
-        /* Forms */
 
         form {
             display: flex;
@@ -225,151 +137,655 @@
             background: rgb(248 81 73 / 0.08);
         }
 
-        /* Messages */
+        auth-step {
+            display: block;
+            margin-block-end: var(--space-md);
+        }
 
-        .message {
-            padding: var(--space-xs) var(--space-sm);
-            margin-block-start: var(--space-sm);
-            background: var(--color-surface);
-            border: 1px solid var(--color-accent);
-            border-radius: 4px;
-            color: var(--color-accent);
+        auth-step:last-of-type {
+            margin-block-end: 0;
+        }
+
+        .step-description {
+            margin: 0 0 var(--space-sm);
+            font-size: 0.8rem;
+            color: var(--color-muted);
+            line-height: 1.5;
+        }
+
+        .no-js-title {
+            margin-block-end: var(--space-md);
+        }
+
+        .status-msg {
+            display: none;
+            padding: 0.5rem 0.75rem;
+            margin-block-end: var(--space-md);
+            border-radius: 6px;
             font-size: 0.85rem;
-            opacity: 0;
-            transform: translateY(-10px);
-            transition: opacity 0.3s ease, transform 0.3s ease;
+            line-height: 1.4;
+        }
+        .status-msg:target { display: block; }
+        .status-msg.success {
+            background: rgb(34 197 94 / 0.12);
+            color: #4ade80;
+            border: 1px solid rgb(34 197 94 / 0.25);
+        }
+        .status-msg.error {
+            background: rgb(239 68 68 / 0.12);
+            color: #f87171;
+            border: 1px solid rgb(239 68 68 / 0.25);
+        }
+        @media (prefers-color-scheme: light) {
+            .status-msg.success {
+                background: rgb(34 197 94 / 0.08);
+                color: #16a34a;
+                border-color: rgb(34 197 94 / 0.2);
+            }
+            .status-msg.error {
+                background: rgb(239 68 68 / 0.08);
+                color: #dc2626;
+                border-color: rgb(239 68 68 / 0.2);
+            }
         }
 
-        .message.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .message.error {
-            color: var(--color-danger);
-            border-color: var(--color-danger);
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                transition-duration: 0.01ms !important;
+                animation-duration: 0.01ms !important;
+            }
         }
     </style>
 </head>
 
 <body>
-<header class="page-header">
-    <h1>Private Landing</h1>
-    <button type="button" class="health-probe" id="health-probe" title="Query protected API">
-        <span class="health-dot" id="health-dot"></span>
-        /api/health
-    </button>
-</header>
-<output id="health-result" class="health-result" aria-live="polite"></output>
 
-<section>
-    <h2>Registration</h2>
-    <form id="registration" method="post" action="/api/register">
-        <label>
-            Email:
-            <input type="email" name="email" autocomplete="email" required>
-        </label>
-        <label>
-            Password:
-            <input type="password" name="password" autocomplete="new-password" required>
-        </label>
-        <button type="submit">Register</button>
-    </form>
-</section>
+<!-- ============================================ -->
+<!-- COMPONENT TEMPLATES                          -->
+<!-- ============================================ -->
 
-<section>
-    <h2>Log In</h2>
-    <form id="login" method="post" action="/api/login">
-        <label>
-            Email:
-            <input type="email" name="email" autocomplete="email" required>
-        </label>
-        <label>
-            Password:
-            <input type="password" name="password" autocomplete="current-password" required>
-        </label>
-        <button type="submit">Log In</button>
-    </form>
-</section>
+<template id="api-console-template">
+    <style>
+        :host {
+            display: block;
+            margin-block-start: var(--space-sm);
+        }
+        .console {
+            padding: 0.4rem 0.75rem;
+            line-height: 1.3;
+            background: var(--color-console-bg);
+            border: 1px solid var(--color-console-border);
+            border-radius: 8px;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--color-muted);
+            white-space: pre-wrap;
+            word-break: break-word;
+            overflow-x: auto;
+            opacity: 0;
+            transform: translateY(-4px);
+            transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+        }
+        .console.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .console.idle {
+            opacity: 1;
+            transform: none;
+        }
+        .prompt { color: var(--color-accent); }
+        .cmd { color: var(--color-console-text); }
+        .status { font-weight: 700; }
+        .console.ok .status { color: var(--color-ok); }
+        .console.denied .status { color: var(--color-danger); }
+        .body { margin: 0; font: inherit; white-space: pre-wrap; word-break: break-word; }
+        .waiting { color: var(--color-muted); }
+    </style>
+    <div class="console idle" role="log" aria-live="polite" aria-label="API response">
+        <div class="output"><span class="prompt">$ </span><span class="cmd"></span><span class="waiting">waiting...</span></div>
+    </div>
+</template>
 
-<section>
-    <form id="logout" method="post" action="/api/logout" style="margin-top: var(--space-sm);">
-        <button type="submit" class="logout-button">Log Out</button>
-    </form>
-</section>
+<template id="auth-step-template">
+    <style>
+        :host {
+            display: block;
+        }
+        .step {
+            display: flex;
+            flex-direction: column;
+        }
+    </style>
+    <div class="step">
+        <slot></slot>
+        <api-console></api-console>
+    </div>
+</template>
 
-<div id="message" class="message"></div>
+<template id="auth-wizard-template">
+    <style>
+        :host {
+            display: block;
+        }
+        .wizard-header {
+            padding-block-end: var(--space-md);
+            border-block-end: 1px solid var(--color-border);
+            margin-block-end: var(--space-md);
+        }
+        .title-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--space-xs);
+            margin-block-end: var(--space-sm);
+        }
+        .auth-status {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            padding: 0.2rem 0.5rem;
+            margin-block-end: 0.2rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .auth-status.unauthenticated {
+            color: var(--color-muted);
+            background: transparent;
+        }
+        .auth-status.registered {
+            color: var(--color-accent);
+            background: rgb(0 229 204 / 0.08);
+        }
+        .auth-status.authenticated {
+            color: var(--color-ok);
+            background: rgb(63 185 80 / 0.08);
+        }
+        .tab-bar {
+            display: flex;
+            gap: 0;
+            position: relative;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .tab-bar::-webkit-scrollbar {
+            display: none;
+        }
+        .tab-btn {
+            flex: none;
+            padding: 0.5rem 0.75rem;
+            background: none;
+            border: none;
+            border-radius: 0;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--color-muted);
+            cursor: pointer;
+            transition: color 0.2s ease;
+            min-height: auto;
+            position: relative;
+        }
+        .tab-btn:hover {
+            color: var(--color-text);
+        }
+        .tab-btn[aria-selected="true"] {
+            color: var(--color-accent);
+        }
+        .tab-btn:focus-visible {
+            outline: none;
+            box-shadow: inset 0 0 0 2px var(--color-accent-glow);
+            border-radius: 4px;
+        }
+        .tab-indicator {
+            position: absolute;
+            bottom: 0;
+            height: 2px;
+            background: var(--color-accent);
+            transition: left 0.25s ease, width 0.25s ease;
+            border-radius: 1px;
+        }
+        .tab-indicator.no-transition {
+            transition: none;
+        }
+        .panels {
+            position: relative;
+        }
+        .panel[hidden] {
+            display: none;
+        }
+    </style>
+    <div class="wizard">
+        <header class="wizard-header">
+            <div class="title-row">
+                <h1>Private Landing</h1>
+                <span class="auth-status unauthenticated" aria-live="polite">-- unauthenticated</span>
+            </div>
+            <nav class="tab-bar" role="tablist" aria-label="Authentication steps"></nav>
+        </header>
+        <div class="panels"></div>
+    </div>
+</template>
+
+<!-- ============================================ -->
+<!-- APPLICATION MARKUP                           -->
+<!-- ============================================ -->
+
+<main>
+<h1 class="no-js-title">Private Landing</h1>
+
+<p id="registered" class="status-msg success">Account created successfully. Log in below.</p>
+<p id="logged-in" class="status-msg success">Logged in successfully.</p>
+<p id="password-changed" class="status-msg success">Password changed. Please log in again.</p>
+<p id="logged-out" class="status-msg success">Logged out successfully.</p>
+<p id="error" class="status-msg error">Something went wrong. Please try again.</p>
+
+<auth-wizard>
+    <auth-step label="Register" method="POST" path="/auth/register">
+        <p class="step-description">
+            Create an account with any email and password (8&ndash;64 chars, no complexity
+            rules). No email is sent. Passwords are hashed with PBKDF2-SHA384
+            and 128-bit salts before storage.
+        </p>
+        <form action="/auth/register" method="post">
+            <label>
+                Email:
+                <input type="email" name="email" autocomplete="email" required>
+            </label>
+            <label>
+                Password:
+                <input type="password" name="password" autocomplete="new-password" required>
+            </label>
+            <button type="submit">Register</button>
+        </form>
+    </auth-step>
+
+    <auth-step label="Login" method="POST" path="/auth/login">
+        <p class="step-description">
+            Authenticate with your credentials. On success, the server issues a 15-minute
+            access token and a 7-day refresh token as HttpOnly cookies, linked to a
+            server-side session.
+        </p>
+        <form action="/auth/login" method="post">
+            <label>
+                Email:
+                <input type="email" name="email" autocomplete="email" required>
+            </label>
+            <label>
+                Password:
+                <input type="password" name="password" autocomplete="current-password" required>
+            </label>
+            <button type="submit">Log In</button>
+        </form>
+    </auth-step>
+
+    <auth-step label="Password" method="POST" path="/account/password">
+        <p class="step-description">
+            Change your password. The current password is re-verified, a full PBKDF2 rehash
+            is performed with a fresh salt, and all sessions are revoked &mdash; you'll
+            need to log in again afterward.
+        </p>
+        <form action="/account/password" method="post">
+            <label>
+                Current password:
+                <input type="password" name="currentPassword" autocomplete="current-password" required>
+            </label>
+            <label>
+                New password:
+                <input type="password" name="newPassword" autocomplete="new-password" required>
+            </label>
+            <button type="submit">Change Password</button>
+        </form>
+    </auth-step>
+
+    <auth-step label="Logout" method="POST" path="/auth/logout">
+        <p class="step-description">
+            End your session and clear authentication tokens. The server-side session
+            record is terminated, and both cookies are removed.
+        </p>
+        <form action="/auth/logout" method="post">
+            <button type="submit" class="logout-button">Log Out</button>
+        </form>
+    </auth-step>
+</auth-wizard>
+</main>
+
+<!-- ============================================ -->
+<!-- COMPONENT DEFINITIONS                        -->
+<!-- ============================================ -->
 
 <script>
-    const params = new URLSearchParams(window.location.search);
-    const message = document.getElementById('message');
+    /* ------------------------------------------ */
+    /* <api-console>                               */
+    /* ------------------------------------------ */
 
-    const messageType = ["error", "registered", "authenticated", "logged_out"].find((type) => params.has(type));
-
-    if (messageType) {
-        switch (messageType) {
-            case 'error':
-                message.textContent = decodeURIComponent(params.get('error'));
-                message.classList.add('visible', 'error');
-                break;
-            case 'registered':
-                message.textContent = 'Registration successful!';
-                requestAnimationFrame(() => message.classList.add('visible'));
-                break;
-            case 'authenticated':
-                message.textContent = 'Login successful!';
-                requestAnimationFrame(() => message.classList.add('visible'));
-                break;
-            case 'logged_out':
-                message.textContent = 'Logout successful!';
-                requestAnimationFrame(() => message.classList.add('visible'));
-                break;
+    class ApiConsole extends HTMLElement {
+        constructor() {
+            super();
+            const shadow = this.attachShadow({ mode: 'open' });
+            shadow.appendChild(
+                document.getElementById('api-console-template').content.cloneNode(true)
+            );
+            this._console = shadow.querySelector('.console');
+            this._output = shadow.querySelector('.output');
+            this._cmd = shadow.querySelector('.cmd');
+            this._waiting = shadow.querySelector('.waiting');
         }
-    }
 
-    const probe = document.getElementById('health-probe');
-    const dot = document.getElementById('health-dot');
-    const result = document.getElementById('health-result');
+        connectedCallback() {}
 
-    probe.addEventListener('click', async () => {
-        probe.disabled = true;
-        dot.style.animation = 'none';
-        dot.style.background = 'var(--color-muted)';
-        result.classList.remove('visible', 'ok', 'denied');
-        result.replaceChildren();
+        async execute(body) {
+            const method = this.getAttribute('method') || 'GET';
+            const path = this.getAttribute('path') || '';
 
-        try {
-            const res = await fetch('/api/health', {
-                headers: { 'Accept': 'application/json' }
-            });
-            const body = await res.json();
-            const ok = res.ok;
+            /* Stay visible — just reset color classes and swap to waiting state */
+            this._console.classList.remove('ok', 'denied', 'idle');
+            this._console.classList.add('visible');
 
-            dot.style.background = ok ? 'var(--color-ok)' : 'var(--color-danger)';
-
+            this._output.replaceChildren();
             const prompt = document.createElement('span');
             prompt.className = 'prompt';
             prompt.textContent = '$ ';
-
             const cmd = document.createElement('span');
             cmd.className = 'cmd';
-            cmd.textContent = 'GET /api/health ';
+            cmd.textContent = `${method} ${path} `;
+            const waiting = document.createElement('span');
+            waiting.className = 'waiting';
+            waiting.textContent = 'waiting...';
+            this._output.append(prompt, cmd, waiting);
 
-            const status = document.createElement('span');
-            status.className = 'status';
-            status.textContent = res.status;
+            try {
+                const opts = {
+                    method,
+                    headers: { 'Accept': 'application/json' }
+                };
+                if (body && Object.keys(body).length > 0) {
+                    opts.headers['Content-Type'] = 'application/json';
+                    opts.body = JSON.stringify(body);
+                }
 
-            result.append(prompt, cmd, '\n', status, ` ${JSON.stringify(body)}`);
-            result.classList.add(ok ? 'ok' : 'denied');
-        } catch {
-            dot.style.background = 'var(--color-danger)';
-            result.textContent = '$ GET /api/health\nNetwork error';
-            result.classList.add('denied');
+                const res = await fetch(path, opts);
+                const data = await res.json();
+
+                waiting.remove();
+                const status = document.createElement('span');
+                status.className = 'status';
+                status.textContent = String(res.status);
+                const bodyEl = document.createElement('pre');
+                bodyEl.className = 'body';
+                bodyEl.textContent = JSON.stringify(data, null, 2);
+                this._output.append(status, '\n', bodyEl);
+                this._console.classList.add(res.ok ? 'ok' : 'denied');
+
+                this.dispatchEvent(new CustomEvent('api-response', {
+                    bubbles: true,
+                    composed: true,
+                    detail: { status: res.status, ok: res.ok, body: data, path }
+                }));
+            } catch {
+                waiting.remove();
+                this._output.append('\nNetwork error');
+                this._console.classList.add('denied');
+            }
         }
 
-        requestAnimationFrame(() => result.classList.add('visible'));
-        probe.disabled = false;
-    });
+        clear() {
+            const method = this.getAttribute('method') || 'GET';
+            const path = this.getAttribute('path') || '';
+            this._console.classList.remove('visible', 'ok', 'denied');
+            this._console.classList.add('idle');
+            this._output.replaceChildren();
+            const prompt = document.createElement('span');
+            prompt.className = 'prompt';
+            prompt.textContent = '$ ';
+            const cmd = document.createElement('span');
+            cmd.className = 'cmd';
+            cmd.textContent = `${method} ${path} `;
+            const waiting = document.createElement('span');
+            waiting.className = 'waiting';
+            waiting.textContent = 'waiting...';
+            this._output.append(prompt, cmd, waiting);
+        }
+    }
+
+    customElements.define('api-console', ApiConsole);
+
+    /* ------------------------------------------ */
+    /* <auth-step>                                 */
+    /* ------------------------------------------ */
+
+    class AuthStep extends HTMLElement {
+        constructor() {
+            super();
+            const shadow = this.attachShadow({ mode: 'open' });
+            shadow.appendChild(
+                document.getElementById('auth-step-template').content.cloneNode(true)
+            );
+        }
+
+        connectedCallback() {
+            const apiConsole = this.shadowRoot.querySelector('api-console');
+            const method = this.getAttribute('method') || 'GET';
+            const path = this.getAttribute('path') || '';
+            apiConsole.setAttribute('method', method);
+            apiConsole.setAttribute('path', path);
+            apiConsole._cmd.textContent = `${method} ${path} `;
+
+            /* Intercept form submissions from slotted content */
+            this.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const data = Object.fromEntries(new FormData(form).entries());
+                apiConsole.execute(Object.keys(data).length > 0 ? data : undefined);
+            });
+
+            /* Intercept probe button clicks */
+            this.addEventListener('click', (e) => {
+                if (e.target.closest('[data-action="probe"]')) {
+                    apiConsole.execute();
+                }
+            });
+
+            /* Reset form on successful response */
+            apiConsole.addEventListener('api-response', (e) => {
+                if (e.detail.ok) {
+                    const form = this.querySelector('form');
+                    if (form) form.reset();
+                }
+            });
+        }
+    }
+
+    customElements.define('auth-step', AuthStep);
+
+    /* ------------------------------------------ */
+    /* <auth-wizard>                               */
+    /* ------------------------------------------ */
+
+    class AuthWizard extends HTMLElement {
+        constructor() {
+            super();
+            const shadow = this.attachShadow({ mode: 'open' });
+            shadow.appendChild(
+                document.getElementById('auth-wizard-template').content.cloneNode(true)
+            );
+            this._tabBar = shadow.querySelector('.tab-bar');
+            this._panels = shadow.querySelector('.panels');
+            this._indicator = null;
+            this._statusEl = shadow.querySelector('.auth-status');
+            this._activeIndex = 0;
+            this._authState = 'unauthenticated';
+        }
+
+        connectedCallback() {
+            /* Clean up no-JS fallback artifacts */
+            const fallbackTitle = document.querySelector('.no-js-title');
+            if (fallbackTitle) fallbackTitle.hidden = true;
+            if (location.search || location.hash) history.replaceState(null, '', location.pathname);
+
+            const steps = Array.from(this.querySelectorAll('auth-step'));
+
+            steps.forEach((step, i) => {
+                step.setAttribute('slot', `step-${i}`);
+
+                /* Create tab button */
+                const btn = document.createElement('button');
+                btn.className = 'tab-btn';
+                btn.role = 'tab';
+                btn.id = `tab-${i}`;
+                btn.setAttribute('aria-controls', `panel-${i}`);
+                btn.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
+                btn.tabIndex = i === 0 ? 0 : -1;
+                btn.textContent = step.getAttribute('label');
+                btn.addEventListener('click', () => this.switchTab(i));
+                this._tabBar.appendChild(btn);
+
+                /* Create panel */
+                const panel = document.createElement('div');
+                panel.className = 'panel';
+                panel.role = 'tabpanel';
+                panel.id = `panel-${i}`;
+                panel.setAttribute('aria-labelledby', `tab-${i}`);
+                if (i !== 0) panel.hidden = true;
+                const slot = document.createElement('slot');
+                slot.name = `step-${i}`;
+                panel.appendChild(slot);
+                this._panels.appendChild(panel);
+            });
+
+            /* Create sliding indicator */
+            this._indicator = document.createElement('div');
+            this._indicator.className = 'tab-indicator no-transition';
+            this._indicator.setAttribute('aria-hidden', 'true');
+            this._tabBar.appendChild(this._indicator);
+
+            /* Position indicator on first tab without animation */
+            requestAnimationFrame(() => {
+                this._positionIndicator(0);
+                requestAnimationFrame(() => {
+                    this._indicator.classList.remove('no-transition');
+                });
+            });
+
+            /* Keyboard navigation */
+            this._tabBar.addEventListener('keydown', (e) => this._handleKeydown(e));
+
+            /* Auth state tracking */
+            this.addEventListener('api-response', (e) => this._updateAuthState(e.detail));
+
+            /* Check auth status on load and on badge click */
+            this._checkAuthStatus();
+            this._statusEl.addEventListener('click', () => this._checkAuthStatus({ interactive: true }));
+
+            /* Recalculate indicator on resize */
+            this._resizeObserver = new ResizeObserver(() => {
+                this._positionIndicator(this._activeIndex);
+            });
+            this._resizeObserver.observe(this._tabBar);
+        }
+
+        disconnectedCallback() {
+            if (this._resizeObserver) {
+                this._resizeObserver.disconnect();
+            }
+        }
+
+        switchTab(index) {
+            const tabs = Array.from(this.shadowRoot.querySelectorAll('[role="tab"]'));
+            const panels = Array.from(this.shadowRoot.querySelectorAll('[role="tabpanel"]'));
+
+            if (index < 0 || index >= tabs.length) return;
+
+            /* Update tab states */
+            tabs.forEach((tab, i) => {
+                tab.setAttribute('aria-selected', i === index ? 'true' : 'false');
+                tab.tabIndex = i === index ? 0 : -1;
+            });
+
+            /* Switch panels */
+            panels.forEach((panel, i) => {
+                panel.hidden = i !== index;
+            });
+
+            /* Reset console on the tab we're leaving */
+            const prevStep = this.querySelectorAll('auth-step')[this._activeIndex];
+            if (prevStep && this._activeIndex !== index) {
+                const console = prevStep.shadowRoot?.querySelector('api-console');
+                if (console) console.clear();
+            }
+
+            /* Slide indicator */
+            this._positionIndicator(index);
+            this._activeIndex = index;
+        }
+
+        _positionIndicator(index) {
+            const tab = this.shadowRoot.querySelector(`#tab-${index}`);
+            if (!tab || !this._indicator) return;
+            const barRect = this._tabBar.getBoundingClientRect();
+            const tabRect = tab.getBoundingClientRect();
+            this._indicator.style.left = `${tabRect.left - barRect.left}px`;
+            this._indicator.style.width = `${tabRect.width}px`;
+        }
+
+        _handleKeydown(e) {
+            const tabs = Array.from(this.shadowRoot.querySelectorAll('[role="tab"]'));
+            const current = tabs.indexOf(e.target);
+            if (current === -1) return;
+
+            let next;
+            switch (e.key) {
+                case 'ArrowRight': next = (current + 1) % tabs.length; break;
+                case 'ArrowLeft': next = (current - 1 + tabs.length) % tabs.length; break;
+                case 'Home': next = 0; break;
+                case 'End': next = tabs.length - 1; break;
+                default: return;
+            }
+            e.preventDefault();
+            this.switchTab(next);
+            tabs[next].focus();
+        }
+
+        async _checkAuthStatus({ interactive = false } = {}) {
+            this._statusEl.textContent = '-- checking...';
+            try {
+                const res = await fetch('/account/me', {
+                    headers: { 'Accept': 'application/json' }
+                });
+                const newState = res.ok ? 'authenticated' : 'unauthenticated';
+                this._authState = newState;
+                this._statusEl.textContent = `-- ${newState}`;
+                this._statusEl.className = `auth-status ${newState}`;
+                if (interactive && !res.ok) this.switchTab(1);
+            } catch {
+                this._statusEl.textContent = `-- ${this._authState}`;
+            }
+        }
+
+        _updateAuthState(detail) {
+            const { ok, path } = detail;
+            let newState = this._authState;
+
+            if (path === '/auth/register' && ok) {
+                newState = 'registered';
+            } else if (path === '/auth/login' && ok) {
+                newState = 'authenticated';
+            } else if (path === '/auth/logout' && ok) {
+                newState = 'unauthenticated';
+            } else if (path === '/account/password' && ok) {
+                newState = 'unauthenticated';
+            }
+
+            if (newState !== this._authState) {
+                this._authState = newState;
+                this._statusEl.textContent = `-- ${newState}`;
+                this._statusEl.className = `auth-status ${newState}`;
+
+            }
+        }
+    }
+
+    customElements.define('auth-wizard', AuthWizard);
 </script>
 </body>
 </html>

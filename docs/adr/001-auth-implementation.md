@@ -83,7 +83,7 @@ sequenceDiagram
   participant B as Backend
   participant DB as Database
 
-  U->>B: POST /api/login {email, password}
+  U->>B: POST /auth/login {email, password}
   B->>B: Schema validation (NIST SP 800-63B)
   Note over B: Validate & normalize input
 

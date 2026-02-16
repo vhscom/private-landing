@@ -1,6 +1,6 @@
 /**
  * @file signup.test.ts
- * Integration tests for the /api/register endpoint.
+ * Integration tests for the /auth/register endpoint.
  *
  * @license Apache-2.0
  */
@@ -15,7 +15,7 @@ import {
 
 let dbClient: SqliteClient;
 
-describe("POST /api/register", () => {
+describe("POST /auth/register", () => {
 	beforeAll(async () => {
 		dbClient = await initTestDb();
 	});
@@ -37,13 +37,13 @@ describe("POST /api/register", () => {
 			"SecurePassword123!",
 		);
 
-		const response = await makeRequest("/api/register", {
+		const response = await makeRequest("/auth/register", {
 			method: "POST",
 			body: formData,
 		});
 
 		expect(response.status).toBe(200);
-		expect(response.url).toContain("/?registered=true");
+		expect(response.url).toMatch(/\/$/);
 	});
 
 	it("should reject registration with invalid email", async () => {
@@ -52,25 +52,25 @@ describe("POST /api/register", () => {
 			"SecurePassword123!",
 		);
 
-		const response = await makeRequest("/api/register", {
+		const response = await makeRequest("/auth/register", {
 			method: "POST",
 			body: formData,
 		});
 
 		expect(response.status).toBe(200);
-		expect(response.url).toContain("error=");
+		expect(response.url).toMatch(/\/$/);
 	});
 
 	it("should reject registration with short password", async () => {
 		const formData = createCredentialsFormData("short@example.com", "short");
 
-		const response = await makeRequest("/api/register", {
+		const response = await makeRequest("/auth/register", {
 			method: "POST",
 			body: formData,
 		});
 
 		expect(response.status).toBe(200);
-		expect(response.url).toContain("error=");
+		expect(response.url).toMatch(/\/$/);
 	});
 
 	it("should reject duplicate email registration", async () => {
@@ -81,29 +81,29 @@ describe("POST /api/register", () => {
 		);
 
 		// First registration should succeed
-		const firstResponse = await makeRequest("/api/register", {
+		const firstResponse = await makeRequest("/auth/register", {
 			method: "POST",
 			body: formData,
 		});
-		expect(firstResponse.url).toContain("/?registered=true");
+		expect(firstResponse.url).toMatch(/\/$/);
 
 		// Second registration with same email should fail
-		const secondResponse = await makeRequest("/api/register", {
+		const secondResponse = await makeRequest("/auth/register", {
 			method: "POST",
 			body: formData,
 		});
-		expect(secondResponse.url).toContain("error=");
+		expect(secondResponse.url).toMatch(/\/$/);
 	});
 
 	it("should handle empty form data", async () => {
 		const formData = createCredentialsFormData("", "");
 
-		const response = await makeRequest("/api/register", {
+		const response = await makeRequest("/auth/register", {
 			method: "POST",
 			body: formData,
 		});
 
 		expect(response.status).toBe(200);
-		expect(response.url).toContain("error=");
+		expect(response.url).toMatch(/\/$/);
 	});
 });

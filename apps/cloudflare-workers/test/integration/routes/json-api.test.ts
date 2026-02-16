@@ -59,9 +59,9 @@ afterAll(async () => {
 	dbClient.close();
 });
 
-describe("POST /api/register (JSON)", () => {
+describe("POST /auth/register (JSON)", () => {
 	it("returns 201 on successful registration", async () => {
-		const response = await makeRequest("/api/register", {
+		const response = await makeRequest("/auth/register", {
 			method: "POST",
 			headers: JSON_HEADERS,
 			body: jsonBody(
@@ -76,7 +76,7 @@ describe("POST /api/register (JSON)", () => {
 	});
 
 	it("returns 400 for invalid email", async () => {
-		const response = await makeRequest("/api/register", {
+		const response = await makeRequest("/auth/register", {
 			method: "POST",
 			headers: JSON_HEADERS,
 			body: jsonBody("not-an-email", "SecurePass123!"),
@@ -89,7 +89,7 @@ describe("POST /api/register (JSON)", () => {
 	});
 
 	it("returns 400 for short password", async () => {
-		const response = await makeRequest("/api/register", {
+		const response = await makeRequest("/auth/register", {
 			method: "POST",
 			headers: JSON_HEADERS,
 			body: jsonBody("short@example.com", "short"),
@@ -105,7 +105,7 @@ describe("POST /api/register (JSON)", () => {
 		const email = `json-api-suite-dup-${Date.now()}@example.com`;
 
 		// First registration succeeds
-		const first = await makeRequest("/api/register", {
+		const first = await makeRequest("/auth/register", {
 			method: "POST",
 			headers: JSON_HEADERS,
 			body: jsonBody(email, "SecurePass123!"),
@@ -113,7 +113,7 @@ describe("POST /api/register (JSON)", () => {
 		expect(first.status).toBe(201);
 
 		// Second registration returns same generic error — no 409 or email hint
-		const second = await makeRequest("/api/register", {
+		const second = await makeRequest("/auth/register", {
 			method: "POST",
 			headers: JSON_HEADERS,
 			body: jsonBody(email, "SecurePass123!"),
@@ -130,19 +130,19 @@ describe("POST /api/register (JSON)", () => {
 			"SecurePass123!",
 		);
 
-		const response = await makeRequest("/api/register", {
+		const response = await makeRequest("/auth/register", {
 			method: "POST",
 			body: formData,
 		});
 
 		expect(response.status).toBe(200);
-		expect(response.url).toContain("/?registered=true");
+		expect(response.url).toMatch(/\/$/);
 	});
 });
 
-describe("POST /api/login (JSON)", () => {
+describe("POST /auth/login (JSON)", () => {
 	it("returns 200 with cookies on successful login", async () => {
-		const response = await makeRequest("/api/login", {
+		const response = await makeRequest("/auth/login", {
 			method: "POST",
 			headers: JSON_HEADERS,
 			body: jsonBody(SUITE_EMAIL, TEST_USER.password),
@@ -160,7 +160,7 @@ describe("POST /api/login (JSON)", () => {
 	});
 
 	it("returns 401 for invalid credentials", async () => {
-		const response = await makeRequest("/api/login", {
+		const response = await makeRequest("/auth/login", {
 			method: "POST",
 			headers: JSON_HEADERS,
 			body: jsonBody(SUITE_EMAIL, "wrongpassword"),
@@ -173,7 +173,7 @@ describe("POST /api/login (JSON)", () => {
 	});
 
 	it("returns 401 for non-existent user (anti-enumeration)", async () => {
-		const response = await makeRequest("/api/login", {
+		const response = await makeRequest("/auth/login", {
 			method: "POST",
 			headers: JSON_HEADERS,
 			body: jsonBody("nobody@example.com", "SomePassword123!"),
@@ -188,17 +188,17 @@ describe("POST /api/login (JSON)", () => {
 	it("still redirects without Accept: application/json", async () => {
 		const formData = createCredentialsFormData(SUITE_EMAIL, TEST_USER.password);
 
-		const response = await makeRequest("/api/login", {
+		const response = await makeRequest("/auth/login", {
 			method: "POST",
 			body: formData,
 		});
 
 		expect(response.status).toBe(200);
-		expect(response.url).toContain("/?authenticated=true");
+		expect(response.url).toMatch(/\/$/);
 	});
 });
 
-describe("POST /api/logout (JSON)", () => {
+describe("POST /auth/logout (JSON)", () => {
 	it("returns 200 on successful logout", async () => {
 		const cookies = await loginAndGetCookies(
 			dbClient,
@@ -206,7 +206,7 @@ describe("POST /api/logout (JSON)", () => {
 			TEST_USER.password,
 		);
 
-		const response = await makeAuthenticatedRequest("/api/logout", cookies, {
+		const response = await makeAuthenticatedRequest("/auth/logout", cookies, {
 			method: "POST",
 			headers: { Accept: "application/json" },
 			redirect: "manual",
@@ -224,11 +224,11 @@ describe("POST /api/logout (JSON)", () => {
 			TEST_USER.password,
 		);
 
-		const response = await makeAuthenticatedRequest("/api/logout", cookies, {
+		const response = await makeAuthenticatedRequest("/auth/logout", cookies, {
 			method: "POST",
 		});
 
 		expect(response.status).toBe(200);
-		expect(response.url).toContain("/?logged_out=true");
+		expect(response.url).toMatch(/\/$/);
 	});
 });

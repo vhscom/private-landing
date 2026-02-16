@@ -20,7 +20,7 @@ sequenceDiagram
   participant PS as PasswordService
   participant DB as Turso DB
 
-  U->>H: POST /api/register {email, password}
+  U->>H: POST /auth/register {email, password}
   H->>AS: createAccount(input, env)
 
   AS->>AS: registrationSchema.safeParseAsync(input)
@@ -67,7 +67,7 @@ sequenceDiagram
   participant TS as TokenService
   participant DB as Turso DB
 
-  U->>H: POST /api/login {email, password}
+  U->>H: POST /auth/login {email, password}
   H->>AS: authenticate(input, env)
 
   AS->>AS: loginSchema.safeParseAsync(input)
@@ -107,7 +107,7 @@ sequenceDiagram
   H-->>U: 200 {success: true} or redirect
 ```
 
-**Source:** [`account-service.ts:149-213`](../packages/core/src/auth/services/account-service.ts) | [`session-service.ts:221-264`](../packages/core/src/auth/services/session-service.ts) | [`token-service.ts:67-114`](../packages/core/src/auth/services/token-service.ts) | [`app.ts:67-105`](../apps/cloudflare-workers/src/app.ts)
+**Source:** [`account-service.ts:149-213`](../packages/core/src/auth/services/account-service.ts) | [`session-service.ts:221-264`](../packages/core/src/auth/services/session-service.ts) | [`token-service.ts:67-114`](../packages/core/src/auth/services/token-service.ts) | [`app.ts:86-124`](../apps/cloudflare-workers/src/app.ts)
 
 ---
 
@@ -124,7 +124,7 @@ sequenceDiagram
   participant DB as Turso DB
   participant RH as Route Handler
 
-  U->>MW: GET /api/ping (Cookie: access_token=...)
+  U->>MW: GET /account/me (Cookie: access_token=...)
   MW->>MW: getCookie(ctx, "access_token")
 
   MW->>JWT: verify(token, JWT_ACCESS_SECRET, AlgorithmTypes.HS256)
@@ -143,7 +143,7 @@ sequenceDiagram
   MW->>MW: Verify session.id === payload.sid
 
   MW->>RH: next()
-  RH-->>U: 200 {message: "pong", userId: 1}
+  RH-->>U: 200 {userId: 1}
 ```
 
 **Source:** [`require-auth.ts:67-124`](../packages/core/src/auth/middleware/require-auth.ts) | [`require-auth.ts:163-191`](../packages/core/src/auth/middleware/require-auth.ts) (verifyToken) | [`session-service.ts:266-292`](../packages/core/src/auth/services/session-service.ts)
@@ -163,7 +163,7 @@ sequenceDiagram
   participant TS as TokenService
   participant DB as Turso DB
 
-  U->>MW: GET /api/ping [Cookie: access_token + refresh_token]
+  U->>MW: GET /account/me [Cookie: access_token + refresh_token]
 
   MW->>JWT: verify(accessToken, JWT_ACCESS_SECRET, HS256)
   JWT-->>MW: Throws (expired)
@@ -218,7 +218,7 @@ sequenceDiagram
   participant SS as SessionService
   participant DB as Turso DB
 
-  U->>H: POST /api/logout [Cookie: access_token + refresh_token]
+  U->>H: POST /auth/logout [Cookie: access_token + refresh_token]
 
   H->>MW: requireAuth middleware validates token
   MW-->>H: Authenticated (sets jwtPayload in context)
@@ -234,7 +234,7 @@ sequenceDiagram
   H-->>U: 200 {success: true} or redirect
 ```
 
-**Source:** [`session-service.ts:294-310`](../packages/core/src/auth/services/session-service.ts) | [`app.ts:147-164`](../apps/cloudflare-workers/src/app.ts)
+**Source:** [`session-service.ts:294-310`](../packages/core/src/auth/services/session-service.ts) | [`app.ts:127-144`](../apps/cloudflare-workers/src/app.ts)
 
 ---
 
@@ -252,7 +252,7 @@ sequenceDiagram
   participant SS as SessionService
   participant DB as Turso DB
 
-  U->>H: POST /api/account/password {currentPassword, newPassword}
+  U->>H: POST /account/password {currentPassword, newPassword}
   H->>MW: requireAuth (verify existing session)
   MW-->>H: Authenticated (userId from JWT payload)
 
@@ -296,4 +296,4 @@ sequenceDiagram
   H-->>U: 200 {success: true} or redirect
 ```
 
-**Source:** [`account-service.ts:215-262`](../packages/core/src/auth/services/account-service.ts) | [`session-service.ts:312-330`](../packages/core/src/auth/services/session-service.ts) | [`app.ts:107-145`](../apps/cloudflare-workers/src/app.ts) | [ADR-004](adr/004-password-change-endpoint.md)
+**Source:** [`account-service.ts:215-262`](../packages/core/src/auth/services/account-service.ts) | [`session-service.ts:312-330`](../packages/core/src/auth/services/session-service.ts) | [`app.ts:147-185`](../apps/cloudflare-workers/src/app.ts) | [ADR-004](adr/004-password-change-endpoint.md)

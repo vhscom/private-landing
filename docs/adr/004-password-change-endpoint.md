@@ -34,18 +34,17 @@ How should we implement a secure password change endpoint that integrates with t
 
 ## Decision Outcome
 
-Implement a `POST /api/account/password` endpoint that requires the current password, updates the stored hash, and
+Implement a `POST /account/password` endpoint that requires the current password, updates the stored hash, and
 invalidates all active sessions for the user. Add an `endAllSessionsForUser` method to both the SQL and cache-backed
 `SessionService` implementations.
 
-The endpoint is registered under the existing `/api/*` prefix to integrate with the current route structure and inherit
-the `requireAuth` wildcard middleware. A future URL reorganization may move this to `/account/password` — the
-implementation should not assume a specific prefix.
+The endpoint is registered at `/account/password` with explicit `requireAuth` inline middleware, following the URL
+reorganization in [ADR-005](005-url-reorganization.md).
 
 ### Endpoint Specification
 
 ```
-POST /api/account/password
+POST /account/password
 Content-Type: application/json
 Cookie: access_token=<JWT>; refresh_token=<JWT>
 
@@ -271,8 +270,6 @@ Invalidate all sessions except the one making the password change request, allow
 
 ## Future Considerations
 
-- **URL reorganization** — a future ADR may move this endpoint from `/api/account/password` to `/account/password` as
-  part of a broader route restructuring
 - **Email notification on password change** — detect unauthorized changes via out-of-band alert
 - **Step-up authentication with 2FA/passkey** — when second factors are implemented (ADR-002 Future Considerations),
   require them during password change for defense-in-depth against session-only attackers
