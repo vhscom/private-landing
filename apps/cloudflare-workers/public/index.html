@@ -673,8 +673,7 @@
             /* Auth state tracking */
             this.addEventListener('api-response', (e) => this._updateAuthState(e.detail));
 
-            /* Check auth status on load and on badge click */
-            this._checkAuthStatus();
+            /* Check auth status on badge click */
             this._statusEl.addEventListener('click', () => this._checkAuthStatus({ interactive: true }));
 
             /* Recalculate indicator on resize */
