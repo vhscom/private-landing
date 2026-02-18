@@ -143,14 +143,21 @@ runtime auto-detection is not possible without restructuring app initialization.
 
 1. Provision a Valkey-compatible endpoint (Upstash, self-hosted Valkey, etc.)
 2. Add `CACHE_URL` and `CACHE_TOKEN` as Worker secrets (`wrangler secret put`)
-3. Wire `createValkeyClient` into `createAuthSystem` in `app.ts`
+3. In `app.ts`, import `createValkeyClient` and set the `createCacheClient` toggle:
+   ```typescript
+   const createCacheClient: CacheClientFactory | null = createValkeyClient;
+   ```
+   This single change enables both cache-backed sessions and rate limiting (ADR-006).
 4. Deploy — new sessions are stored in cache; existing SQL sessions continue to work via the JWT refresh flow
    (users re-authenticate naturally as access tokens expire)
 
 **Rolling back:**
 
-1. Revert the `app.ts` change to `createAuthSystem()` (no cache factory)
-2. Deploy — the app returns to SQL-backed sessions immediately
+1. Set the toggle back to `null` in `app.ts`:
+   ```typescript
+   const createCacheClient: CacheClientFactory | null = null;
+   ```
+2. Deploy — the app returns to SQL-backed sessions and rate limiting is disabled
 3. Active cache-backed sessions become invalid; affected users must re-authenticate
 4. Cache credentials can be removed from Worker secrets at any time after rollback
 

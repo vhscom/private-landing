@@ -1,6 +1,6 @@
 # ADR-006: Rate Limiting
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-02-18
 - **Decision-makers:** @vhscom
 
@@ -186,6 +186,12 @@ Use Cloudflare's built-in rate limiting rules at the edge.
 - Bad, because it couples the implementation to Cloudflare's proprietary API
 - Bad, because it cannot be unit-tested or demonstrated in the codebase
 - Rejected because this is an educational reference — the rate limiting logic should be visible and testable
+
+## Implementation Notes
+
+- **Middleware implementation:** [`packages/core/src/auth/middleware/rate-limit.ts`](../../packages/core/src/auth/middleware/rate-limit.ts)
+- **Concrete limit configuration:** [`apps/cloudflare-workers/src/app.ts`](../../apps/cloudflare-workers/src/app.ts) (`rateLimits` object)
+- **Framework coupling:** The middleware uses Hono's `createMiddleware` factory and `MiddlewareHandler` type. Porting to another framework (Express, Fastify, etc.) requires replacing the middleware wrapper — the core algorithm (INCR + EXPIRE against `CacheClient`) is framework-agnostic.
 
 ## References
 

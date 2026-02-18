@@ -31,6 +31,7 @@ packages/types/             # Shared TypeScript types and error classes
 - **Optional cache-backed sessions**: `CacheClient` abstraction (ADR-003) enables Valkey/Redis for session storage via `createCachedSessionService`; SQL remains the default when no cache is configured
 - **Password change with full revocation**: `POST /account/password` verifies the current password, updates the hash, and revokes all sessions via `endAllSessionsForUser` (ADR-004)
 - **Semantic URL grouping**: Routes organized into `/health/*` (public probes), `/auth/*` (authentication lifecycle), `/account/*` (account management) with explicit per-route auth middleware (ADR-005)
+- **Rate limiting**: Fixed-window counters via `CacheClient` (ADR-006); IP-based keying for public routes, user-based keying for authenticated routes; degrades to no-op when cache is disabled
 
 ## Commands
 
@@ -63,14 +64,19 @@ When modifying authentication code:
 4. **Return generic error messages** - avoid leaking whether users exist
 5. **Cache keys are not secrets but are sensitive** - session data stored in cache contains userId, IP, and user agent; treat the cache endpoint as a trusted internal service
 
-## Enabling Cache-Backed Sessions
+## Enabling Cache-Backed Features
 
-To switch from SQL-only to cache-backed sessions in `apps/cloudflare-workers/src/app.ts`:
+Cache-backed sessions (ADR-003) and rate limiting (ADR-006) are controlled by a single toggle in `apps/cloudflare-workers/src/app.ts`:
 
-1. Add `createValkeyClient` to the `@private-landing/infrastructure` import
-2. Pass `{ createCacheClient: createValkeyClient }` to `createAuthSystem()`
+```typescript
+// Default: no cache (SQL-only sessions, no rate limiting)
+const createCacheClient: CacheClientFactory | null = null;
 
-The factory is called per-request with `ctx.env`, so it works at module scope. Requires `CACHE_URL` (and optionally `CACHE_TOKEN`) in the Worker environment. Revert by removing the argument to restore SQL-only sessions.
+// Enable: import createValkeyClient and assign it
+const createCacheClient: CacheClientFactory | null = createValkeyClient;
+```
+
+Both `createAuthSystem` and `createRateLimiter` read from this variable. Requires `CACHE_URL` (and optionally `CACHE_TOKEN`) in the Worker environment. Revert by setting back to `null`.
 
 ## Documentation
 
