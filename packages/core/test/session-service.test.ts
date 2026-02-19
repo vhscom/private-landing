@@ -145,7 +145,7 @@ describe("SessionService", () => {
 			await service.createSession(42, ctx);
 
 			// Verify the INSERT call (3rd call)
-			const insertCall = mockDbClient.execute.mock.calls[2];
+			const insertCall = mockDbClient.execute.mock.calls[1];
 			expect(insertCall[0].sql).toContain("INSERT INTO session");
 			expect(insertCall[0].args[1]).toBe(42); // userId
 			expect(insertCall[0].args[2]).toBe("Chrome/120.0"); // userAgent
@@ -188,7 +188,7 @@ describe("SessionService", () => {
 
 			await service.createSession(1, ctx, customConfig);
 
-			const limitCall = mockDbClient.execute.mock.calls[1];
+			const limitCall = mockDbClient.execute.mock.calls[2];
 			expect(limitCall[0].args).toContain(1); // userId
 			expect(limitCall[0].args).toContain(2); // maxSessions
 		});
@@ -209,7 +209,7 @@ describe("SessionService", () => {
 
 			await service.createSession(1, ctx);
 
-			const insertCall = mockDbClient.execute.mock.calls[2];
+			const insertCall = mockDbClient.execute.mock.calls[1];
 			expect(insertCall[0].sql).toContain("INSERT INTO user_sessions");
 			expect(insertCall[0].sql).toContain("session_id");
 			expect(insertCall[0].sql).toContain("account_id");
@@ -235,7 +235,7 @@ describe("SessionService", () => {
 			await service.createSession(1, ctx, customConfig);
 			const after = Date.now();
 
-			const insertCall = mockDbClient.execute.mock.calls[2];
+			const insertCall = mockDbClient.execute.mock.calls[1];
 			const expiresAt = new Date(insertCall[0].args[4]).getTime();
 			const expectedMin = before + 7200 * 1000;
 			const expectedMax = after + 7200 * 1000;

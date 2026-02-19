@@ -225,20 +225,21 @@ export function createSessionService(
 		): Promise<string> {
 			const dbClient = createDbClient(ctx.env);
 
+			// Global expired-session cleanup (can be scoped per user if needed)
 			await cleanupExpiredSessions(dbClient);
-			await enforceSessionLimit(userId, dbClient, sessionConfig.maxSessions);
 
 			const sessionId = nanoid();
 
+			const now = new Date();
 			const sessionData: SessionState = {
 				id: sessionId,
 				userId,
 				userAgent: ctx.req.header("user-agent") || "unknown",
 				ipAddress: getClientIp(ctx),
 				expiresAt: new Date(
-					Date.now() + sessionConfig.sessionDuration * 1000,
+					now.getTime() + sessionConfig.sessionDuration * 1000,
 				).toISOString(),
-				createdAt: new Date().toISOString(),
+				createdAt: now.toISOString(),
 			};
 
 			await dbClient.execute({
@@ -259,6 +260,9 @@ export function createSessionService(
 					sessionData.createdAt,
 				],
 			});
+
+			// Enforce post-insert to avoid off-by-one behavior
+			await enforceSessionLimit(userId, dbClient, sessionConfig.maxSessions);
 
 			return sessionId;
 		},
