@@ -15,6 +15,8 @@
 
 </div>
 
+> **Demo note:** The login endpoint is rate-limited. Repeated attempts return `429 Too Many Requests` with a `Retry-After` header.
+
 ---
 
 A from-scratch authentication reference implementation for Cloudflare Workers — PBKDF2 password hashing, JWT dual-token sessions, constant-time comparison, and sliding expiration — all wired together with Hono, Turso (with optional Valkey/Redis caching), and strict TypeScript.
@@ -22,6 +24,13 @@ A from-scratch authentication reference implementation for Cloudflare Workers �
 Every design choice traces back to a standard: [NIST SP 800-63B](https://pages.nist.gov/800-63-3/sp800-63b.html) for credentials, [NIST SP 800-132](https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-132.pdf) for key derivation, [OWASP ASVS](https://owasp.org/www-project-application-security-verification-standard/) for verification, and [RFC 8725](https://datatracker.ietf.org/doc/html/rfc8725) for JWT best practices.
 
 > **Shipping a product?** Use **[Better Auth](https://www.better-auth.com)** instead — it covers OAuth, passkeys, MFA, rate limiting, and more out of the box with an active plugin ecosystem. This repo exists to teach you *how* auth works, not to replace a production library.
+
+### Security Status
+
+- ✅ Implemented: Rate limiting ([ADR-006](docs/adr/006-rate-limiting.md))
+- ⚠️ Planned: `aud` claim hardening
+- ⚠️ Planned: Refresh token rotation
+- ⚠️ Planned: Breached-password checks
 
 ### Why this repo
 
@@ -43,6 +52,7 @@ Every design choice traces back to a standard: [NIST SP 800-63B](https://pages.n
 | **Secure cookies** | HttpOnly, Secure, SameSite=Strict, Path=/ ([`cookie.ts`](packages/core/src/auth/utils/cookie.ts)) |
 | **Security headers** | HSTS, CSP, CORP/COEP/COOP, Permissions-Policy, fingerprint removal ([`security.ts`](packages/core/src/auth/middleware/security.ts)) |
 | **Input validation** | Zod schemas with NIST-compliant password policy (length only, no complexity rules) |
+| **Rate limiting** | Fixed-window throttling against brute-force and credential-stuffing attacks: IP-keyed on public auth routes (e.g. login), user-keyed on protected actions; no hard lockouts (NIST-aligned) ([ADR-006](docs/adr/006-rate-limiting.md)) |
 | **Attack-vector tests** | JWT tampering, algorithm confusion, type confusion, unicode edge cases, info-disclosure checks |
 
 ## Production Next Steps
@@ -55,8 +65,7 @@ This project intentionally omits features that are outside its educational scope
 
 | Feature | Why It Matters | Standard / Reference |
 |---------|---------------|---------------------|
-| Rate limiting | Prevents brute-force login and credential-stuffing attacks — the cache layer ([ADR-003](docs/adr/003-cache-layer-valkey.md)) is available as a foundation | [OWASP ASVS v5.0 §6.3.1](https://github.com/OWASP/ASVS/blob/v5.0.0/5.0/en/0x15-V6-Authentication.md#v63-authentication-lifecycle) |
-| Account lockout / throttling | Slows automated attacks without full rate-limiting infra | [NIST SP 800-63B §5.2.2](https://pages.nist.gov/800-63-3/sp800-63b.html) |
+| Bot mitigation / adaptive challenges | Adds resilience beyond baseline throttling, especially against distributed credential stuffing | [OWASP ASVS v5.0 §6.3.1](https://github.com/OWASP/ASVS/blob/v5.0.0/5.0/en/0x15-V6-Authentication.md#v63-authentication-lifecycle), [NIST SP 800-63B §5.2.2](https://pages.nist.gov/800-63-3/sp800-63b.html) |
 | Breached-password checking | Prevents use of passwords known to be in public breach dumps | [NIST SP 800-63B §5.1.1.2](https://pages.nist.gov/800-63-3/sp800-63b.html), [HIBP API](https://haveibeenpwned.com/API/v3) |
 
 ### High Priority — Production Confidence
