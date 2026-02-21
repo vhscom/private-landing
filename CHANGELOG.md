@@ -18,14 +18,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Session limit enforcement now runs **post-INSERT** to correctly count the newly created session and avoid an off-by-one window where a 4th concurrent session could exist momentarily
+- `'unsafe-eval'` removed from `Content-Security-Policy` `script-src` — not required by any code in the project
+- Session limit enforcement now runs post-INSERT to correctly count the newly created session and avoid an off-by-one window where a 4th concurrent session could exist momentarily
 
 ### Documentation
 
 - ADR-006: rate limiting design and configuration record
-- STRIDE threat model row 13 updated from "Gap" to "Mitigated" with rate limiting details
-- Source line number references corrected in `docs/flows.md` and `docs/threat-model.md` after rate limiting and post-insert fix shifted line positions
-- README: test count updated to 380+; demo note added for `429 Too Many Requests` behaviour on the live endpoint
+- Security audit report covering rate limiting middleware and wizard UI (v1.3.0 stop-gap review)
+- Rate limiting rejection steps added to login and register flow diagrams
+- STRIDE threat model updated: brute-force gap now marked as mitigated
 
 ## [1.3.0] - 2026-02-16
 
