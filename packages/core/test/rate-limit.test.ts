@@ -206,6 +206,45 @@ describe("createRateLimiter", () => {
 		expect(res.status).toBe(200);
 	});
 
+	it("deletes orphaned key when expire throws", async () => {
+		let delCalls = 0;
+		const inner = createMemoryCacheClient();
+		const tracked: CacheClient = {
+			...inner,
+			async expire(_key, _ttl) {
+				throw new Error("expire failed");
+			},
+			async del(...keys) {
+				delCalls++;
+				return inner.del(...keys);
+			},
+		};
+
+		const app = buildApp(() => tracked);
+		const res = await request(app);
+
+		expect(res.status).toBe(200); // fails open
+		expect(delCalls).toBe(1); // orphaned key cleaned up
+	});
+
+	it("fails open when expire and del both throw", async () => {
+		const inner = createMemoryCacheClient();
+		const tracked: CacheClient = {
+			...inner,
+			async expire(_key, _ttl) {
+				throw new Error("expire failed");
+			},
+			async del(..._keys) {
+				throw new Error("del failed");
+			},
+		};
+
+		const app = buildApp(() => tracked);
+		const res = await request(app);
+
+		expect(res.status).toBe(200); // still fails open
+	});
+
 	it("sets TTL on first request only", async () => {
 		let expireCalls = 0;
 		const inner = createMemoryCacheClient();

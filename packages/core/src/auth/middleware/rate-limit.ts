@@ -86,7 +86,20 @@ export function createRateLimiter(
 				const count = await cache.incr(key);
 
 				if (count === 1) {
-					await cache.expire(key, windowSeconds);
+					try {
+						await cache.expire(key, windowSeconds);
+					} catch (expireError) {
+						// expire failed — remove orphaned key to prevent permanent lockout
+						try {
+							await cache.del(key);
+						} catch {
+							// best-effort; key will be evicted by maxmemory policy
+						}
+						console.error(
+							"Rate limiter: expire failed, key removed:",
+							expireError,
+						);
+					}
 				}
 
 				if (count > max) {
