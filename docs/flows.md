@@ -4,6 +4,8 @@ Sequence diagrams for every authentication flow in Private Landing. Each diagram
 
 > **Note:** The diagrams below show the default SQL-backed session path. Sessions can optionally be stored in Valkey/Redis cache instead, replacing SQL round-trips with cache GET/SET operations. See [ADR-003](adr/003-cache-layer-valkey.md) for details.
 
+> **Rate limiting:** Fixed-window middleware gates public auth routes before any business logic runs. Requests exceeding the threshold receive `429 Too Many Requests` with a `Retry-After` header. When no cache is configured the rate limiter degrades to a no-op pass-through. See [ADR-006](adr/006-rate-limiting.md).
+
 > **Rendering:** GitHub renders Mermaid natively. For local preview, use the [Mermaid Live Editor](https://mermaid.live) or a VS Code extension.
 
 ---
@@ -16,11 +18,18 @@ User creates a new account. The password is hashed with PBKDF2-SHA384 before sto
 sequenceDiagram
   participant U as User Agent
   participant H as Hono Worker
+  participant RL as Rate Limiter
   participant AS as AccountService
   participant PS as PasswordService
   participant DB as Turso DB
 
   U->>H: POST /auth/register {email, password}
+  H->>RL: group limiter (rl:auth 20/300s) then route limiter (rl:register 5/300s) — IP-keyed
+  Note over RL: Fixed-window INCR+EXPIRE per client IP.<br/>Both checks run in sequence — either can reject.
+  alt Rate limit exceeded
+    RL-->>U: 429 {error: "Too many requests", Retry-After: 300}
+  end
+
   H->>AS: createAccount(input, env)
 
   AS->>AS: registrationSchema.safeParseAsync(input)
@@ -61,6 +70,7 @@ Full authentication flow from credential verification through token issuance.
 sequenceDiagram
   participant U as User Agent
   participant H as Hono Worker
+  participant RL as Rate Limiter
   participant AS as AccountService
   participant PS as PasswordService
   participant SS as SessionService
@@ -68,6 +78,12 @@ sequenceDiagram
   participant DB as Turso DB
 
   U->>H: POST /auth/login {email, password}
+  H->>RL: group limiter (rl:auth 20/300s) then route limiter (rl:login 5/300s) — IP-keyed
+  Note over RL: Throttles brute-force and credential-stuffing.<br/>429 is returned before any DB lookup occurs.
+  alt Rate limit exceeded
+    RL-->>U: 429 {error: "Too many requests", Retry-After: 300}
+  end
+
   H->>AS: authenticate(input, env)
 
   AS->>AS: loginSchema.safeParseAsync(input)
