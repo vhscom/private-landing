@@ -68,7 +68,7 @@ export const securityHeaders = createMiddleware<{
 	res.headers.set(
 		"Content-Security-Policy",
 		"default-src 'self'; " +
-			"script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+			"script-src 'self' 'unsafe-inline'; " +
 			"style-src 'self' 'unsafe-inline'; " +
 			"form-action 'self'; " +
 			"object-src 'none'; " +

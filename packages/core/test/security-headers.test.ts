@@ -54,7 +54,7 @@ describe("securityHeaders middleware", () => {
 
 			const csp = res.headers.get("Content-Security-Policy");
 			expect(csp).toContain("default-src 'self'");
-			expect(csp).toContain("script-src 'self' 'unsafe-inline' 'unsafe-eval'");
+			expect(csp).toContain("script-src 'self' 'unsafe-inline'");
 			expect(csp).toContain("style-src 'self' 'unsafe-inline'");
 			expect(csp).toContain("form-action 'self'");
 			expect(csp).toContain("object-src 'none'");
