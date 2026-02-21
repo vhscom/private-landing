@@ -36,7 +36,7 @@ Every design choice traces back to a standard: [NIST SP 800-63B](https://pages.n
 
 - **Read the code, not just the docs** — every security property (timing-safe rejection, session-linked revocation, algorithm pinning) is implemented and tested, not just described
 - **NIST + OWASP + RFC references** throughout — learn the *why* behind each decision
-- **370+ tests** including attack-vector suites (token tampering, algorithm confusion, unicode edge cases)
+- **380+ tests** including attack-vector suites (token tampering, algorithm confusion, unicode edge cases)
 - **Built for the edge** — runs on Cloudflare Workers with Web Crypto API, no Node.js dependencies
 - **Apache-2.0** — fork it, teach with it, learn from it
 

@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-02-21
+
+### Added
+
+- Fixed-window rate limiting middleware `createRateLimiter` backed by the `CacheClient` abstraction ([ADR-006](docs/adr/006-rate-limiting.md))
+  - IP-keyed on public auth routes: 5 attempts / 300 s for login and register, 20 / 300 s for the `/auth/*` group
+  - User ID-keyed on authenticated routes: 5 logouts / 300 s, 3 password changes / 3600 s
+  - Degrades to a no-op pass-through when no cache is configured (`createCacheClient = null`)
+  - Returns `429 Too Many Requests` with `Retry-After` header on limit breach
+  - Fails open on cache errors — a cache outage does not block legitimate requests
+
+### Fixed
+
+- Session limit enforcement now runs **post-INSERT** to correctly count the newly created session and avoid an off-by-one window where a 4th concurrent session could exist momentarily
+
+### Documentation
+
+- ADR-006: rate limiting design and configuration record
+- STRIDE threat model row 13 updated from "Gap" to "Mitigated" with rate limiting details
+- Source line number references corrected in `docs/flows.md` and `docs/threat-model.md` after rate limiting and post-insert fix shifted line positions
+- README: test count updated to 380+; demo note added for `429 Too Many Requests` behaviour on the live endpoint
+
 ## [1.3.0] - 2026-02-16
 
 ### Changed
@@ -106,6 +128,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Architecture Decision Records in `docs/adr/`
 - Security audit reports in `docs/audits/`
 
+[1.4.0]: https://github.com/vhscom/private-landing/compare/1.3.0...1.4.0
 [1.3.0]: https://github.com/vhscom/private-landing/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/vhscom/private-landing/compare/1.1.0...1.2.0
 [1.1.0]: https://github.com/vhscom/private-landing/compare/1.0.0...1.1.0
