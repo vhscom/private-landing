@@ -90,7 +90,7 @@ The 429 response body is `{ "error": "Too many requests", "code": "RATE_LIMIT" }
 
 ### 8. Test Coverage
 
-Nine unit tests cover the core paths using `createMemoryCacheClient()` — no external Redis/Valkey required:
+Eleven unit tests cover the core paths using `createMemoryCacheClient()` — no external Redis/Valkey required:
 
 | Test | Coverage |
 |------|---------|
@@ -103,6 +103,8 @@ Nine unit tests cover the core paths using `createMemoryCacheClient()` — no ex
 | No-op when `deps` is null | Null factory path |
 | Fails open when cache throws | Error handling |
 | Sets TTL only on first hit | EXPIRE call count |
+| Deletes orphaned key when expire throws | RL-1/RL-7 fix: `del()` called on EXPIRE failure |
+| Fails open when expire and del both throw | RL-1/RL-7 fix: best-effort inner catch |
 
 Gaps that are acceptable for this scope: window-boundary burst behaviour (requires timing control), real Redis atomicity under concurrent load (JavaScript is single-threaded; Redis INCR is atomic), and the `unknown` IP fallback path.
 
@@ -112,7 +114,7 @@ Gaps that are acceptable for this scope: window-boundary burst behaviour (requir
 
 | # | Category | Finding | Confidence | Disposition |
 |---|----------|---------|------------|-------------|
-| RL-1/RL-7 | Reliability / Security | INCR+EXPIRE non-atomicity: if `expire` throws after `incr` returns 1, key has no TTL and the identifier is permanently locked out | 8/10 | **Fixed** — `expire` wrapped in nested try/catch; `cache.del(key)` called on failure to remove the orphaned key immediately (commit `2e58281`) |
+| RL-1/RL-7 | Reliability / Security | INCR+EXPIRE non-atomicity: if `expire` throws after `incr` returns 1, key has no TTL and the identifier is permanently locked out | 8/10 | **Fixed** — `expire` wrapped in nested try/catch; `cache.del(key)` called on failure to remove the orphaned key immediately (commit `7fda050`); both failure paths covered by unit tests |
 | RL-10 | Route Ordering | Group limiter `app.use("/auth/*", ...)` might double-rate-limit logout | 4/10 | **False positive** — Hono `compose.js` confirms handler chain stops when a handler returns without calling `next()`; logout handler returns before group limiter is reached |
 | UI-6 | CSP | `'unsafe-eval'` present in `script-src` directive; nothing in the codebase uses `eval()`, `Function()`, or `setTimeout(string)` | 7/10 | **Fixed** — `'unsafe-eval'` removed from CSP; `security-headers.test.ts` updated to assert its absence (commit `4a3343d`) |
 | IP-ROT | Coverage | IP-rotation allows distributed bypass of per-IP limits | 2/10 | Accepted — acknowledged in ADR-006; requires attacker infrastructure; per-user keying on sensitive routes (password change, logout) limits exposure even if bypass is achieved on public routes |
@@ -193,7 +195,7 @@ No other vulnerabilities found. No regressions introduced by the v1.3.0 UI or th
 bun run build        # Clean build
 bun run typecheck    # No type errors
 bun run lint         # No lint violations
-bun run test:unit    # 325 tests passing
+bun run test:unit    # 326 tests passing
 bun run test:integration  # 63 tests passing
 ```
 
@@ -203,7 +205,7 @@ Relevant suites to this audit:
 
 | Suite | Tests | Security properties covered |
 |-------|-------|----------------------------|
-| `rate-limit.test.ts` | 9 | Fixed-window logic, 429 response, Retry-After header, prefix isolation, IP isolation, custom key extractor, no-op path, fail-open on cache error, TTL set once |
+| `rate-limit.test.ts` | 11 | Fixed-window logic, 429 response, Retry-After header, prefix isolation, IP isolation, custom key extractor, no-op path, fail-open on cache error, TTL set once, EXPIRE failure cleanup, best-effort del failure |
 | `security-headers.test.ts` | 21 | HSTS, CSP (`unsafe-eval` absence asserted), CORP/COEP/COOP, Permissions-Policy, fingerprint header removal |
 | `jwt-attack-vectors.test.ts` | 25 | Algorithm confusion (`alg: none`, RS256/HS256 confusion), signature tampering, type confusion (refresh as access), expired tokens |
 | `auth-edge-cases.test.ts` | 20 | Timing-safe rejection, Unicode normalisation, session linkage, boundary conditions |
