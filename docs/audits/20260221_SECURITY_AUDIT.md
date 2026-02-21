@@ -3,14 +3,16 @@
 **Project:** Cloudflare Workers Authentication Foundation  
 **Date:** February 21, 2026  
 **Audit Type:** Feature Security Review (ADR-006 Rate Limiting) + Stop-gap UI Review (v1.3.0)  
-**Auditor:** Claude Sonnet 4.6  
-**Status:** PASSED - NO ACTIONABLE VULNERABILITIES FOUND
+**Auditor:** Claude Opus 4.6  
+**Status:** PASSED - 2 FINDINGS RESOLVED
 
 ---
 
 ## Executive Summary
 
 This audit reviews the fixed-window rate limiting middleware introduced in ADR-006. The implementation adds `createRateLimiter` backed by the `CacheClient` abstraction, with IP-keyed limits on public auth routes and user ID-keyed limits on authenticated routes. The review covers the middleware, key extraction logic, app-level wiring, test suite, and alignment with ADR-006.
+
+Two findings were identified and resolved before release. No open vulnerabilities remain.
 
 **Overall Security Rating:** EXCELLENT
 
@@ -19,11 +21,14 @@ This audit reviews the fixed-window rate limiting middleware introduced in ADR-0
 Files reviewed:
 
 - `packages/core/src/auth/middleware/rate-limit.ts` — `createRateLimiter` factory
+- `packages/core/src/auth/middleware/security.ts` — Security headers middleware
 - `packages/core/src/auth/utils/get-client-ip.ts` — IP extraction from Cloudflare context
 - `packages/infrastructure/src/cache/memory-client.ts` — In-memory test double
 - `packages/infrastructure/src/cache/valkey-client.ts` — Production cache client
 - `packages/core/test/rate-limit.test.ts` — Unit test suite (9 tests)
+- `packages/core/test/security-headers.test.ts` — Security headers test suite (21 tests)
 - `apps/cloudflare-workers/src/app.ts` — Route wiring and limit configuration
+- `apps/cloudflare-workers/public/index.html` — Wizard UI (supplemental review)
 - `docs/adr/006-rate-limiting.md` — Design record
 
 ---
@@ -65,7 +70,7 @@ The middleware wraps all cache operations in a `try/catch`. On any error it logs
 
 This design prioritizes availability over rate-enforcement during cache outages, which is the correct trade-off for an auth service — locking out legitimate users due to a cache failure would be a worse outcome than temporarily disabling rate limiting. The posture is documented in ADR-006.
 
-One partial-failure scenario is worth noting: if `cache.incr()` succeeds but `cache.expire()` throws, the counter key is created without a TTL. The key will persist until the cache evicts it via its maxmemory policy (Redis/Valkey default is LRU or allkeys-lru). This has no security impact; it consumes a small amount of cache memory and resolves on the next cache restart or eviction cycle.
+**Partial-failure atomicity (Finding RL-1/RL-7 — resolved):** The original implementation called `cache.expire(key, windowSeconds)` bare inside the `count === 1` branch. If `expire` succeeded but then the key had no TTL set (e.g., `expire` threw after `incr` returned 1), the counter key would persist indefinitely, permanently locking out the key's identifier. This was fixed: `expire` is now wrapped in a nested try/catch that calls `cache.del(key)` on failure before re-logging, ensuring the orphaned key is cleaned up immediately rather than waiting for LRU eviction. The outer fail-open catch remains unchanged — a failure of the del() itself is swallowed as best-effort.
 
 ### 5. No-Op Path Wiring
 
@@ -76,6 +81,8 @@ This is the correct default for the educational reference — enabling rate limi
 ### 6. Route Ordering
 
 `POST /auth/logout` is registered **before** `app.use("/auth/*", rateLimit(rateLimits.auth))`. This is deliberate: the logout route uses user ID–based keying rather than IP-based keying, so authenticated users behind shared NAT are not locked out by the IP-scoped group limiter. The ordering matches the requirement specified in ADR-006.
+
+**Verification of RL-10 (false positive):** A concern was raised that the group limiter at `app.use("/auth/*", ...)` might also execute on logout requests, subjecting them to double rate-limiting. Hono source was inspected to verify: `hono-base.js` confirms that `app.use()` and `app.post()` both add handlers to the same router in strict registration order. `compose.js` confirms that each handler receives `() => dispatch(i + 1)` as `next` — if the handler returns without calling `next()`, the chain stops and no subsequent handlers run. The logout handler (registered at line 74) returns a response directly; the group limiter (registered at line 100) is never reached on logout requests. The concern is a false positive.
 
 ### 7. Response Information Disclosure
 
@@ -103,12 +110,12 @@ Gaps that are acceptable for this scope: window-boundary burst behaviour (requir
 
 ## Findings
 
-No vulnerabilities meeting the HIGH or MEDIUM confidence threshold (>80%) were identified. Two notes were evaluated:
-
 | # | Category | Finding | Confidence | Disposition |
 |---|----------|---------|------------|-------------|
-| 1 | Reliability | Partial cache failure (INCR succeeds, EXPIRE throws) leaves key without TTL | 3/10 | Accepted — key is evicted by Redis/Valkey maxmemory policy; no security impact; no user-visible effect |
-| 2 | Coverage | IP-rotation allows distributed bypass of per-IP limits | 2/10 | Accepted — acknowledged in ADR-006; requires attacker infrastructure; per-user keying on sensitive routes (password change, logout) limits exposure even if bypass is achieved on public routes |
+| RL-1/RL-7 | Reliability / Security | INCR+EXPIRE non-atomicity: if `expire` throws after `incr` returns 1, key has no TTL and the identifier is permanently locked out | 8/10 | **Fixed** — `expire` wrapped in nested try/catch; `cache.del(key)` called on failure to remove the orphaned key immediately (commit `2e58281`) |
+| RL-10 | Route Ordering | Group limiter `app.use("/auth/*", ...)` might double-rate-limit logout | 4/10 | **False positive** — Hono `compose.js` confirms handler chain stops when a handler returns without calling `next()`; logout handler returns before group limiter is reached |
+| UI-6 | CSP | `'unsafe-eval'` present in `script-src` directive; nothing in the codebase uses `eval()`, `Function()`, or `setTimeout(string)` | 7/10 | **Fixed** — `'unsafe-eval'` removed from CSP; `security-headers.test.ts` updated to assert its absence (commit `4a3343d`) |
+| IP-ROT | Coverage | IP-rotation allows distributed bypass of per-IP limits | 2/10 | Accepted — acknowledged in ADR-006; requires attacker infrastructure; per-user keying on sensitive routes (password change, logout) limits exposure even if bypass is achieved on public routes |
 
 ---
 
@@ -125,11 +132,11 @@ The rate limiting implementation is additive and does not modify existing auth l
 
 ## Recommendations
 
-No mandatory changes required. Optional hardening for future consideration:
+Optional hardening for future consideration:
 
 1. **Sliding-window algorithm** — a sliding log or sliding window counter eliminates the boundary burst; adds cache complexity ([ADR-006 Future Considerations](../adr/006-rate-limiting.md))
-2. **Monitor partial EXPIRE failures** — add a metric or counter when `cache.expire` throws after a successful `cache.incr` to detect and alert on this condition in production
-3. **Bot mitigation / CAPTCHA** — as noted in README Production Next Steps, adaptive challenges provide defence in depth beyond IP-based throttling
+2. **Bot mitigation / CAPTCHA** — as noted in README Production Next Steps, adaptive challenges provide defence in depth beyond IP-based throttling
+3. **CSP nonces for inline scripts** — current CSP retains `'unsafe-inline'` for the wizard UI's inline script block; nonce-based CSP would eliminate this directive but requires server-side nonce injection per response (out of scope for this educational reference)
 
 ---
 
@@ -167,15 +174,16 @@ Prior to commit `86bb75d`, `connectedCallback` called `this._checkAuthStatus()` 
 
 ### CSP Compliance
 
-The server's `Content-Security-Policy` header includes `script-src 'self' 'unsafe-inline'` to accommodate the inline `<script>` block. This is a known gap already documented in the README production next steps ("CSP nonces for inline scripts"). The inline script itself has no XSS risk (see DOM injection analysis above), and no external scripts are loaded. Moving to a nonce-based CSP would eliminate `'unsafe-inline'` but requires server-side nonce injection per response — out of scope for this educational reference implementation.
+The server's `Content-Security-Policy` header includes `script-src 'self' 'unsafe-inline'` to accommodate the inline `<script>` block. `'unsafe-eval'` was identified during this audit as present in the CSP but unrequired — no `eval()`, `Function()`, or `setTimeout(string)` calls exist anywhere in the codebase. It was removed (Finding UI-6, commit `4a3343d`). The remaining `'unsafe-inline'` is a known gap documented in the README production next steps ("CSP nonces for inline scripts"). Moving to a nonce-based CSP would eliminate it but requires server-side nonce injection per response — out of scope for this educational reference implementation.
 
 ### Findings
 
 | # | Category | Finding | Confidence | Disposition |
 |---|----------|---------|------------|-------------|
-| 1 | CSP | `'unsafe-inline'` required for inline script block | 1/10 | Accepted — documented in README; no XSS risk in the inline code; nonce migration is a future hardening item |
+| UI-6 | CSP | `'unsafe-eval'` present in `script-src`; not required by any code in the project | 7/10 | **Fixed** — removed from CSP in `security.ts`; test updated to assert absence (commit `4a3343d`) |
+| UI-CSP | CSP | `'unsafe-inline'` required for inline script block | 1/10 | Accepted — documented in README; no XSS risk in the inline code; nonce migration is a future hardening item |
 
-No vulnerabilities found. No regressions introduced by the v1.3.0 UI or the subsequent fix.
+No other vulnerabilities found. No regressions introduced by the v1.3.0 UI or the subsequent fix.
 
 ---
 
@@ -185,22 +193,22 @@ No vulnerabilities found. No regressions introduced by the v1.3.0 UI or the subs
 bun run build        # Clean build
 bun run typecheck    # No type errors
 bun run lint         # No lint violations
-bun run test:unit    # 324 tests passing
+bun run test:unit    # 325 tests passing
 bun run test:integration  # 63 tests passing
 ```
 
-### Unit tests (324 passing, 17 files)
+### Unit tests (325 passing, 17 files)
 
 Relevant suites to this audit:
 
 | Suite | Tests | Security properties covered |
 |-------|-------|----------------------------|
 | `rate-limit.test.ts` | 9 | Fixed-window logic, 429 response, Retry-After header, prefix isolation, IP isolation, custom key extractor, no-op path, fail-open on cache error, TTL set once |
+| `security-headers.test.ts` | 21 | HSTS, CSP (`unsafe-eval` absence asserted), CORP/COEP/COOP, Permissions-Policy, fingerprint header removal |
 | `jwt-attack-vectors.test.ts` | 25 | Algorithm confusion (`alg: none`, RS256/HS256 confusion), signature tampering, type confusion (refresh as access), expired tokens |
 | `auth-edge-cases.test.ts` | 20 | Timing-safe rejection, Unicode normalisation, session linkage, boundary conditions |
 | `require-auth.test.ts` | 12 | Middleware flow: valid token, expired access + valid refresh, revoked session rejection |
 | `session-service.test.ts` | 22 | Session creation, sliding expiration, limit enforcement (post-insert), cleanup |
-| `security-headers.test.ts` | 21 | HSTS, CSP, CORP/COEP/COOP, Permissions-Policy, fingerprint header removal |
 | `crypto.test.ts` | 19 | `timingSafeEqual` correctness, constant-time comparison invariants |
 | `account-service.test.ts` | 29 | Registration, authentication, constant-time dummy PBKDF2 path, error message parity |
 | `password-service.test.ts` | 30 | PBKDF2-SHA384 hash/verify, integrity digest, version parsing, compromise checks |
