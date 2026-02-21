@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `'unsafe-eval'` removed from `Content-Security-Policy` `script-src` — not required by any code in the project
 - Session limit enforcement now runs post-INSERT to correctly count the newly created session and avoid an off-by-one window where a 4th concurrent session could exist momentarily
+- Unit tests added for INCR+EXPIRE partial-failure paths: `expire` failure triggers `del` cleanup; both `expire` and `del` failing still fails open
 
 ### Documentation
 
