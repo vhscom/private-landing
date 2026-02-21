@@ -1,6 +1,6 @@
 {
 	"name": "@private-landing/infrastructure",
-	"version": "1.1.0",
+	"version": "1.4.0",
 	"description": "Database and middleware utilities for Cloudflare Workers",
 	"license": "Apache-2.0",
 	"author": "Josh Habdas <josh@comfus.io>",
