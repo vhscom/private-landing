@@ -1,6 +1,6 @@
 # ADR-007: Session Dual-Write
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-02-27
 - **Decision-makers:** @vhscom
 
