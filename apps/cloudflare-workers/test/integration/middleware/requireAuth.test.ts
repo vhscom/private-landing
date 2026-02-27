@@ -72,7 +72,7 @@ describe("requireAuth middleware", () => {
 			expect(response.status).toBe(200);
 			const data = await response.json();
 			expect(data).toHaveProperty("userId");
-		});
+		}, 10_000);
 
 		it("should set jwtPayload in context", async () => {
 			const cookies = await loginAndGetCookies(

@@ -7,8 +7,10 @@
 
 import {
 	createAuthSystem,
+	createMirroredSessionService,
 	createRateLimiter,
 	createRequireAuth,
+	defaultGetClientIp,
 	type RateLimitConfig,
 	securityHeaders,
 } from "@private-landing/core";
@@ -16,6 +18,8 @@ import {
 	type CacheClientFactory,
 	serveStatic,
 } from "@private-landing/infrastructure";
+// Plugin-only – removable by deleting packages/observability and commenting these lines
+import { observabilityPlugin } from "@private-landing/observability";
 import {
 	type Env,
 	ValidationError,
@@ -31,9 +35,18 @@ const auth = createAuthSystem({
 	createCacheClient: createCacheClient ?? undefined,
 });
 
+// When cache is enabled, wrap with mirrored decorator for SQL visibility (ADR-007)
+const sessions =
+	createCacheClient != null
+		? createMirroredSessionService({
+				inner: auth.sessions,
+				getClientIp: defaultGetClientIp,
+			})
+		: auth.sessions;
+
 // Create middleware with injected dependencies
 const requireAuth = createRequireAuth({
-	sessionService: auth.sessions,
+	sessionService: sessions,
 	tokenService: auth.tokens,
 });
 
@@ -61,6 +74,12 @@ const rateLimits = {
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
+// Plugin-only – removable by deleting packages/observability and commenting these lines
+const { obsEmit, obsEmitEvent, adaptiveChallenge } = observabilityPlugin(app, {
+	createCacheClient: createCacheClient ?? undefined,
+	getClientIp: defaultGetClientIp,
+});
+
 // Global middleware
 app.use("*", securityHeaders);
 app.use("*", serveStatic({ cache: "key" }));
@@ -75,10 +94,11 @@ app.post(
 	"/auth/logout",
 	requireAuth,
 	rateLimit(rateLimits.logout),
+	obsEmit("session.revoke"),
 	async (ctx) => {
 		const json = wantsJson(ctx);
 		try {
-			await auth.sessions.endSession(ctx);
+			await sessions.endSession(ctx);
 			if (json) {
 				return ctx.json({ success: true, message: "Logged out" }, 200);
 			}
@@ -126,49 +146,60 @@ app.post("/auth/register", rateLimit(rateLimits.register), async (ctx) => {
 	}
 });
 
-app.post("/auth/login", rateLimit(rateLimits.login), async (ctx) => {
-	const json = wantsJson(ctx);
-	try {
-		const body = await parseRequestBody(ctx);
-		const authResult = await auth.accounts.authenticate(
-			body as { email: string; password: string },
-			ctx.env,
-		);
+app.post(
+	"/auth/login",
+	rateLimit(rateLimits.login),
+	adaptiveChallenge,
+	async (ctx) => {
+		const json = wantsJson(ctx);
+		try {
+			const body = await parseRequestBody(ctx);
+			const authResult = await auth.accounts.authenticate(
+				body as { email: string; password: string },
+				ctx.env,
+			);
 
-		if (!authResult.authenticated) {
+			if (!authResult.authenticated) {
+				obsEmitEvent(ctx, { type: "login.failure" });
+				if (json) {
+					return ctx.json(
+						{ error: "Authentication failed", code: "INVALID_CREDENTIALS" },
+						401,
+					);
+				}
+				return ctx.redirect("/#error");
+			}
+
+			const sessionId = await sessions.createSession(authResult.userId, ctx);
+			await auth.tokens.generateTokens(ctx, authResult.userId, sessionId);
+			obsEmitEvent(ctx, {
+				type: "login.success",
+				userId: authResult.userId,
+			});
+
+			if (json) {
+				return ctx.json({ success: true, message: "Login successful" }, 200);
+			}
+			return ctx.redirect("/#logged-in");
+		} catch (error) {
+			console.error("Authentication error:", error);
 			if (json) {
 				return ctx.json(
-					{ error: "Authentication failed", code: "INVALID_CREDENTIALS" },
-					401,
+					{ error: "Authentication failed", code: "INTERNAL_ERROR" },
+					500,
 				);
 			}
 			return ctx.redirect("/#error");
 		}
-
-		const sessionId = await auth.sessions.createSession(authResult.userId, ctx);
-		await auth.tokens.generateTokens(ctx, authResult.userId, sessionId);
-
-		if (json) {
-			return ctx.json({ success: true, message: "Login successful" }, 200);
-		}
-		return ctx.redirect("/#logged-in");
-	} catch (error) {
-		console.error("Authentication error:", error);
-		if (json) {
-			return ctx.json(
-				{ error: "Authentication failed", code: "INTERNAL_ERROR" },
-				500,
-			);
-		}
-		return ctx.redirect("/#error");
-	}
-});
+	},
+);
 
 // Account management (protected, user-based rate limiting)
 app.post(
 	"/account/password",
 	requireAuth,
 	rateLimit(rateLimits.password),
+	obsEmit("password.change"),
 	async (ctx) => {
 		const json = wantsJson(ctx);
 		try {
@@ -181,7 +212,8 @@ app.post(
 				userId,
 				ctx.env,
 			);
-			await auth.sessions.endAllSessionsForUser(userId, ctx);
+			await sessions.endAllSessionsForUser(userId, ctx);
+			obsEmitEvent(ctx, { type: "session.revoke_all", userId });
 
 			if (json) {
 				return ctx.json(

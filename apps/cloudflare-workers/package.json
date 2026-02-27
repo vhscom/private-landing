@@ -44,6 +44,7 @@
 		"@libsql/client": "^0.15.0",
 		"@private-landing/core": "workspace:*",
 		"@private-landing/infrastructure": "workspace:*",
+		"@private-landing/observability": "workspace:*",
 		"@private-landing/schemas": "workspace:*",
 		"@private-landing/types": "workspace:*",
 		"hono": "^4.11.5",

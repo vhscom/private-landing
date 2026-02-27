@@ -6,8 +6,9 @@
  */
 
 import type { SqliteClient } from "@private-landing/infrastructure";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
+	cleanupSecurityEvents,
 	cleanupSuiteUser,
 	createCredentialsFormData,
 	createSuiteUser,
@@ -30,6 +31,10 @@ describe("POST /auth/login", () => {
 	afterAll(async () => {
 		await cleanupSuiteUser(dbClient, SUITE_EMAIL);
 		dbClient.close();
+	});
+
+	beforeEach(async () => {
+		await cleanupSecurityEvents(dbClient);
 	});
 
 	it("should authenticate valid credentials", async () => {

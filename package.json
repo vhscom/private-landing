@@ -31,7 +31,10 @@
 		"typecheck": "bun run --filter '@private-landing/*' typecheck",
 		"lint": "biome lint",
 		"format": "biome check --write .",
-		"format:packages": "biome check --write packages"
+		"format:packages": "biome check --write packages",
+		"cli:build": "cd tools/cli && go build -o plctl ./cmd/plctl",
+		"cli:start": "./tools/cli/plctl",
+		"cli:test": "cd tools/cli && go test ./..."
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.14",

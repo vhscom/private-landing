@@ -7,3 +7,4 @@ backup.sql
 coverage
 dist
 tsconfig.tsbuildinfo
+tools/cli/plctl

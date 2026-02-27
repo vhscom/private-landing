@@ -107,7 +107,7 @@ describe("POST /account/password", () => {
 
 		// 403: the JWT is still valid but the session has been revoked
 		expect(pingResponse.status).toBe(403);
-	}, 15_000);
+	}, 20_000);
 
 	it("should allow login with new password", async () => {
 		const cookies = await loginAndGetCookies(

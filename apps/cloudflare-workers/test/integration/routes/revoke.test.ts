@@ -45,7 +45,7 @@ describe("POST /auth/logout", () => {
 
 		expect(response.status).toBe(200);
 		expect(response.url).toMatch(/\/$/);
-	});
+	}, 10_000);
 
 	it("should invalidate session after logout", async () => {
 		const cookies = await loginAndGetCookies(

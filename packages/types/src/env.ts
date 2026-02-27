@@ -16,4 +16,5 @@ export interface Env {
 	JWT_REFRESH_SECRET: string;
 	CACHE_URL?: string;
 	CACHE_TOKEN?: string;
+	AGENT_PROVISIONING_SECRET?: string;
 }

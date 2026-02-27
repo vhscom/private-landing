@@ -10,7 +10,11 @@ import {
 	type DbClientFactory,
 	createDbClient as defaultCreateDbClient,
 } from "@private-landing/infrastructure";
-import type { AuthContext, SessionConfig } from "@private-landing/types";
+import type {
+	AuthContext,
+	GetClientIpFn,
+	SessionConfig,
+} from "@private-landing/types";
 import { defaultSessionConfig } from "../config";
 import type { SessionService } from "./session-service";
 
@@ -22,6 +26,8 @@ export interface MirroredSessionServiceConfig {
 	inner: SessionService;
 	/** Factory that creates a DB client for SQL writes */
 	createDbClient?: DbClientFactory;
+	/** Extracts the client IP from a request context */
+	getClientIp?: GetClientIpFn;
 }
 
 /**
@@ -35,7 +41,7 @@ export interface MirroredSessionServiceConfig {
 export function createMirroredSessionService(
 	config: MirroredSessionServiceConfig,
 ): SessionService {
-	const { inner, createDbClient = defaultCreateDbClient } = config;
+	const { inner, createDbClient = defaultCreateDbClient, getClientIp } = config;
 
 	return {
 		async createSession(
@@ -48,6 +54,15 @@ export function createMirroredSessionService(
 			const duration =
 				sessionConfig.sessionDuration ?? defaultSessionConfig.sessionDuration;
 
+			let ip = "unknown";
+			if (getClientIp) {
+				try {
+					ip = getClientIp(ctx);
+				} catch {
+					// getConnInfo may not be available in all contexts
+				}
+			}
+
 			try {
 				const db = createDbClient(ctx.env);
 
@@ -58,7 +73,7 @@ export function createMirroredSessionService(
 						sessionId,
 						userId,
 						ctx.req.header("user-agent") || "unknown",
-						"unknown", // IP already captured by inner service
+						ip,
 						duration,
 					],
 				});

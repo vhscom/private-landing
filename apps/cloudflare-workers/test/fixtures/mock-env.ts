@@ -76,6 +76,9 @@ export async function initTestDb(): Promise<SqliteClient> {
 	// Insert test user
 	await dbClient.execute(TEST_USER_SQL);
 
+	// Clear stale security events from previous test runs (adaptive challenge)
+	await cleanupSecurityEvents(dbClient);
+
 	return dbClient;
 }
 
@@ -84,6 +87,21 @@ export async function initTestDb(): Promise<SqliteClient> {
  */
 export async function cleanupSessions(dbClient: SqliteClient): Promise<void> {
 	await dbClient.execute("DELETE FROM session");
+}
+
+/**
+ * Cleans up security events from the observability plugin's security_event table.
+ * Prevents adaptive challenge from triggering due to accumulated login.failure events
+ * across test runs. Safe to call even if the table doesn't exist yet.
+ */
+export async function cleanupSecurityEvents(
+	dbClient: SqliteClient,
+): Promise<void> {
+	try {
+		await dbClient.execute("DELETE FROM security_event");
+	} catch {
+		// Table may not exist yet (created lazily by ensureSchema) — safe to ignore
+	}
 }
 
 /**
@@ -213,6 +231,7 @@ export async function loginAndGetCookies(
 		sql: "DELETE FROM session WHERE user_id IN (SELECT id FROM account WHERE email = ?)",
 		args: [email],
 	});
+	await cleanupSecurityEvents(dbClient);
 
 	const formData = createCredentialsFormData(email, password);
 	const response = await makeRequest("/auth/login", {

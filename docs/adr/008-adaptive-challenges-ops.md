@@ -1,6 +1,6 @@
 # ADR-008: Adaptive Challenges and Operational Surface
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-02-27
 - **Decision-makers:** @vhscom
 

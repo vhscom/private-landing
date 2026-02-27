@@ -13,6 +13,7 @@ declare namespace Cloudflare {
 		JWT_REFRESH_SECRET: string;
 		CACHE_URL?: string;
 		CACHE_TOKEN?: string;
+		AGENT_PROVISIONING_SECRET?: string;
 	}
 }
 interface Env extends Cloudflare.Env {}
