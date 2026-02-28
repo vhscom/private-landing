@@ -353,6 +353,8 @@ Add event emission and challenge logic inline in `session-service.ts` and route 
 ## Deferred
 
 - **`session.revoke_all` detail missing `count`** — the ADR specifies `{ userId, count }` but `endAllSessionsForUser` returns `void`. Adding `count` requires changing the `SessionService` interface across all implementations (base, cached, mirrored). `userId` is captured on the top-level event; `count` is deferred until the interface change is warranted.
+- **`session.revoke` detail missing `sessionId`** — the ADR specifies `detail: { sessionId }` but `obsEmit("session.revoke")` does not extract the session ID from the JWT payload (`sid`). Populating it requires switching from `obsEmit` middleware to inline `obsEmitEvent` inside the logout handler. Deferred until the middleware-to-inline migration is done for the other detail gaps below.
+- **`password.change` detail missing `userId`** — the ADR specifies `detail: { userId }` but `obsEmit("password.change")` does not populate detail. The session ID (`sid`) is also available in the JWT payload but not specified by the ADR. Requires the same middleware-to-inline switch as `session.revoke`; deferred for the same reason.
 
 ## Implementation Notes
 
