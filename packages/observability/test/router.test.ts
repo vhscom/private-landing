@@ -477,6 +477,366 @@ describe("POST /ops/sessions/revoke — cache invalidation", () => {
 	});
 });
 
+describe("GET /ops/sessions", () => {
+	beforeEach(() => {
+		mockExecute.mockReset();
+	});
+
+	it("returns sessions for authenticated agent", async () => {
+		withAgentAuth({
+			rows: [
+				{
+					id: "s1",
+					user_id: 1,
+					ip_address: "1.2.3.4",
+					user_agent: "Test",
+					created_at: "2026-01-01",
+					expires_at: "2026-02-01",
+				},
+			],
+		});
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/sessions",
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.sessions).toHaveLength(1);
+		expect(body.count).toBe(1);
+	});
+
+	it("passes user_id filter to SQL", async () => {
+		withAgentAuth({ rows: [] });
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/sessions?user_id=42",
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		expect(res.status).toBe(200);
+		const lastCall = mockExecute.mock.calls[mockExecute.mock.calls.length - 1];
+		expect(lastCall[0].args).toContain(42);
+	});
+
+	it("respects active=false query parameter", async () => {
+		withAgentAuth({ rows: [] });
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/sessions?active=false",
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		expect(res.status).toBe(200);
+		const lastCall = mockExecute.mock.calls[mockExecute.mock.calls.length - 1];
+		expect(lastCall[0].sql).not.toContain("expires_at > datetime");
+	});
+
+	it("returns 500 on database error", async () => {
+		withAgentAuth();
+		mockExecute.mockRejectedValueOnce(new Error("DB unavailable"));
+		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/sessions",
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		expect(res.status).toBe(500);
+		const body = await res.json();
+		expect(body.code).toBe("INTERNAL_ERROR");
+		consoleSpy.mockRestore();
+	});
+
+	it("returns 401 without auth", async () => {
+		const app = buildApp();
+		const res = await app.request("/ops/sessions", {}, baseEnv);
+		expect(res.status).toBe(401);
+	});
+});
+
+describe("GET /ops/events — actor_id filter", () => {
+	beforeEach(() => {
+		mockExecute.mockReset();
+	});
+
+	it("passes user_id filter to SQL query", async () => {
+		withAgentAuth({ rows: [] });
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/events?user_id=7",
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		expect(res.status).toBe(200);
+		const lastCall = mockExecute.mock.calls[mockExecute.mock.calls.length - 1];
+		expect(lastCall[0].args).toContain(7);
+	});
+
+	it("passes ip filter to SQL query", async () => {
+		withAgentAuth({ rows: [] });
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/events?ip=10.0.0.1",
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		expect(res.status).toBe(200);
+		const lastCall = mockExecute.mock.calls[mockExecute.mock.calls.length - 1];
+		expect(lastCall[0].args).toContain("10.0.0.1");
+	});
+
+	it("passes type filter to SQL query", async () => {
+		withAgentAuth({ rows: [] });
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/events?type=login.failure",
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		expect(res.status).toBe(200);
+		const lastCall = mockExecute.mock.calls[mockExecute.mock.calls.length - 1];
+		expect(lastCall[0].args).toContain("login.failure");
+	});
+
+	it("passes actor_id filter to SQL query", async () => {
+		withAgentAuth({
+			rows: [
+				{
+					id: 1,
+					type: "login.success",
+					actor_id: "app:test",
+					created_at: "2026-01-01",
+				},
+			],
+		});
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/events?actor_id=app:test",
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.events).toHaveLength(1);
+		// Verify actor_id was passed as a SQL arg
+		const lastExecuteCall =
+			mockExecute.mock.calls[mockExecute.mock.calls.length - 1];
+		expect(lastExecuteCall[0].args).toContain("app:test");
+	});
+});
+
+describe("GET /ops/events — DB error", () => {
+	beforeEach(() => {
+		mockExecute.mockReset();
+	});
+
+	it("returns 500 on database error", async () => {
+		withAgentAuth();
+		mockExecute.mockRejectedValueOnce(new Error("DB unavailable"));
+		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/events",
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		expect(res.status).toBe(500);
+		const body = await res.json();
+		expect(body.code).toBe("INTERNAL_ERROR");
+		consoleSpy.mockRestore();
+	});
+});
+
+describe("GET /ops/events/stats", () => {
+	beforeEach(() => {
+		mockExecute.mockReset();
+	});
+
+	it("returns stats for authenticated agent", async () => {
+		withAgentAuth({
+			rows: [
+				{ type: "login.success", count: 10 },
+				{ type: "login.failure", count: 3 },
+			],
+		});
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/events/stats",
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.stats["login.success"]).toBe(10);
+		expect(body.stats["login.failure"]).toBe(3);
+		expect(body.since).toBeDefined();
+	});
+
+	it("returns 401 without auth", async () => {
+		const app = buildApp();
+		const res = await app.request("/ops/events/stats", {}, baseEnv);
+		expect(res.status).toBe(401);
+	});
+
+	it("returns 500 on database error", async () => {
+		withAgentAuth();
+		mockExecute.mockRejectedValueOnce(new Error("DB unavailable"));
+		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/events/stats",
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		expect(res.status).toBe(500);
+		const body = await res.json();
+		expect(body.code).toBe("INTERNAL_ERROR");
+		consoleSpy.mockRestore();
+	});
+});
+
+describe("POST /ops/agents — error paths", () => {
+	beforeEach(() => {
+		mockExecute.mockReset();
+		mockEnsureSchema.mockReset();
+		(timingSafeEqual as ReturnType<typeof vi.fn>).mockReset();
+	});
+
+	it("returns 409 when agent name already exists", async () => {
+		(timingSafeEqual as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+		mockExecute.mockRejectedValue(new Error("UNIQUE constraint failed"));
+		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/agents",
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"x-provisioning-secret": "test-secret",
+				},
+				body: JSON.stringify({ name: "existing-agent" }),
+			},
+			baseEnv,
+		);
+		expect(res.status).toBe(409);
+		const body = await res.json();
+		expect(body.code).toBe("AGENT_EXISTS");
+		consoleSpy.mockRestore();
+	});
+});
+
+describe("DELETE /ops/agents/:name — error paths", () => {
+	beforeEach(() => {
+		mockExecute.mockReset();
+		(timingSafeEqual as ReturnType<typeof vi.fn>).mockReset();
+	});
+
+	it("returns 404 when agent not found", async () => {
+		(timingSafeEqual as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+		mockExecute.mockResolvedValue({ rowsAffected: 0 });
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/agents/nonexistent",
+			{
+				method: "DELETE",
+				headers: { "x-provisioning-secret": "test-secret" },
+			},
+			baseEnv,
+		);
+		expect(res.status).toBe(404);
+		const body = await res.json();
+		expect(body.code).toBe("NOT_FOUND");
+	});
+
+	it("returns 401 with wrong provisioning secret", async () => {
+		(timingSafeEqual as ReturnType<typeof vi.fn>).mockResolvedValue(false);
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/agents/test-agent",
+			{
+				method: "DELETE",
+				headers: { "x-provisioning-secret": "wrong-secret" },
+			},
+			baseEnv,
+		);
+		expect(res.status).toBe(401);
+	});
+});
+
+describe("GET /ops/agents — error paths", () => {
+	beforeEach(() => {
+		mockExecute.mockReset();
+	});
+
+	it("returns 500 on database error", async () => {
+		withAgentAuth();
+		mockExecute.mockRejectedValueOnce(new Error("DB unavailable"));
+		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/agents",
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		expect(res.status).toBe(500);
+		const body = await res.json();
+		expect(body.code).toBe("INTERNAL_ERROR");
+		consoleSpy.mockRestore();
+	});
+});
+
+describe("POST /ops/sessions/revoke — validation", () => {
+	beforeEach(() => {
+		mockExecute.mockReset();
+	});
+
+	it("returns 400 for invalid body schema", async () => {
+		withAgentAuth();
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/sessions/revoke",
+			{
+				method: "POST",
+				headers: {
+					Authorization: "Bearer valid-key",
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ scope: "invalid-scope" }),
+			},
+			baseEnv,
+		);
+		expect(res.status).toBe(400);
+		const body = await res.json();
+		expect(body.error).toBe("Invalid body");
+	});
+
+	it("returns 500 when revocation SQL fails", async () => {
+		withAgentAuth();
+		mockExecute.mockRejectedValueOnce(new Error("SQL write failed"));
+		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/sessions/revoke",
+			{
+				method: "POST",
+				headers: {
+					Authorization: "Bearer valid-key",
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ scope: "all" }),
+			},
+			baseEnv,
+		);
+		expect(res.status).toBe(500);
+		const body = await res.json();
+		expect(body.code).toBe("REVOCATION_ERROR");
+		consoleSpy.mockRestore();
+	});
+});
+
 describe("ops route event emission", () => {
 	beforeEach(() => {
 		mockExecute.mockReset();

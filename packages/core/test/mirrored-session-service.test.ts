@@ -174,4 +174,129 @@ describe("MirroredSessionService", () => {
 
 		consoleSpy.mockRestore();
 	});
+
+	it("uses getClientIp for IP in SQL INSERT", async () => {
+		const memoryCache = createMemoryCacheClient();
+		const localExecute = vi
+			.fn()
+			.mockResolvedValue({ rows: [], rowsAffected: 0 });
+
+		const inner = createCachedSessionService({
+			createCacheClient: () => memoryCache,
+			getClientIp: stubGetClientIp,
+		});
+
+		const svc = createMirroredSessionService({
+			inner,
+			createDbClient: () => ({ execute: localExecute }) as SqliteClient,
+			getClientIp: () => "10.0.0.1",
+		});
+
+		const ctx = createMockAuthContext();
+		await svc.createSession(1, ctx, sessionConfig);
+
+		const insertCall = localExecute.mock.calls.find(
+			(c: unknown[]) =>
+				typeof c[0] === "object" &&
+				(c[0] as { sql: string }).sql.includes("INSERT INTO session"),
+		);
+		expect(insertCall).toBeDefined();
+		expect((insertCall?.[0] as { args: unknown[] }).args).toContain("10.0.0.1");
+	});
+
+	it("uses 'unknown' when getClientIp throws", async () => {
+		const memoryCache = createMemoryCacheClient();
+		const localExecute = vi
+			.fn()
+			.mockResolvedValue({ rows: [], rowsAffected: 0 });
+
+		const inner = createCachedSessionService({
+			createCacheClient: () => memoryCache,
+			getClientIp: stubGetClientIp,
+		});
+
+		const svc = createMirroredSessionService({
+			inner,
+			createDbClient: () => ({ execute: localExecute }) as SqliteClient,
+			getClientIp: () => {
+				throw new Error("no conn info");
+			},
+		});
+
+		const ctx = createMockAuthContext();
+		await svc.createSession(1, ctx, sessionConfig);
+
+		const insertCall = localExecute.mock.calls.find(
+			(c: unknown[]) =>
+				typeof c[0] === "object" &&
+				(c[0] as { sql: string }).sql.includes("INSERT INTO session"),
+		);
+		expect(insertCall).toBeDefined();
+		expect((insertCall?.[0] as { args: unknown[] }).args).toContain("unknown");
+	});
+
+	it("catches and logs SQL error in endSession", async () => {
+		const memoryCache = createMemoryCacheClient();
+		const localExecute = vi
+			.fn()
+			.mockResolvedValue({ rows: [], rowsAffected: 0 });
+
+		const inner = createCachedSessionService({
+			createCacheClient: () => memoryCache,
+			getClientIp: stubGetClientIp,
+		});
+
+		const svc = createMirroredSessionService({
+			inner,
+			createDbClient: () => ({ execute: localExecute }) as SqliteClient,
+		});
+
+		const ctx = createMockAuthContext();
+		const sessionId = await svc.createSession(1, ctx, sessionConfig);
+
+		// Make the UPDATE in endSession fail
+		localExecute.mockRejectedValueOnce(new Error("SQL write failed"));
+		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+		const endCtx = createMockAuthContext({ sessionId });
+		await svc.endSession(endCtx);
+
+		expect(consoleSpy).toHaveBeenCalledWith(
+			expect.stringContaining("[mirrored-session] end failed:"),
+			expect.any(Error),
+		);
+		consoleSpy.mockRestore();
+	});
+
+	it("catches and logs SQL error in endAllSessionsForUser", async () => {
+		const memoryCache = createMemoryCacheClient();
+		const localExecute = vi
+			.fn()
+			.mockResolvedValue({ rows: [], rowsAffected: 0 });
+
+		const inner = createCachedSessionService({
+			createCacheClient: () => memoryCache,
+			getClientIp: stubGetClientIp,
+		});
+
+		const svc = createMirroredSessionService({
+			inner,
+			createDbClient: () => ({ execute: localExecute }) as SqliteClient,
+		});
+
+		const ctx = createMockAuthContext();
+		await svc.createSession(1, ctx, sessionConfig);
+
+		// Make the UPDATE in endAllSessionsForUser fail
+		localExecute.mockRejectedValueOnce(new Error("SQL write failed"));
+		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+		await svc.endAllSessionsForUser(1, ctx);
+
+		expect(consoleSpy).toHaveBeenCalledWith(
+			expect.stringContaining("[mirrored-session] endAll failed:"),
+			expect.any(Error),
+		);
+		consoleSpy.mockRestore();
+	});
 });

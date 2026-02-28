@@ -128,6 +128,7 @@ describe("createObsEmit", () => {
 describe("createAdaptiveChallenge", () => {
 	beforeEach(() => {
 		mockComputeChallenge.mockReset().mockResolvedValue(null);
+		mockProcessEvent.mockReset().mockResolvedValue(undefined);
 	});
 
 	it("passes custom eventType to computeChallenge", async () => {
@@ -160,5 +161,175 @@ describe("createAdaptiveChallenge", () => {
 			expect.any(Object),
 			undefined,
 		);
+	});
+
+	it("returns 403 with challenge.issued for non-JSON request", async () => {
+		mockComputeChallenge.mockResolvedValue({
+			type: "pow",
+			difficulty: 1,
+			nonce: "test-nonce",
+		});
+		const middleware = createAdaptiveChallenge(() => "1.2.3.4");
+		const app = new Hono<AppEnv>();
+		app.post("/login", middleware, (ctx) => ctx.json({ ok: true }));
+
+		const execCtx = { waitUntil: vi.fn(), passThroughOnException: vi.fn() };
+		const res = await app.request(
+			"/login",
+			{
+				method: "POST",
+				headers: { "Content-Type": "text/plain" },
+				body: "hello",
+			},
+			baseEnv,
+			execCtx,
+		);
+
+		expect(res.status).toBe(403);
+		const body = await res.json();
+		expect(body.error).toBe("Challenge required");
+		expect(body.challenge.nonce).toBe("test-nonce");
+		expect(mockProcessEvent).toHaveBeenCalledWith(
+			expect.objectContaining({ type: "challenge.issued", status: 403 }),
+			expect.anything(),
+		);
+	});
+
+	it("returns 403 with challenge.issued when nonce/solution missing", async () => {
+		mockComputeChallenge.mockResolvedValue({
+			type: "pow",
+			difficulty: 1,
+			nonce: "test-nonce",
+		});
+		const middleware = createAdaptiveChallenge(() => "1.2.3.4");
+		const app = new Hono<AppEnv>();
+		app.post("/login", middleware, (ctx) => ctx.json({ ok: true }));
+
+		const execCtx = { waitUntil: vi.fn(), passThroughOnException: vi.fn() };
+		const res = await app.request(
+			"/login",
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ username: "user" }),
+			},
+			baseEnv,
+			execCtx,
+		);
+
+		expect(res.status).toBe(403);
+		const body = await res.json();
+		expect(body.error).toBe("Challenge required");
+		expect(mockProcessEvent).toHaveBeenCalledWith(
+			expect.objectContaining({ type: "challenge.issued" }),
+			expect.anything(),
+		);
+	});
+
+	it("returns 403 with challenge.failed for wrong solution", async () => {
+		mockComputeChallenge.mockResolvedValue({
+			type: "pow",
+			difficulty: 4,
+			nonce: "test-nonce",
+		});
+		const middleware = createAdaptiveChallenge(() => "1.2.3.4");
+		const app = new Hono<AppEnv>();
+		app.post("/login", middleware, (ctx) => ctx.json({ ok: true }));
+
+		const execCtx = { waitUntil: vi.fn(), passThroughOnException: vi.fn() };
+		const res = await app.request(
+			"/login",
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					challengeNonce: "test-nonce",
+					challengeSolution: "wrong-answer",
+				}),
+			},
+			baseEnv,
+			execCtx,
+		);
+
+		expect(res.status).toBe(403);
+		const body = await res.json();
+		expect(body.error).toBe("Invalid solution");
+		expect(mockProcessEvent).toHaveBeenCalledWith(
+			expect.objectContaining({ type: "challenge.failed" }),
+			expect.anything(),
+		);
+	});
+
+	it("passes through to next() with valid PoW solution", async () => {
+		const nonce = "test-nonce";
+		const difficulty = 1;
+		mockComputeChallenge.mockResolvedValue({
+			type: "pow",
+			difficulty,
+			nonce,
+		});
+
+		// Brute-force a valid solution for difficulty 1
+		const prefix = "0".repeat(difficulty);
+		let solution = "";
+		for (let i = 0; i < 100000; i++) {
+			const candidate = String(i);
+			const hash = Array.from(
+				new Uint8Array(
+					await crypto.subtle.digest(
+						"SHA-256",
+						new TextEncoder().encode(nonce + candidate),
+					),
+				),
+			)
+				.map((b) => b.toString(16).padStart(2, "0"))
+				.join("");
+			if (hash.startsWith(prefix)) {
+				solution = candidate;
+				break;
+			}
+		}
+
+		const middleware = createAdaptiveChallenge(() => "1.2.3.4");
+		const app = new Hono<AppEnv>();
+		app.post("/login", middleware, (ctx) => ctx.json({ ok: true }));
+
+		const res = await app.request(
+			"/login",
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					challengeNonce: nonce,
+					challengeSolution: solution,
+				}),
+			},
+			baseEnv,
+		);
+
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.ok).toBe(true);
+	});
+
+	it("fails open when computeChallenge rejects", async () => {
+		mockComputeChallenge.mockRejectedValue(new Error("DB down"));
+		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+		const middleware = createAdaptiveChallenge(() => "1.2.3.4");
+		const app = new Hono<AppEnv>();
+		app.post("/login", middleware, (ctx) => ctx.json({ ok: true }));
+
+		const res = await app.request("/login", { method: "POST" }, baseEnv);
+
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.ok).toBe(true);
+		expect(consoleSpy).toHaveBeenCalledWith(
+			expect.stringContaining("[obs] adaptive challenge error:"),
+			expect.any(Error),
+		);
+
+		consoleSpy.mockRestore();
 	});
 });
