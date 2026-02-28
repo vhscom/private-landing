@@ -17,6 +17,7 @@ export default defineWorkersConfig({
 			"test/integration/**/*.test.ts",
 			"test/sanity/**/*.test.ts",
 		],
+		exclude: ["test/integration/plugins/**"],
 		silent: "passed-only",
 		poolOptions: {
 			workers: {

@@ -37,6 +37,7 @@
 		"lint": "biome lint",
 		"test": "vitest",
 		"test:run": "vitest run",
+		"test:plugins": "vitest run --config vitest.config.plugins.ts",
 		"typecheck": "tsc --noEmit",
 		"typegen": "wrangler types"
 	},

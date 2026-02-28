@@ -45,6 +45,9 @@ jobs:
       - name: Integration tests
         run: bun run test:integration
 
+      - name: Integration tests (plugins)
+        run: bun run test:plugins
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
