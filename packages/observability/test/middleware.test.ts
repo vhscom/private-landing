@@ -108,6 +108,20 @@ describe("createObsEmit", () => {
 		expect(event.type).toBe("session.revoke");
 	});
 
+	it("delegates to executionCtx.waitUntil when available", async () => {
+		const obsEmit = createObsEmit({ getClientIp: () => "1.2.3.4" });
+		const app = new Hono<AppEnv>();
+		app.post("/login", obsEmit("login.success"), (ctx) =>
+			ctx.json({ ok: true }),
+		);
+
+		const execCtx = { waitUntil: vi.fn(), passThroughOnException: vi.fn() };
+		await app.request("/login", { method: "POST" }, baseEnv, execCtx);
+
+		expect(mockProcessEvent).toHaveBeenCalledTimes(1);
+		expect(execCtx.waitUntil).toHaveBeenCalledWith(expect.any(Promise));
+	});
+
 	it("uses custom actorId when provided in deps", async () => {
 		const obsEmit = createObsEmit({
 			getClientIp: () => "1.2.3.4",
@@ -310,6 +324,74 @@ describe("createAdaptiveChallenge", () => {
 		expect(res.status).toBe(200);
 		const body = await res.json();
 		expect(body.ok).toBe(true);
+	});
+
+	it("logs error when challenge event emission fails", async () => {
+		mockComputeChallenge.mockResolvedValue({
+			type: "pow",
+			difficulty: 1,
+			nonce: "test-nonce",
+		});
+		mockProcessEvent.mockRejectedValueOnce(new Error("emit failed"));
+		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+		const middleware = createAdaptiveChallenge(() => "1.2.3.4");
+		const app = new Hono<AppEnv>();
+		app.post("/login", middleware, (ctx) => ctx.json({ ok: true }));
+
+		const execCtx = { waitUntil: vi.fn(), passThroughOnException: vi.fn() };
+		const res = await app.request(
+			"/login",
+			{
+				method: "POST",
+				headers: { "Content-Type": "text/plain" },
+				body: "hello",
+			},
+			baseEnv,
+			execCtx,
+		);
+
+		expect(res.status).toBe(403);
+		// waitUntil receives the promise; wait for it to settle
+		await execCtx.waitUntil.mock.calls[0][0];
+		expect(consoleSpy).toHaveBeenCalledWith(
+			"[obs] challenge event failed:",
+			expect.any(Error),
+		);
+		consoleSpy.mockRestore();
+	});
+
+	it("awaits promise directly when executionCtx.waitUntil is unavailable", async () => {
+		mockComputeChallenge.mockResolvedValue({
+			type: "pow",
+			difficulty: 1,
+			nonce: "test-nonce",
+		});
+		const middleware = createAdaptiveChallenge(() => "1.2.3.4");
+		const app = new Hono<AppEnv>();
+		app.post("/login", middleware, (ctx) => ctx.json({ ok: true }));
+
+		// Provide execCtx without waitUntil so the else branch (await promise) runs
+		const execCtx = {
+			waitUntil: undefined as unknown,
+			passThroughOnException: vi.fn(),
+		};
+		const res = await app.request(
+			"/login",
+			{
+				method: "POST",
+				headers: { "Content-Type": "text/plain" },
+				body: "hello",
+			},
+			baseEnv,
+			execCtx,
+		);
+
+		expect(res.status).toBe(403);
+		expect(mockProcessEvent).toHaveBeenCalledWith(
+			expect.objectContaining({ type: "challenge.issued" }),
+			expect.anything(),
+		);
 	});
 
 	it("fails open when computeChallenge rejects", async () => {

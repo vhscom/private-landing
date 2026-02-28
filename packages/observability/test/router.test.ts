@@ -475,6 +475,66 @@ describe("POST /ops/sessions/revoke — cache invalidation", () => {
 		// Other session remains
 		expect(mock.sets.get("user_sessions:1")?.has("s2")).toBe(true);
 	});
+
+	it("scope=all continues when pre-UPDATE user_id query rejects", async () => {
+		const mock = createMockCache();
+
+		// agent auth → SELECT DISTINCT rejects → UPDATE succeeds
+		mockExecute
+			.mockResolvedValueOnce({ rows: [AGENT_ROW] })
+			.mockRejectedValueOnce(new Error("DB hiccup"))
+			.mockResolvedValueOnce({ rowsAffected: 2 });
+
+		const app = buildAppWithCache(mock.client);
+		const res = await app.request(
+			"/ops/sessions/revoke",
+			{
+				method: "POST",
+				headers: {
+					Authorization: "Bearer valid-key",
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ scope: "all" }),
+			},
+			baseEnv,
+		);
+
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.success).toBe(true);
+		expect(body.revoked).toBe(2);
+		// Cache cleanup should not have run (affectedUserIds is empty)
+		expect(mock.client.smembers).not.toHaveBeenCalled();
+	});
+
+	it("returns 200 and logs error when cache cleanup throws", async () => {
+		const mock = createMockCache();
+		mock.client.smembers.mockRejectedValueOnce(new Error("cache down"));
+
+		withAgentAuth({ rowsAffected: 1 });
+		const app = buildAppWithCache(mock.client);
+		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+		const res = await app.request(
+			"/ops/sessions/revoke",
+			{
+				method: "POST",
+				headers: {
+					Authorization: "Bearer valid-key",
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ scope: "user", id: 1 }),
+			},
+			baseEnv,
+		);
+
+		expect(res.status).toBe(200);
+		expect(consoleSpy).toHaveBeenCalledWith(
+			"[obs] cache cleanup error:",
+			expect.any(Error),
+		);
+		consoleSpy.mockRestore();
+	});
 });
 
 describe("GET /ops/sessions", () => {
@@ -900,6 +960,34 @@ describe("ops route event emission", () => {
 				expect.anything(),
 			);
 		});
+	});
+
+	it("emits event with ip 'unknown' when getClientIp throws", async () => {
+		const router = createOpsRouter({
+			getClientIp: () => {
+				throw new Error("getConnInfo unavailable");
+			},
+		});
+		const app = new Hono<AppEnv>();
+		app.route("/ops", router);
+
+		(timingSafeEqual as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+		mockExecute.mockResolvedValue({ rowsAffected: 1 });
+
+		const res = await app.request(
+			"/ops/agents/test-agent",
+			{
+				method: "DELETE",
+				headers: { "x-provisioning-secret": "test-secret" },
+			},
+			baseEnv,
+		);
+
+		expect(res.status).toBe(200);
+		expect(mockProcessEvent).toHaveBeenCalledWith(
+			expect.objectContaining({ ipAddress: "unknown" }),
+			expect.anything(),
+		);
 	});
 
 	it("DELETE /ops/agents/:name emits agent.revoked", async () => {
