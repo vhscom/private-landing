@@ -7,7 +7,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/private-landing/cli/internal/api"
 	"github.com/private-landing/cli/internal/session"
 	"github.com/private-landing/cli/internal/ui"
@@ -23,6 +25,7 @@ const (
 	stateResult
 	stateSessions
 	stateEvents
+	stateEventDetail
 	stateEventStats
 	stateAgents
 )
@@ -116,12 +119,13 @@ type model struct {
 	resultErr     error
 
 	// data states
-	sessions   []api.Session
-	events     []api.Event
-	eventStats map[string]int
-	eventSince string
-	agents     []api.Agent
-	dataErr    error
+	sessions    []api.Session
+	events      []api.Event
+	eventsTable table.Model
+	eventStats  map[string]int
+	eventSince  string
+	agents      []api.Agent
+	dataErr     error
 }
 
 func initialModel(client *api.Client) model {
@@ -161,6 +165,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.events = msg.events
 		m.dataErr = msg.err
 		m.state = stateEvents
+		if msg.err == nil && len(msg.events) > 0 {
+			m.eventsTable = buildEventsTable(msg.events)
+		}
 		return m, nil
 	case eventStatsMsg:
 		m.eventStats = msg.stats
@@ -192,7 +199,11 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleInput(key, msg)
 	case stateConfirm:
 		return m.handleConfirm(key)
-	case stateResult, stateSessions, stateEvents, stateEventStats, stateAgents:
+	case stateEvents:
+		return m.handleEventsView(msg)
+	case stateEventDetail:
+		return m.handleEventDetail(msg)
+	case stateResult, stateSessions, stateEventStats, stateAgents:
 		return m.handleDataView(key)
 	}
 	return m, nil
@@ -357,6 +368,87 @@ func (m model) handleDataView(key string) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m model) handleEventsView(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	key := msg.String()
+	switch key {
+	case "enter":
+		if len(m.events) > 0 && m.eventsTable.SelectedRow() != nil {
+			m.state = stateEventDetail
+			return m, nil
+		}
+	case "esc":
+		m.state = stateMenu
+		m.dataErr = nil
+		return m, nil
+	case "q":
+		m.quitting = true
+		return m, tea.Quit
+	}
+	var cmd tea.Cmd
+	m.eventsTable, cmd = m.eventsTable.Update(msg)
+	return m, cmd
+}
+
+func (m model) handleEventDetail(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc", "enter":
+		m.state = stateEvents
+	case "q":
+		m.quitting = true
+		return m, tea.Quit
+	}
+	return m, nil
+}
+
+func buildEventsTable(events []api.Event) table.Model {
+	columns := []table.Column{
+		{Title: "ID", Width: 6},
+		{Title: "Type", Width: 24},
+		{Title: "IP", Width: 16},
+		{Title: "User", Width: 8},
+		{Title: "Actor", Width: 28},
+		{Title: "Time", Width: 20},
+	}
+
+	rows := make([]table.Row, len(events))
+	for i, e := range events {
+		userID := "-"
+		if e.UserID != nil {
+			userID = fmt.Sprintf("%d", *e.UserID)
+		}
+		rows[i] = table.Row{
+			fmt.Sprintf("%d", e.ID),
+			e.Type,
+			e.IPAddress,
+			userID,
+			e.ActorID,
+			e.CreatedAt,
+		}
+	}
+
+	s := table.DefaultStyles()
+	s.Header = s.Header.
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("8")).
+		BorderBottom(true).
+		Bold(true).
+		Foreground(lipgloss.Color("5"))
+	s.Selected = s.Selected.
+		Foreground(lipgloss.Color("0")).
+		Background(lipgloss.Color("2")).
+		Bold(false)
+
+	t := table.New(
+		table.WithColumns(columns),
+		table.WithRows(rows),
+		table.WithHeight(15),
+		table.WithFocused(true),
+		table.WithStyles(s),
+	)
+
+	return t
+}
+
 // --- Commands ---
 
 func (m model) fetchSessions(userID string) tea.Cmd {
@@ -468,6 +560,8 @@ func (m model) View() string {
 		b.WriteString(m.viewSessions())
 	case stateEvents:
 		b.WriteString(m.viewEvents())
+	case stateEventDetail:
+		b.WriteString(m.viewEventDetail())
 	case stateEventStats:
 		b.WriteString(m.viewEventStats())
 	case stateAgents:
@@ -632,34 +726,42 @@ func (m model) viewEvents() string {
 	}
 
 	b.WriteString(fmt.Sprintf("Security Events (%d)\n\n", len(m.events)))
+	b.WriteString(m.eventsTable.View())
+	b.WriteString(ui.DimStyle.Render("\n↑/↓ navigate • enter detail • esc back • q quit"))
+	return b.String()
+}
 
-	columns := []ui.Column{
-		{Header: "ID", Width: 6},
-		{Header: "Type", Width: 24},
-		{Header: "IP", Width: 16},
-		{Header: "User", Width: 8},
-		{Header: "Actor", Width: 28},
-		{Header: "Time", Width: 20},
+func (m model) viewEventDetail() string {
+	var b strings.Builder
+
+	idx := m.eventsTable.Cursor()
+	if idx < 0 || idx >= len(m.events) {
+		b.WriteString(ui.DimStyle.Render("No event selected."))
+		b.WriteString(ui.DimStyle.Render("\n\nesc back • q quit"))
+		return b.String()
 	}
 
-	rows := make([][]string, len(m.events))
-	for i, e := range m.events {
-		userID := "-"
-		if e.UserID != nil {
-			userID = fmt.Sprintf("%d", *e.UserID)
-		}
-		rows[i] = []string{
-			fmt.Sprintf("%d", e.ID),
-			e.Type,
-			e.IPAddress,
-			userID,
-			e.ActorID,
-			e.CreatedAt,
-		}
+	e := m.events[idx]
+
+	b.WriteString(fmt.Sprintf("Event #%d\n\n", e.ID))
+
+	userID := "-"
+	if e.UserID != nil {
+		userID = fmt.Sprintf("%d", *e.UserID)
+	}
+	detail := "-"
+	if e.Detail != nil {
+		detail = *e.Detail
 	}
 
-	b.WriteString(ui.RenderTable(columns, rows))
-	b.WriteString(ui.DimStyle.Render("\nenter continue • q quit"))
+	labels := []string{"Type", "IP", "User", "Actor", "Time", "Detail"}
+	values := []string{e.Type, e.IPAddress, userID, e.ActorID, e.CreatedAt, detail}
+
+	for i, label := range labels {
+		b.WriteString(fmt.Sprintf("  %s  %s\n", ui.HeaderStyle.Render(fmt.Sprintf("%-10s", label)), values[i]))
+	}
+
+	b.WriteString(ui.DimStyle.Render("\nesc back • q quit"))
 	return b.String()
 }
 
