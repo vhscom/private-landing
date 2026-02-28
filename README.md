@@ -15,11 +15,11 @@
 
 </div>
 
-> **Demo note:** The login endpoint is rate-limited. Repeated attempts return `429 Too Many Requests` with a `Retry-After` header.
+> **Demo note:** The login endpoint is rate-limited and protected by adaptive PoW challenges. Repeated failures return increasing proof-of-work difficulty before `429 Too Many Requests`.
 
 ---
 
-A from-scratch authentication reference implementation for Cloudflare Workers — PBKDF2 password hashing, JWT dual-token sessions, constant-time comparison, and sliding expiration — all wired together with Hono, Turso (with optional Valkey/Redis caching), and strict TypeScript.
+A from-scratch authentication reference implementation for Cloudflare Workers — PBKDF2 password hashing, JWT dual-token sessions, constant-time comparison, sliding expiration, and a removable observability plugin — all wired together with Hono, Turso (with optional Valkey/Redis caching), and strict TypeScript.
 
 Every design choice traces back to a standard: [NIST SP 800-63B](https://pages.nist.gov/800-63-3/sp800-63b.html) for credentials, [NIST SP 800-132](https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-132.pdf) for key derivation, [OWASP ASVS](https://owasp.org/www-project-application-security-verification-standard/) for verification, and [RFC 8725](https://datatracker.ietf.org/doc/html/rfc8725) for JWT best practices.
 
@@ -27,7 +27,10 @@ Every design choice traces back to a standard: [NIST SP 800-63B](https://pages.n
 
 ### Security Status
 
-- ✅ Implemented: Rate limiting ([ADR-006](docs/adr/006-rate-limiting.md))
+- ✅ Rate limiting ([ADR-006](docs/adr/006-rate-limiting.md))
+- ✅ Structured audit logging ([ADR-008](docs/adr/008-adaptive-challenges-ops.md))
+- ✅ Adaptive PoW challenges ([ADR-008](docs/adr/008-adaptive-challenges-ops.md))
+- ✅ Agent-authenticated ops surface ([ADR-008](docs/adr/008-adaptive-challenges-ops.md))
 - ⚠️ Planned: `aud` claim hardening
 - ⚠️ Planned: Refresh token rotation
 - ⚠️ Planned: Breached-password checks
@@ -36,7 +39,8 @@ Every design choice traces back to a standard: [NIST SP 800-63B](https://pages.n
 
 - **Read the code, not just the docs** — every security property (timing-safe rejection, session-linked revocation, algorithm pinning) is implemented and tested, not just described
 - **NIST + OWASP + RFC references** throughout — learn the *why* behind each decision
-- **380+ tests** including attack-vector suites (token tampering, algorithm confusion, unicode edge cases)
+- **420+ tests** including attack-vector suites (token tampering, algorithm confusion, unicode edge cases)
+- **Plugin architecture** — observability (events, adaptive challenges, ops API) bolts on via Hono middleware without modifying core auth services
 - **Built for the edge** — runs on Cloudflare Workers with Web Crypto API, no Node.js dependencies
 - **Apache-2.0** — fork it, teach with it, learn from it
 
@@ -53,6 +57,8 @@ Every design choice traces back to a standard: [NIST SP 800-63B](https://pages.n
 | **Security headers** | HSTS, CSP, CORP/COEP/COOP, Permissions-Policy, fingerprint removal ([`security.ts`](packages/core/src/auth/middleware/security.ts)) |
 | **Input validation** | Zod schemas with NIST-compliant password policy (length only, no complexity rules) |
 | **Rate limiting** | Fixed-window throttling against brute-force and credential-stuffing attacks: IP-keyed on public auth routes (e.g. login), user-keyed on protected actions; no hard lockouts (NIST-aligned) ([ADR-006](docs/adr/006-rate-limiting.md)) |
+| **Observability plugin** | Structured security events, adaptive PoW challenges, agent-authenticated `/ops` API — plugs in via middleware, removable by deleting one package ([ADR-008](docs/adr/008-adaptive-challenges-ops.md)) |
+| **CLI tooling** | Go TUI (`plctl`) for querying events, managing sessions, and provisioning agent credentials via the `/ops` surface ([`tools/cli/`](tools/cli/)) |
 | **Attack-vector tests** | JWT tampering, algorithm confusion, type confusion, unicode edge cases, info-disclosure checks |
 
 ## Production Next Steps
@@ -65,7 +71,6 @@ This project intentionally omits features that are outside its educational scope
 
 | Feature | Why It Matters | Standard / Reference |
 |---------|---------------|---------------------|
-| Bot mitigation / adaptive challenges | Adds resilience beyond baseline throttling, especially against distributed credential stuffing | [OWASP ASVS v5.0 §6.3.1](https://github.com/OWASP/ASVS/blob/v5.0.0/5.0/en/0x15-V6-Authentication.md#v63-authentication-lifecycle), [NIST SP 800-63B §5.2.2](https://pages.nist.gov/800-63-3/sp800-63b.html) |
 | Breached-password checking | Prevents use of passwords known to be in public breach dumps | [NIST SP 800-63B §5.1.1.2](https://pages.nist.gov/800-63-3/sp800-63b.html), [HIBP API](https://haveibeenpwned.com/API/v3) |
 
 ### High Priority — Production Confidence
@@ -75,7 +80,6 @@ This project intentionally omits features that are outside its educational scope
 | CSRF protection (if SameSite relaxed) | SameSite=Strict currently prevents CSRF; if changed to Lax for UX, an explicit token is needed | [OWASP CSRF Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html) |
 | Refresh token rotation | Detects token theft — if a rotated-out refresh token is replayed, revoke the entire session family | [RFC 6819 §5.2.2.3](https://datatracker.ietf.org/doc/html/rfc6819#section-5.2.2.3) |
 | `aud` claim in JWTs | Prevents token from one service being accepted by another sharing the same secret | [RFC 7519 §4.1.3](https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.3), [RFC 8725 §3.9](https://datatracker.ietf.org/doc/html/rfc8725#section-3.9) |
-| Audit logging | Enables incident response, anomaly detection, and compliance | [OWASP Logging Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html) |
 | CSP nonces for inline scripts | Current CSP uses `'unsafe-inline'`; nonces eliminate inline-script XSS vectors | [MDN CSP script-src](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src) |
 
 ### Medium Priority — As Product Scales
@@ -110,8 +114,11 @@ All of these are excellent reasons to reach for [Better Auth](https://www.better
 ├── packages/
 │   ├── core/                  # Auth services, middleware, crypto utilities
 │   ├── infrastructure/        # DB client + utilities
+│   ├── observability/         # Event emission, adaptive challenges, ops API (removable plugin)
 │   ├── schemas/               # Zod schemas
 │   └── types/                 # Shared TypeScript types
+├── tools/
+│   └── cli/                   # plctl — Go TUI for the /ops surface
 └── docs/
     ├── adr/                   # Architecture Decision Records
     └── audits/                # Security audits
