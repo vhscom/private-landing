@@ -75,6 +75,8 @@ The `obsEmit` middleware inspects the response status — if >= 400, it rewrites
 | `agent.provisioned` | `POST /ops/agents` | `{ name, trustLevel }` |
 | `agent.revoked` | `DELETE /ops/agents/:name` | `{ name }` |
 | `agent.auth_failure` | `requireAgentKey` middleware | `{ keyHashPrefix }` |
+| `challenge.issued` | `adaptiveChallenge` middleware | `{ difficulty }` |
+| `challenge.failed` | `adaptiveChallenge` middleware | `{ difficulty }` |
 
 **Email handling:** Failed login events store only the domain portion of the submitted email (`*@example.com`) to support abuse-pattern detection without logging credentials or full identifiers.
 
@@ -95,7 +97,7 @@ The login endpoint can require clients to solve SHA-256 proof-of-work challenges
 
 #### Escalation Logic
 
-The `adaptiveChallenge` middleware runs before the login handler. It queries the `security_event` table for `login.failure` events from the requesting IP within a configurable time window:
+The `adaptiveChallenge` middleware runs before the login handler. It queries the `security_event` table for failure events from the requesting IP within a configurable time window (default: `login.failure`; configurable via `adaptiveChallengeFor({ eventType })` for other endpoints):
 
 | Failures (window) | Response |
 |---|---|
@@ -354,7 +356,7 @@ Add event emission and challenge logic inline in `session-service.ts` and route 
 - **CLI:** `tools/cli/cmd/plctl/main.go`
 - **Wiring:** Single call in `app.ts` mounts the plugin and returns middleware factories:
   ```typescript
-  const { obsEmit, obsEmitEvent, adaptiveChallenge } = observabilityPlugin(app, {
+  const { obsEmit, obsEmitEvent, adaptiveChallenge, adaptiveChallengeFor } = observabilityPlugin(app, {
     createCacheClient: createCacheClient ?? undefined,
     getClientIp: defaultGetClientIp,
   });

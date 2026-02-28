@@ -8,7 +8,11 @@
 
 import type { Env, GetClientIpFn, Variables } from "@private-landing/types";
 import type { Hono } from "hono";
-import { createAdaptiveChallenge, createObsEmit } from "./middleware";
+import {
+	type AdaptiveChallengeOpts,
+	createAdaptiveChallenge,
+	createObsEmit,
+} from "./middleware";
 import {
 	APP_ACTOR_ID,
 	EventTypes,
@@ -19,6 +23,7 @@ import { createOpsRouter, type OpsRouterDeps } from "./router";
 
 export type { ResolvedAdaptiveConfig } from "./config";
 export { computeChallenge } from "./process-event";
+export type { AdaptiveChallengeOpts };
 export type { AgentPrincipal, TrustLevel } from "./types";
 export { APP_ACTOR_ID, EventTypes };
 export type { SecurityEvent };
@@ -51,8 +56,10 @@ export function observabilityPlugin(
 		actorId: deps.actorId,
 	});
 	const adaptiveChallenge = createAdaptiveChallenge(deps.getClientIp);
+	const adaptiveChallengeFor = (opts: AdaptiveChallengeOpts) =>
+		createAdaptiveChallenge(deps.getClientIp, opts);
 
-	return { obsEmit, obsEmitEvent, adaptiveChallenge };
+	return { obsEmit, obsEmitEvent, adaptiveChallenge, adaptiveChallengeFor };
 }
 
 /** Structural subset of ExecutionContext — avoids leaking @cloudflare/workers-types. */

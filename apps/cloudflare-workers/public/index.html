@@ -460,6 +460,27 @@
     /* ------------------------------------------ */
 
     class ApiConsole extends HTMLElement {
+        /* Inline Web Worker: brute-force SHA-256(nonce + i) until hash has `difficulty` leading zeros */
+        static _workerCode = `
+            self.onmessage = async ({ data: { nonce, difficulty } }) => {
+                const prefix = '0'.repeat(difficulty);
+                const encoder = new TextEncoder();
+                for (let i = 0; ; i++) {
+                    const buf = await crypto.subtle.digest(
+                        'SHA-256',
+                        encoder.encode(nonce + i)
+                    );
+                    const hex = [...new Uint8Array(buf)]
+                        .map(b => b.toString(16).padStart(2, '0'))
+                        .join('');
+                    if (hex.startsWith(prefix)) {
+                        self.postMessage({ solution: String(i) });
+                        return;
+                    }
+                }
+            };
+        `;
+
         constructor() {
             super();
             const shadow = this.attachShadow({ mode: 'open' });
@@ -473,6 +494,20 @@
         }
 
         connectedCallback() {}
+
+        _solveChallenge(nonce, difficulty) {
+            return new Promise((resolve) => {
+                const blob = new Blob([ApiConsole._workerCode], { type: 'application/javascript' });
+                const url = URL.createObjectURL(blob);
+                const worker = new Worker(url);
+                worker.onmessage = ({ data }) => {
+                    worker.terminate();
+                    URL.revokeObjectURL(url);
+                    resolve(data.solution);
+                };
+                worker.postMessage({ nonce, difficulty });
+            });
+        }
 
         async execute(body) {
             const method = this.getAttribute('method') || 'GET';
@@ -504,8 +539,29 @@
                     opts.body = JSON.stringify(body);
                 }
 
-                const res = await fetch(path, opts);
-                const data = await res.json();
+                let res = await fetch(path, opts);
+                let data = await res.json();
+
+                /* PoW challenge: solve in a Web Worker and retry */
+                if (res.status === 403 && data.challenge?.type === 'pow') {
+                    const { nonce, difficulty } = data.challenge;
+                    waiting.textContent = `solving challenge (difficulty ${difficulty})...`;
+
+                    const solution = await this._solveChallenge(nonce, difficulty);
+                    const retryBody = { ...body, challengeNonce: nonce, challengeSolution: solution };
+
+                    waiting.textContent = 'retrying...';
+                    const retryOpts = {
+                        method,
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(retryBody)
+                    };
+                    res = await fetch(path, retryOpts);
+                    data = await res.json();
+                }
 
                 waiting.remove();
                 const status = document.createElement('span');

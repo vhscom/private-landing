@@ -39,8 +39,8 @@ export function createObsEmit(deps: ObsEmitDeps = {}) {
 				| undefined;
 
 			const resolvedType =
-				eventType === "login.success" && ctx.res.status >= 400
-					? "login.failure"
+				ctx.res.status >= 400 && eventType.endsWith(".success")
+					? eventType.replace(/\.success$/, ".failure")
 					: eventType;
 
 			const event: SecurityEvent = {
@@ -64,23 +64,59 @@ export function createObsEmit(deps: ObsEmitDeps = {}) {
 	};
 }
 
+export interface AdaptiveChallengeOpts {
+	/** Event type to query for failure count. Default: "login.failure" */
+	eventType?: string;
+}
+
 /**
- * Returns before-handler middleware that enforces PoW challenges on high-risk logins.
+ * Returns before-handler middleware that enforces PoW challenges on high-risk requests.
  * Calls computeChallenge directly. Fails open on error.
  */
-export function createAdaptiveChallenge(getClientIp?: GetClientIpFn) {
+export function createAdaptiveChallenge(
+	getClientIp?: GetClientIpFn,
+	opts: AdaptiveChallengeOpts = {},
+) {
 	return createMiddleware<{
 		Bindings: Env;
 		Variables: Variables;
 	}>(async (ctx, next) => {
+		const ip = getClientIp ? getClientIp(ctx) : "unknown";
+		const ua = ctx.req.header("user-agent") ?? "";
+
+		const emit = async (type: string, status: number, difficulty: number) => {
+			const event: SecurityEvent = {
+				type,
+				created_at: new Date().toISOString(),
+				ipAddress: ip,
+				ua,
+				status,
+				detail: { difficulty },
+				actorId: APP_ACTOR_ID,
+			};
+			const promise = processEvent(event, { env: ctx.env }).catch((err) =>
+				console.error("[obs] challenge event failed:", err),
+			);
+			if (ctx.executionCtx?.waitUntil) {
+				ctx.executionCtx.waitUntil(promise);
+			} else {
+				await promise;
+			}
+		};
+
 		try {
-			const ip = getClientIp ? getClientIp(ctx) : "unknown";
-			const challenge = await computeChallenge(ip, ctx.env, adaptiveDefaults);
+			const challenge = await computeChallenge(
+				ip,
+				ctx.env,
+				adaptiveDefaults,
+				opts.eventType,
+			);
 
 			if (!challenge) return next();
 
 			const contentType = ctx.req.header("content-type") ?? "";
 			if (!contentType.includes("application/json")) {
+				await emit("challenge.issued", 403, challenge.difficulty);
 				return ctx.json({ error: "Challenge required", challenge }, 403);
 			}
 
@@ -91,6 +127,7 @@ export function createAdaptiveChallenge(getClientIp?: GetClientIpFn) {
 			};
 
 			if (!challengeNonce || !challengeSolution) {
+				await emit("challenge.issued", 403, challenge.difficulty);
 				return ctx.json({ error: "Challenge required", challenge }, 403);
 			}
 
@@ -107,6 +144,7 @@ export function createAdaptiveChallenge(getClientIp?: GetClientIpFn) {
 
 			const prefix = "0".repeat(challenge.difficulty);
 			if (!hash.startsWith(prefix)) {
+				await emit("challenge.failed", 403, challenge.difficulty);
 				return ctx.json({ error: "Invalid solution", challenge }, 403);
 			}
 		} catch (err) {

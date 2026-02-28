@@ -116,6 +116,23 @@ describe("adaptive challenge escalation", () => {
 		expect(result.difficulty).toBe(2);
 	});
 
+	it("queries custom eventType when provided", async () => {
+		mockFailureCount(adaptiveDefaults.failureThreshold);
+		const result = await computeChallenge(
+			"1.2.3.4",
+			env,
+			adaptiveDefaults,
+			"registration.failure",
+		);
+		if (result == null) return expect.unreachable("expected challenge");
+		expect(result.type).toBe("pow");
+		expect(result.difficulty).toBe(adaptiveDefaults.lowDifficulty);
+
+		// Verify the SQL query used the custom event type
+		const lastCall = mockExecute.mock.calls.at(-1);
+		expect(lastCall?.[0].args).toContain("registration.failure");
+	});
+
 	it("fail-opens on DB error", async () => {
 		const spy = vi.spyOn(console, "error").mockImplementation(() => {});
 		mockExecute.mockRejectedValueOnce(new Error("db down"));

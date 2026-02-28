@@ -26,6 +26,9 @@ export const EventTypes = {
 	SESSION_OPS_REVOKE: "session.ops_revoke",
 	AGENT_PROVISIONED: "agent.provisioned",
 	AGENT_REVOKED: "agent.revoked",
+	CHALLENGE_ISSUED: "challenge.issued",
+	CHALLENGE_FAILED: "challenge.failed",
+	REGISTRATION_FAILURE: "registration.failure",
 } as const;
 
 /** Structured security event for the observability pipeline. */
@@ -100,6 +103,7 @@ export async function computeChallenge(
 	ipAddress: string,
 	env: Env,
 	config: ResolvedAdaptiveConfig = adaptiveDefaults,
+	eventType = "login.failure",
 ): Promise<AdaptiveChallenge | null> {
 	const since = new Date(
 		Date.now() - config.windowMinutes * 60 * 1000,
@@ -109,8 +113,8 @@ export async function computeChallenge(
 		await ensureSchema(env);
 		const db = createDbClient(env);
 		const result = await db.execute({
-			sql: "SELECT COUNT(*) as count FROM security_event WHERE type = 'login.failure' AND ip_address = ? AND created_at >= ?",
-			args: [ipAddress, since],
+			sql: "SELECT COUNT(*) as count FROM security_event WHERE type IN (?, 'challenge.issued', 'challenge.failed') AND ip_address = ? AND created_at >= ?",
+			args: [eventType, ipAddress, since],
 		});
 		failures = Number(result.rows[0]?.count ?? 0);
 	} catch (err) {
