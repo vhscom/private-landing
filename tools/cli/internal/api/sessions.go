@@ -2,22 +2,24 @@ package api
 
 import (
 	"context"
-	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 )
 
 // ListSessions returns active sessions, optionally filtered by user ID.
 func (c *Client) ListSessions(ctx context.Context, params SessionsParams) (*ListSessionsResponse, error) {
-	path := "/ops/sessions?"
+	q := url.Values{}
 	if params.UserID != "" {
-		path += fmt.Sprintf("user_id=%s&", params.UserID)
+		q.Set("user_id", params.UserID)
 	}
 	if params.Limit > 0 {
-		path += fmt.Sprintf("limit=%d&", params.Limit)
+		q.Set("limit", strconv.Itoa(params.Limit))
 	}
 	if params.Offset > 0 {
-		path += fmt.Sprintf("offset=%d&", params.Offset)
+		q.Set("offset", strconv.Itoa(params.Offset))
 	}
+	path := "/ops/sessions?" + q.Encode()
 
 	var out ListSessionsResponse
 	if err := c.do(ctx, http.MethodGet, path, nil, &out); err != nil {

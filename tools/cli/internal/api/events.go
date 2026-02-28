@@ -2,31 +2,33 @@ package api
 
 import (
 	"context"
-	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 )
 
 // ListEvents returns security events, optionally filtered.
 func (c *Client) ListEvents(ctx context.Context, params EventsParams) (*ListEventsResponse, error) {
-	path := "/ops/events?"
+	q := url.Values{}
 	if params.Type != "" {
-		path += fmt.Sprintf("type=%s&", params.Type)
+		q.Set("type", params.Type)
 	}
 	if params.UserID != "" {
-		path += fmt.Sprintf("user_id=%s&", params.UserID)
+		q.Set("user_id", params.UserID)
 	}
 	if params.IP != "" {
-		path += fmt.Sprintf("ip=%s&", params.IP)
+		q.Set("ip", params.IP)
 	}
 	if params.Since != "" {
-		path += fmt.Sprintf("since=%s&", params.Since)
+		q.Set("since", params.Since)
 	}
 	if params.Limit > 0 {
-		path += fmt.Sprintf("limit=%d&", params.Limit)
+		q.Set("limit", strconv.Itoa(params.Limit))
 	}
 	if params.Offset > 0 {
-		path += fmt.Sprintf("offset=%d&", params.Offset)
+		q.Set("offset", strconv.Itoa(params.Offset))
 	}
+	path := "/ops/events?" + q.Encode()
 
 	var out ListEventsResponse
 	if err := c.do(ctx, http.MethodGet, path, nil, &out); err != nil {
@@ -39,7 +41,9 @@ func (c *Client) ListEvents(ctx context.Context, params EventsParams) (*ListEven
 func (c *Client) GetEventStats(ctx context.Context, since string) (*EventStatsResponse, error) {
 	path := "/ops/events/stats"
 	if since != "" {
-		path += fmt.Sprintf("?since=%s", since)
+		q := url.Values{}
+		q.Set("since", since)
+		path += "?" + q.Encode()
 	}
 
 	var out EventStatsResponse

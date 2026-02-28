@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"net/http"
+	"net/url"
 )
 
 // ListAgents returns all active agent credentials.
@@ -26,7 +27,7 @@ func (c *Client) CreateAgent(ctx context.Context, req CreateAgentRequest) (*Crea
 // DeleteAgent revokes an agent credential by name. Requires provisioning secret.
 func (c *Client) DeleteAgent(ctx context.Context, name string) (*DeleteAgentResponse, error) {
 	var out DeleteAgentResponse
-	if err := c.doProvisioning(ctx, http.MethodDelete, "/ops/agents/"+name, nil, &out); err != nil {
+	if err := c.doProvisioning(ctx, http.MethodDelete, "/ops/agents/"+url.PathEscape(name), nil, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil

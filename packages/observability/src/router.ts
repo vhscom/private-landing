@@ -380,7 +380,7 @@ export function createOpsRouter(deps: OpsRouterDeps) {
 			const db = createDbClient(ctx.env);
 			const where = clauses.join(" AND ");
 			const result = await db.execute({
-				sql: `SELECT * FROM security_event WHERE ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+				sql: `SELECT id, type, ip_address, user_id, detail, created_at, actor_id FROM security_event WHERE ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
 				args: [...args, limit, offset],
 			});
 			return ctx.json({ events: result.rows, count: result.rows.length });
