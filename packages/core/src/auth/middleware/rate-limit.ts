@@ -37,6 +37,8 @@ export interface RateLimitConfig {
 	prefix: string;
 	/** Optional key extractor. Defaults to IP-based keying via `getClientIp`. */
 	key?: (ctx: Context<{ Bindings: Env; Variables: Variables }>) => string;
+	/** Optional callback invoked when a request is rate-limited. */
+	onLimited?: (ctx: Context<{ Bindings: Env; Variables: Variables }>) => void;
 }
 
 /**
@@ -103,6 +105,7 @@ export function createRateLimiter(
 				}
 
 				if (count > max) {
+					config.onLimited?.(ctx);
 					ctx.res = ctx.json(
 						{ error: "Too many requests", code: "RATE_LIMIT" },
 						429,

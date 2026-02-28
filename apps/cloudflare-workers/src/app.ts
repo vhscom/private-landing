@@ -58,20 +58,6 @@ const rateLimit = createRateLimiter(
 const userKey = (ctx: Context<{ Bindings: Env; Variables: Variables }>) =>
 	String(ctx.get("jwtPayload").uid);
 
-// Rate limit configurations — all limits visible in one place
-const rateLimits = {
-	auth: { windowSeconds: 300, max: 20, prefix: "rl:auth" },
-	login: { windowSeconds: 300, max: 5, prefix: "rl:login" },
-	register: { windowSeconds: 300, max: 5, prefix: "rl:register" },
-	logout: { windowSeconds: 300, max: 5, prefix: "rl:logout", key: userKey },
-	password: {
-		windowSeconds: 3600,
-		max: 3,
-		prefix: "rl:password",
-		key: userKey,
-	},
-} satisfies Record<string, RateLimitConfig>;
-
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 // Plugin-only – removable by deleting packages/observability and commenting these lines
@@ -79,6 +65,49 @@ const { obsEmit, obsEmitEvent, adaptiveChallenge } = observabilityPlugin(app, {
 	createCacheClient: createCacheClient ?? undefined,
 	getClientIp: defaultGetClientIp,
 });
+
+// Emit rate_limit.blocked event when a request is rate-limited
+const onLimited =
+	(prefix: string) =>
+	(ctx: Context<{ Bindings: Env; Variables: Variables }>) => {
+		obsEmitEvent(ctx, { type: "rate_limit.reject", detail: { prefix } });
+	};
+
+// Rate limit configurations — all limits visible in one place
+const rateLimits = {
+	auth: {
+		windowSeconds: 300,
+		max: 20,
+		prefix: "rl:auth",
+		onLimited: onLimited("rl:auth"),
+	},
+	login: {
+		windowSeconds: 300,
+		max: 5,
+		prefix: "rl:login",
+		onLimited: onLimited("rl:login"),
+	},
+	register: {
+		windowSeconds: 300,
+		max: 5,
+		prefix: "rl:register",
+		onLimited: onLimited("rl:register"),
+	},
+	logout: {
+		windowSeconds: 300,
+		max: 5,
+		prefix: "rl:logout",
+		key: userKey,
+		onLimited: onLimited("rl:logout"),
+	},
+	password: {
+		windowSeconds: 3600,
+		max: 3,
+		prefix: "rl:password",
+		key: userKey,
+		onLimited: onLimited("rl:password"),
+	},
+} satisfies Record<string, RateLimitConfig>;
 
 // Global middleware
 app.use("*", securityHeaders);

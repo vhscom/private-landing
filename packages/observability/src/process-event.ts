@@ -29,6 +29,7 @@ export const EventTypes = {
 	CHALLENGE_ISSUED: "challenge.issued",
 	CHALLENGE_FAILED: "challenge.failed",
 	REGISTRATION_FAILURE: "registration.failure",
+	RATE_LIMITED: "rate_limit.reject",
 } as const;
 
 /** Structured security event for the observability pipeline. */

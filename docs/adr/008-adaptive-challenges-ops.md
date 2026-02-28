@@ -77,6 +77,7 @@ The `obsEmit` middleware inspects the response status — if >= 400, it rewrites
 | `agent.auth_failure` | `requireAgentKey` middleware | `{ keyHashPrefix }` |
 | `challenge.issued` | `adaptiveChallenge` middleware | `{ difficulty }` |
 | `challenge.failed` | `adaptiveChallenge` middleware | `{ difficulty }` |
+| `rate_limit.reject` | `onLimited` callback (rate limiter) | `{ prefix }` |
 
 **Email handling:** Failed login events store only the domain portion of the submitted email (`*@example.com`) to support abuse-pattern detection without logging credentials or full identifiers.
 
@@ -367,7 +368,7 @@ Add event emission and challenge logic inline in `session-service.ts` and route 
 - [ADR-003: Cache Layer with Valkey](003-cache-layer-valkey.md) — cache is optional; events must work without it
 - [ADR-004: Password Change Endpoint](004-password-change-endpoint.md) — emits `password.change` and `session.revoke_all`
 - [ADR-005: URL Reorganization](005-url-reorganization.md) — semantic route grouping pattern for `/ops/*`
-- [ADR-006: Rate Limiting](006-rate-limiting.md) — emits `rate_limit.reject`; fail-open pattern reused
+- [ADR-006: Rate Limiting](006-rate-limiting.md) — emits `rate_limit.reject` via `onLimited` callback; fail-open pattern reused
 - [ADR-007: Session Dual-Write](007-session-dual-write.md) — ensures SQL session visibility for `/ops/sessions`
 - [OWASP Logging Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html)
 - [OWASP Application Logging Vocabulary](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Vocabulary_Cheat_Sheet.html)
