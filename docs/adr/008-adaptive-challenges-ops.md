@@ -299,6 +299,7 @@ Write operations (revoke, provision) prompt for confirmation before executing.
 - `detail` as untyped JSON trades schema flexibility for query ergonomics — filtering inside `detail` requires `json_extract()` in SQLite
 - PoW challenges require client-side JavaScript (or equivalent compute) — not suitable for all client types
 - PoW does not distinguish humans from bots, only raises cost for high-volume automated attempts
+- When cache is active, rate limiting and adaptive challenges overlap — a legitimate request may be rate-limited between receiving a challenge and submitting the solution. Acceptable for now; if it becomes a problem, solved-challenge requests could skip the rate limit increment or use a separate bucket
 - Pruning requires a scheduled trigger — without it, the `security_event` table grows indefinitely
 - SHA-256 is appropriate for high-entropy agent keys but would not be suitable for user passwords
 
