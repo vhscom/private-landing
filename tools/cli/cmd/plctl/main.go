@@ -376,6 +376,9 @@ func (m model) handleEventsView(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.state = stateEventDetail
 			return m, nil
 		}
+		m.state = stateMenu
+		m.dataErr = nil
+		return m, nil
 	case "esc":
 		m.state = stateMenu
 		m.dataErr = nil
