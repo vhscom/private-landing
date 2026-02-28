@@ -87,3 +87,24 @@ jobs:
 
       - name: Unit tests
         run: bun run test:unit
+
+  cli:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/cli/go.mod
+          cache-dependency-path: tools/cli/go.sum
+
+      - name: Build CLI
+        working-directory: tools/cli
+        run: go build -o plctl ./cmd/plctl
+
+      - name: Test CLI
+        working-directory: tools/cli
+        run: go test ./...
