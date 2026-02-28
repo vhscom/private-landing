@@ -41,6 +41,7 @@ export function createOpsRouter(deps: OpsRouterDeps) {
 		ctx: { env: Env; req: { header(name: string): string | undefined } },
 		type: string,
 		actorId: string,
+		detail?: Record<string, unknown>,
 	): Promise<void> {
 		let ip = "unknown";
 		try {
@@ -56,6 +57,7 @@ export function createOpsRouter(deps: OpsRouterDeps) {
 				ua: ctx.req.header("user-agent") ?? "",
 				status: 200,
 				actorId,
+				detail,
 			},
 			{ env: ctx.env },
 		).catch((err) => console.error("[obs] ops event emit failed:", err));
@@ -224,7 +226,11 @@ export function createOpsRouter(deps: OpsRouterDeps) {
 			}
 		}
 
-		await emitOpsEvent(ctx, "session.ops_revoke", `agent:${principal.name}`);
+		await emitOpsEvent(ctx, "session.ops_revoke", `agent:${principal.name}`, {
+			scope,
+			id: id ?? undefined,
+			revoked,
+		});
 		return ctx.json({ success: true, revoked });
 	});
 
@@ -286,7 +292,10 @@ export function createOpsRouter(deps: OpsRouterDeps) {
 			);
 		}
 
-		await emitOpsEvent(ctx, "agent.provisioned", APP_ACTOR_ID);
+		await emitOpsEvent(ctx, "agent.provisioned", APP_ACTOR_ID, {
+			name: parsed.data.name,
+			trustLevel,
+		});
 		return ctx.json({
 			name: parsed.data.name,
 			apiKey: rawKey,
@@ -317,7 +326,7 @@ export function createOpsRouter(deps: OpsRouterDeps) {
 			return ctx.json({ error: "Not found", code: "NOT_FOUND" }, 404);
 		}
 
-		await emitOpsEvent(ctx, "agent.revoked", APP_ACTOR_ID);
+		await emitOpsEvent(ctx, "agent.revoked", APP_ACTOR_ID, { name });
 		return ctx.json({ success: true });
 	});
 

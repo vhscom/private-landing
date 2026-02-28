@@ -350,6 +350,10 @@ Add event emission and challenge logic inline in `session-service.ts` and route 
 - **Role-based access control for users** — agent auth is separate from user auth
 - **Log forwarding** — no integration with external log platforms
 
+## Deferred
+
+- **`session.revoke_all` detail missing `count`** — the ADR specifies `{ userId, count }` but `endAllSessionsForUser` returns `void`. Adding `count` requires changing the `SessionService` interface across all implementations (base, cached, mirrored). `userId` is captured on the top-level event; `count` is deferred until the interface change is warranted.
+
 ## Implementation Notes
 
 - **Package:** `packages/observability/` — self-contained, depends on `@private-landing/core` and `@private-landing/infrastructure`

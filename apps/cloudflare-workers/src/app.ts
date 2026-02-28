@@ -196,7 +196,11 @@ app.post(
 			);
 
 			if (!authResult.authenticated) {
-				obsEmitEvent(ctx, { type: "login.failure" });
+				const email = (body as { email?: string }).email ?? "";
+				const domain = email.includes("@")
+					? `*@${email.split("@").pop()}`
+					: undefined;
+				obsEmitEvent(ctx, { type: "login.failure", detail: { email: domain } });
 				if (json) {
 					return ctx.json(
 						{ error: "Authentication failed", code: "INVALID_CREDENTIALS" },
@@ -211,6 +215,7 @@ app.post(
 			obsEmitEvent(ctx, {
 				type: "login.success",
 				userId: authResult.userId,
+				detail: { userId: authResult.userId },
 			});
 
 			if (json) {

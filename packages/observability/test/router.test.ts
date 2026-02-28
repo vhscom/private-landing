@@ -866,6 +866,7 @@ describe("ops route event emission", () => {
 				expect.objectContaining({
 					type: "session.ops_revoke",
 					actorId: "agent:test-agent",
+					detail: { scope: "all", revoked: 1 },
 				}),
 				expect.anything(),
 			);
@@ -894,6 +895,7 @@ describe("ops route event emission", () => {
 				expect.objectContaining({
 					type: "agent.provisioned",
 					actorId: "app:private-landing",
+					detail: { name: "new-agent", trustLevel: "read" },
 				}),
 				expect.anything(),
 			);
@@ -918,6 +920,7 @@ describe("ops route event emission", () => {
 				expect.objectContaining({
 					type: "agent.revoked",
 					actorId: "app:private-landing",
+					detail: { name: "test-agent" },
 				}),
 				expect.anything(),
 			);
