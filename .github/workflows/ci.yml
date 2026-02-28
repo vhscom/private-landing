@@ -50,3 +50,40 @@ jobs:
         with:
           fail_ci_if_error: false
           token: "#{{ secrets.CODECOV_TOKEN }}"
+
+  plugin-removal:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Strip observability plugin
+        run: |
+          rm -rf packages/observability
+          sed -i '/obs-plugin 1\/2/,/observability/d' apps/cloudflare-workers/src/app.ts
+          sed -i '/obs-plugin 2\/2/,/}));/d' apps/cloudflare-workers/src/app.ts
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('apps/cloudflare-workers/package.json', 'utf8'));
+            delete pkg.dependencies['@private-landing/observability'];
+            fs.writeFileSync('apps/cloudflare-workers/package.json', JSON.stringify(pkg, null, '\t') + '\n');
+          "
+          bun install
+
+      - name: Build packages
+        run: bun run build
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Unit tests
+        run: bun run test:unit

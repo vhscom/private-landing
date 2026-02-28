@@ -18,7 +18,7 @@ import {
 	type CacheClientFactory,
 	serveStatic,
 } from "@private-landing/infrastructure";
-// Plugin-only – removable by deleting packages/observability and commenting these lines
+// [obs-plugin 1/2] Remove this import and the override below to disable observability
 import { observabilityPlugin } from "@private-landing/observability";
 import {
 	type Env,
@@ -26,6 +26,7 @@ import {
 	type Variables,
 } from "@private-landing/types";
 import { type Context, Hono } from "hono";
+import type { MiddlewareHandler } from "hono/types";
 import { parseRequestBody, wantsJson } from "./utils/negotiate";
 
 // Toggle cache: set to createValkeyClient to enable (ADR-003)
@@ -55,23 +56,29 @@ const rateLimit = createRateLimiter(
 );
 
 // Key extractor for authenticated routes — uses user ID from JWT payload
-const userKey = (ctx: Context<{ Bindings: Env; Variables: Variables }>) =>
-	String(ctx.get("jwtPayload").uid);
+const userKey = (ctx: Context<AppEnv>) => String(ctx.get("jwtPayload").uid);
 
-const app = new Hono<{ Bindings: Env; Variables: Variables }>();
+type AppEnv = { Bindings: Env; Variables: Variables };
 
-// Plugin-only – removable by deleting packages/observability and commenting these lines
-const { obsEmit, obsEmitEvent, adaptiveChallenge } = observabilityPlugin(app, {
+const app = new Hono<AppEnv>();
+
+// No-op defaults — active when observability plugin is not loaded
+const noop: MiddlewareHandler<AppEnv> = async (_, next) => next();
+let obsEmit: (eventType: string) => MiddlewareHandler<AppEnv> = () => noop;
+// biome-ignore lint/suspicious/noExplicitAny: no-op accepts any args
+let obsEmitEvent: (ctx: any, event: any) => void = () => {};
+let adaptiveChallenge: MiddlewareHandler<AppEnv> = noop;
+
+// [obs-plugin 2/2] Remove this override and the import above to disable observability
+({ obsEmit, obsEmitEvent, adaptiveChallenge } = observabilityPlugin(app, {
 	createCacheClient: createCacheClient ?? undefined,
 	getClientIp: defaultGetClientIp,
-});
+}));
 
 // Emit rate_limit.blocked event when a request is rate-limited
-const onLimited =
-	(prefix: string) =>
-	(ctx: Context<{ Bindings: Env; Variables: Variables }>) => {
-		obsEmitEvent(ctx, { type: "rate_limit.reject", detail: { prefix } });
-	};
+const onLimited = (prefix: string) => (ctx: Context<AppEnv>) => {
+	obsEmitEvent(ctx, { type: "rate_limit.reject", detail: { prefix } });
+};
 
 // Rate limit configurations — all limits visible in one place
 const rateLimits = {
