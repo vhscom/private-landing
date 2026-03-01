@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-03-01
+
+### Added
+
+- Observability plugin `@private-landing/observability` — removable via two `[obs-plugin]` lines in `app.ts` ([ADR-008](docs/adr/008-adaptive-challenges-ops.md))
+  - Structured `security_event` table for durable, queryable audit trail (login, logout, password change, rate-limit rejection, challenge, agent auth)
+  - Adaptive proof-of-work challenges on `/auth/login` — escalates difficulty after repeated failures from the same IP
+  - Agent identity system with SHA-256 hashed API keys, `read`/`write` trust levels, and provisioning via `AGENT_PROVISIONING_SECRET`
+  - `/ops/*` API surface: query events, sessions, and agents; revoke sessions by scope (`all`, `user`, `session`)
+  - Rate-limit event emission via `onLimited` callback
+  - `obsEmit` middleware and `obsEmitEvent` inline emitter with fire-and-forget semantics
+- `plctl` CLI tool (Go/Bubble Tea) for interactive agent, event, and session management
+- Mirrored session service `createMirroredSessionService` for cache-to-SQL visibility ([ADR-007](docs/adr/007-session-dual-write.md))
+- CI job verifying the core build and tests pass with the observability plugin removed
+
+### Fixed
+
+- `timingSafeEqual` no longer leaks input length via early return — both inputs padded to max length before HMAC comparison (OBS-4)
+- `plctl`: path traversal via agent name in URL (OBS-1), query parameter injection (OBS-2)
+- `/ops/events` uses explicit column list instead of `SELECT *` (OBS-3)
+- `plctl`: enter key on empty event list no longer panics
+
+### Documentation
+
+- ADR-007: session dual-write decision record
+- ADR-008: adaptive challenges and operational surface decision record
+- Security audit report (Feb 28, 2026) covering OBS-1 through OBS-4
+- STRIDE threat model updated with observability plugin attack surface (entries 19–27)
+- 90-day event pruning command documented in ADR-008
+- Stale `app.ts` line references corrected in threat model and flow diagrams
+- Updated README for observability plugin
+
 ## [1.4.0] - 2026-02-21
 
 ### Added
@@ -130,6 +162,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Architecture Decision Records in `docs/adr/`
 - Security audit reports in `docs/audits/`
 
+[1.5.0]: https://github.com/vhscom/private-landing/compare/1.4.0...1.5.0
 [1.4.0]: https://github.com/vhscom/private-landing/compare/1.3.0...1.4.0
 [1.3.0]: https://github.com/vhscom/private-landing/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/vhscom/private-landing/compare/1.1.0...1.2.0
