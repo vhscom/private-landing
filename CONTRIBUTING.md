@@ -47,8 +47,11 @@ Thank you for your interest in contributing! This guide will help you get starte
 ├── packages/
 │   ├── core/                  # Auth middleware, services, crypto utilities
 │   ├── infrastructure/        # Database client, cache client, static file serving
+│   ├── observability/         # Removable plugin: event capture, adaptive challenges, /ops API
 │   ├── schemas/               # Zod validation schemas
 │   └── types/                 # Shared TypeScript types and errors
+├── tools/
+│   └── cli/                   # plctl — Go TUI for the /ops API
 └── docs/
     ├── adr/                   # Architecture Decision Records
     └── audits/                # Security audit reports
