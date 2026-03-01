@@ -358,6 +358,13 @@ Add event emission and challenge logic inline in `session-service.ts` and route 
 
 ## Implementation Notes
 
+- **Agent bootstrap:** The first agent must be provisioned via direct `curl` against `POST /ops/agents` with the `x-provisioning-secret` header — `plctl` requires an existing agent API key (`PLCTL_API_KEY`) to connect. After the first agent is provisioned, subsequent agents can be created through the TUI.
+  ```bash
+  curl -X POST https://your-host/ops/agents \
+    -H "Content-Type: application/json" \
+    -H "x-provisioning-secret: $(grep AGENT_PROVISIONING_SECRET apps/cloudflare-workers/.dev.vars.production | cut -d= -f2)" \
+    -d '{"name": "ops-admin", "trustLevel": "write"}'
+  ```
 - **Package:** `packages/observability/` — self-contained, depends on `@private-landing/core` and `@private-landing/infrastructure`
 - **Migration:** `packages/core/src/auth/migrations/002_observability.sql`
 - **Routes:** `apps/cloudflare-workers/src/routes/ops.ts`
