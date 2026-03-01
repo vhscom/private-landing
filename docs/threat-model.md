@@ -27,7 +27,7 @@ STRIDE analysis and JWT pitfall catalogue for Private Landing. This document is 
 | 15 | **Elevation of Privilege** | Missing `aud` claim in JWT | `token-service.ts:77-94` | **Gap**: No `aud` (audience) claim in tokens | If multiple services share the same secret, a token from one service could be accepted by another |
 | 16 | **Elevation of Privilege** | Cross-secret token acceptance | `require-auth.ts:169-172` | Access tokens verified with `JWT_ACCESS_SECRET`, refresh tokens with `JWT_REFRESH_SECRET` — separate secrets | None — secrets are isolated per token type |
 | 17 | **Spoofing** | Credential takeover via stolen session | `account-service.ts:215-268` | `changePassword()` requires current password re-verification even for authenticated users; `endAllSessionsForUser()` revokes all sessions after change ([ADR-004](adr/004-password-change-endpoint.md)) | Rate limiting depends on optional cache layer (ADR-003); without it, current password requirement + constant-time comparison are the only brute-force controls |
-| 18 | **Tampering** | Race condition during password change | `account-service.ts:247-251` | Password update is a single `UPDATE ... WHERE id = ?` — SQLite serializes writes; `endAllSessionsForUser` runs after the update ensuring no session outlives the old credential | None — write serialization prevents concurrent hash corruption |
+| 18 | **Tampering** | Race condition during password change | `account-service.ts:262-267` | Password update is a single `UPDATE ... WHERE id = ?` — SQLite serializes writes; `endAllSessionsForUser` runs after the update ensuring no session outlives the old credential | None — write serialization prevents concurrent hash corruption |
 
 ### Observability Plugin Surface
 

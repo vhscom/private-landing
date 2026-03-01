@@ -123,7 +123,7 @@ sequenceDiagram
   H-->>U: 200 {success: true} or redirect
 ```
 
-**Source:** [`account-service.ts:149-213`](../packages/core/src/auth/services/account-service.ts) | [`session-service.ts:221-268`](../packages/core/src/auth/services/session-service.ts) | [`token-service.ts:67-114`](../packages/core/src/auth/services/token-service.ts) | [`app.ts:129-165`](../apps/cloudflare-workers/src/app.ts)
+**Source:** [`account-service.ts:149-213`](../packages/core/src/auth/services/account-service.ts) | [`session-service.ts:221-268`](../packages/core/src/auth/services/session-service.ts) | [`token-service.ts:67-114`](../packages/core/src/auth/services/token-service.ts) | [`app.ts:185-236`](../apps/cloudflare-workers/src/app.ts)
 
 ---
 
@@ -250,7 +250,7 @@ sequenceDiagram
   H-->>U: 200 {success: true} or redirect
 ```
 
-**Source:** [`session-service.ts:298-314`](../packages/core/src/auth/services/session-service.ts) | [`app.ts:74-97`](../apps/cloudflare-workers/src/app.ts)
+**Source:** [`session-service.ts:298-314`](../packages/core/src/auth/services/session-service.ts) | [`app.ts:129-153`](../apps/cloudflare-workers/src/app.ts)
 
 ---
 
@@ -312,4 +312,4 @@ sequenceDiagram
   H-->>U: 200 {success: true} or redirect
 ```
 
-**Source:** [`account-service.ts:215-268`](../packages/core/src/auth/services/account-service.ts) | [`session-service.ts:316-331`](../packages/core/src/auth/services/session-service.ts) | [`app.ts:168-207`](../apps/cloudflare-workers/src/app.ts) | [ADR-004](adr/004-password-change-endpoint.md)
+**Source:** [`account-service.ts:215-268`](../packages/core/src/auth/services/account-service.ts) | [`session-service.ts:316-331`](../packages/core/src/auth/services/session-service.ts) | [`app.ts:239-280`](../apps/cloudflare-workers/src/app.ts) | [ADR-004](adr/004-password-change-endpoint.md)
