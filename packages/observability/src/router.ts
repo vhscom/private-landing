@@ -298,6 +298,7 @@ export function createOpsRouter(deps: OpsRouterDeps) {
 		});
 		return ctx.json({
 			name: parsed.data.name,
+			trustLevel,
 			apiKey: rawKey,
 			createdAt: new Date().toISOString(),
 		});
