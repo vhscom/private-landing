@@ -365,6 +365,10 @@ Add event emission and challenge logic inline in `session-service.ts` and route 
     -H "x-provisioning-secret: $(grep AGENT_PROVISIONING_SECRET apps/cloudflare-workers/.dev.vars.production | cut -d= -f2)" \
     -d '{"name": "ops-admin", "trustLevel": "write"}'
   ```
+- **Event pruning:** No automated retention policy. To trim events older than 90 days:
+  ```sql
+  DELETE FROM security_event WHERE created_at < datetime('now', '-90 days');
+  ```
 - **Package:** `packages/observability/` — self-contained, depends on `@private-landing/core` and `@private-landing/infrastructure`
 - **Migration:** `packages/core/src/auth/migrations/002_observability.sql`
 - **Routes:** `apps/cloudflare-workers/src/routes/ops.ts`
