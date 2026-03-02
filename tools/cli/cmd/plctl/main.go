@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
@@ -855,6 +856,19 @@ func (m model) viewAgents() string {
 	return b.String()
 }
 
+func isSafeTarget(rawURL string) bool {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return false
+	}
+	host := u.Hostname()
+	if host == "localhost" || host == "127.0.0.1" || host == "::1" {
+		return true
+	}
+	env := os.Getenv("ENVIRONMENT")
+	return env != "" && env != "production"
+}
+
 func printUsage() {
 	heading := ui.TitleStyle.Render
 	label := ui.PromptStyle.Render
@@ -874,6 +888,7 @@ func printUsage() {
 	fmt.Println("  " + label("PLCTL_API_URL") + "              API base URL (required)")
 	fmt.Println("  " + label("PLCTL_API_KEY") + "              Agent API key for Bearer auth (required)")
 	fmt.Println("  " + label("PLCTL_PROVISIONING_SECRET") + "  Infrastructure secret for agent provisioning (optional)")
+	fmt.Println("  " + label("ENVIRONMENT") + "                Set to any non-production value to suppress safety prompt")
 	fmt.Println()
 	fmt.Println(heading("Commands (interactive):"))
 	fmt.Println()
@@ -913,9 +928,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	if !strings.Contains(apiURL, "localhost") && !strings.Contains(apiURL, "dev") && !strings.Contains(apiURL, "staging") {
-		fmt.Fprintln(os.Stderr, ui.ErrorStyle.Render("WARNING: PLCTL_API_URL does not contain 'localhost', 'dev', or 'staging'."))
-		fmt.Fprintln(os.Stderr, ui.ErrorStyle.Render("You may be targeting a production environment."))
+	if !isSafeTarget(apiURL) {
+		fmt.Fprintln(os.Stderr, ui.ErrorStyle.Render("WARNING: Target does not appear to be a non-production environment."))
+		fmt.Fprintln(os.Stderr, ui.ErrorStyle.Render("Set ENVIRONMENT to a non-production value (e.g. 'development', 'staging') to suppress."))
 		fmt.Fprint(os.Stderr, ui.PromptStyle.Render("Continue? (y/N) "))
 
 		var answer string
