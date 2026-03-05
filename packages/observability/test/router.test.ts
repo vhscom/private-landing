@@ -616,6 +616,41 @@ describe("GET /ops/sessions", () => {
 	});
 });
 
+describe("GET /ops/events — since param", () => {
+	beforeEach(() => {
+		mockExecute.mockReset();
+	});
+
+	it("uses provided since param when valid", async () => {
+		withAgentAuth({ rows: [] });
+		const app = buildApp();
+		const since = "2026-03-01T00:00:00.000Z";
+		const res = await app.request(
+			`/ops/events?since=${since}`,
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		expect(res.status).toBe(200);
+		const lastCall = mockExecute.mock.calls[mockExecute.mock.calls.length - 1];
+		expect(lastCall[0].args[0]).toBe(since);
+	});
+
+	it("falls back to 24h default when since is invalid", async () => {
+		withAgentAuth({ rows: [] });
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/events?since=not-a-date",
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		expect(res.status).toBe(200);
+		const lastCall = mockExecute.mock.calls[mockExecute.mock.calls.length - 1];
+		// Should be a valid ISO string (24h default), not "not-a-date"
+		expect(lastCall[0].args[0]).not.toBe("not-a-date");
+		expect(new Date(lastCall[0].args[0]).getTime()).not.toBeNaN();
+	});
+});
+
 describe("GET /ops/events — actor_id filter", () => {
 	beforeEach(() => {
 		mockExecute.mockReset();
@@ -732,6 +767,34 @@ describe("GET /ops/events/stats", () => {
 		expect(body.stats["login.success"]).toBe(10);
 		expect(body.stats["login.failure"]).toBe(3);
 		expect(body.since).toBeDefined();
+	});
+
+	it("uses provided since param when valid", async () => {
+		withAgentAuth({ rows: [] });
+		const app = buildApp();
+		const since = "2026-03-01T00:00:00.000Z";
+		const res = await app.request(
+			`/ops/events/stats?since=${since}`,
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		expect(res.status).toBe(200);
+		const lastCall = mockExecute.mock.calls[mockExecute.mock.calls.length - 1];
+		expect(lastCall[0].args[0]).toBe(since);
+	});
+
+	it("falls back to 24h default when since is invalid", async () => {
+		withAgentAuth({ rows: [] });
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/events/stats?since=garbage",
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		expect(res.status).toBe(200);
+		const lastCall = mockExecute.mock.calls[mockExecute.mock.calls.length - 1];
+		expect(lastCall[0].args[0]).not.toBe("garbage");
+		expect(new Date(lastCall[0].args[0]).getTime()).not.toBeNaN();
 	});
 
 	it("returns 401 without auth", async () => {

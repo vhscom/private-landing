@@ -74,8 +74,11 @@ export function createOpsRouter(deps: OpsRouterDeps) {
 	router.get("/sessions", requireAgentKey, async (ctx) => {
 		const userId = ctx.req.query("user_id");
 		const activeOnly = ctx.req.query("active") !== "false";
-		const limit = Math.min(Number(ctx.req.query("limit") ?? 50), 200);
-		const offset = Number(ctx.req.query("offset") ?? 0);
+		const limit = Math.min(
+			parseInt(ctx.req.query("limit") ?? "50", 10) || 50,
+			200,
+		);
+		const offset = parseInt(ctx.req.query("offset") ?? "0", 10) || 0;
 
 		const clauses: string[] = [];
 		const args: (string | number)[] = [];
@@ -84,8 +87,11 @@ export function createOpsRouter(deps: OpsRouterDeps) {
 			clauses.push("expires_at > datetime('now')");
 		}
 		if (userId) {
-			clauses.push("user_id = ?");
-			args.push(Number(userId));
+			const uid = parseInt(userId, 10);
+			if (!Number.isNaN(uid)) {
+				clauses.push("user_id = ?");
+				args.push(uid);
+			}
 		}
 
 		try {
@@ -120,10 +126,7 @@ export function createOpsRouter(deps: OpsRouterDeps) {
 			body,
 		);
 		if (!parsed.success) {
-			return ctx.json(
-				{ error: "Invalid body", issues: parsed.error.issues },
-				400,
-			);
+			return ctx.json({ error: "Invalid body", code: "VALIDATION_ERROR" }, 400);
 		}
 
 		const { scope, id } = parsed.data;
@@ -249,17 +252,18 @@ export function createOpsRouter(deps: OpsRouterDeps) {
 		const body = await ctx.req.json();
 		const parsed = z.safeParse(
 			z.object({
-				name: z.string().min(1),
+				name: z
+					.string()
+					.min(1)
+					.max(64)
+					.regex(/^[a-zA-Z0-9_-]+$/),
 				trustLevel: z.enum(["read", "write"]).optional(),
 				description: z.string().max(200).optional(),
 			}),
 			body,
 		);
 		if (!parsed.success) {
-			return ctx.json(
-				{ error: "Invalid body", issues: parsed.error.issues },
-				400,
-			);
+			return ctx.json({ error: "Invalid body", code: "VALIDATION_ERROR" }, 400);
 		}
 
 		const trustLevel = parsed.data.trustLevel ?? "read";
@@ -347,11 +351,16 @@ export function createOpsRouter(deps: OpsRouterDeps) {
 
 	// Event query (ADR-008)
 	router.get("/events", requireAgentKey, async (ctx) => {
+		const sinceParam = ctx.req.query("since");
 		const since =
-			ctx.req.query("since") ??
-			new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-		const limit = Math.min(Number(ctx.req.query("limit") ?? 50), 200);
-		const offset = Number(ctx.req.query("offset") ?? 0);
+			sinceParam && !Number.isNaN(Date.parse(sinceParam))
+				? sinceParam
+				: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+		const limit = Math.min(
+			parseInt(ctx.req.query("limit") ?? "50", 10) || 50,
+			200,
+		);
+		const offset = parseInt(ctx.req.query("offset") ?? "0", 10) || 0;
 
 		const clauses: string[] = ["created_at >= ?"];
 		const args: (string | number)[] = [since];
@@ -363,8 +372,11 @@ export function createOpsRouter(deps: OpsRouterDeps) {
 		}
 		const userId = ctx.req.query("user_id");
 		if (userId) {
-			clauses.push("user_id = ?");
-			args.push(Number(userId));
+			const uid = parseInt(userId, 10);
+			if (!Number.isNaN(uid)) {
+				clauses.push("user_id = ?");
+				args.push(uid);
+			}
 		}
 		const ip = ctx.req.query("ip");
 		if (ip) {
@@ -392,9 +404,11 @@ export function createOpsRouter(deps: OpsRouterDeps) {
 	});
 
 	router.get("/events/stats", requireAgentKey, async (ctx) => {
+		const sinceParam = ctx.req.query("since");
 		const since =
-			ctx.req.query("since") ??
-			new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+			sinceParam && !Number.isNaN(Date.parse(sinceParam))
+				? sinceParam
+				: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
 		try {
 			const db = createDbClient(ctx.env);

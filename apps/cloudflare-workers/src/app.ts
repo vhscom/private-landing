@@ -130,11 +130,16 @@ app.post(
 	"/auth/logout",
 	requireAuth,
 	rateLimit(rateLimits.logout),
-	obsEmit("session.revoke"),
 	async (ctx) => {
 		const json = wantsJson(ctx);
+		const payload = ctx.get("jwtPayload");
 		try {
 			await sessions.endSession(ctx);
+			obsEmitEvent(ctx, {
+				type: "session.revoke",
+				userId: payload.uid,
+				detail: { sessionId: payload.sid },
+			});
 			if (json) {
 				return ctx.json({ success: true, message: "Logged out" }, 200);
 			}
@@ -215,7 +220,7 @@ app.post(
 			obsEmitEvent(ctx, {
 				type: "login.success",
 				userId: authResult.userId,
-				detail: { userId: authResult.userId },
+				detail: { sessionId },
 			});
 
 			if (json) {

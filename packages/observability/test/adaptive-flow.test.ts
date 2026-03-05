@@ -19,7 +19,7 @@ vi.mock("../src/schema", () => ({
 	ensureSchema: vi.fn(),
 }));
 
-import { computeChallenge } from "../src/process-event";
+import { computeChallenge, verifySignedNonce } from "../src/process-event";
 
 const env: Env = {
 	AUTH_DB_URL: "libsql://test.turso.io",
@@ -62,7 +62,8 @@ describe("adaptive challenge escalation", () => {
 		if (result == null) return expect.unreachable("expected challenge");
 		expect(result.type).toBe("pow");
 		expect(result.difficulty).toBe(adaptiveDefaults.lowDifficulty);
-		expect(result.nonce).toMatch(/^[0-9a-f]{32}$/);
+		// Signed nonce format: randomHex.timestamp.hmac
+		expect(result.nonce).toMatch(/^[0-9a-f]{32}\.\d+\.[0-9a-f]{64}$/);
 	});
 
 	it("returns high difficulty at high threshold", async () => {
@@ -139,5 +140,101 @@ describe("adaptive challenge escalation", () => {
 		const result = await computeChallenge("1.2.3.4", env);
 		expect(result).toBeNull();
 		spy.mockRestore();
+	});
+});
+
+describe("verifySignedNonce", () => {
+	it("accepts a freshly issued nonce for the same IP", async () => {
+		mockFailureCount(3);
+		const challenge = await computeChallenge("1.2.3.4", env);
+		if (challenge == null) return expect.unreachable("expected challenge");
+		expect(
+			await verifySignedNonce(
+				challenge.nonce,
+				env.JWT_ACCESS_SECRET,
+				"1.2.3.4",
+			),
+		).toBe(true);
+	});
+
+	it("rejects a nonce issued for a different IP", async () => {
+		mockFailureCount(3);
+		const challenge = await computeChallenge("1.2.3.4", env);
+		if (challenge == null) return expect.unreachable("expected challenge");
+		expect(
+			await verifySignedNonce(
+				challenge.nonce,
+				env.JWT_ACCESS_SECRET,
+				"5.6.7.8",
+			),
+		).toBe(false);
+	});
+
+	it("rejects a nonce signed with a different secret", async () => {
+		mockFailureCount(3);
+		const challenge = await computeChallenge("1.2.3.4", env);
+		if (challenge == null) return expect.unreachable("expected challenge");
+		expect(
+			await verifySignedNonce(challenge.nonce, "wrong-secret", "1.2.3.4"),
+		).toBe(false);
+	});
+
+	it("rejects a nonce with tampered timestamp", async () => {
+		mockFailureCount(3);
+		const challenge = await computeChallenge("1.2.3.4", env);
+		if (challenge == null) return expect.unreachable("expected challenge");
+		const [random, , mac] = challenge.nonce.split(".");
+		const tampered = `${random}.0.${mac}`;
+		expect(
+			await verifySignedNonce(tampered, env.JWT_ACCESS_SECRET, "1.2.3.4"),
+		).toBe(false);
+	});
+
+	it("rejects a self-chosen nonce (attacker precomputation)", async () => {
+		const forged = "aaaabbbbccccddddeeeeffffaaaabbbb.9999999999999.deadbeef";
+		expect(
+			await verifySignedNonce(forged, env.JWT_ACCESS_SECRET, "1.2.3.4"),
+		).toBe(false);
+	});
+
+	it("rejects malformed nonces", async () => {
+		expect(
+			await verifySignedNonce("no-dots", env.JWT_ACCESS_SECRET, "1.2.3.4"),
+		).toBe(false);
+		expect(
+			await verifySignedNonce("a.b", env.JWT_ACCESS_SECRET, "1.2.3.4"),
+		).toBe(false);
+		expect(await verifySignedNonce("", env.JWT_ACCESS_SECRET, "1.2.3.4")).toBe(
+			false,
+		);
+	});
+
+	it("rejects an expired nonce (TTL exceeded)", async () => {
+		mockFailureCount(3);
+		const challenge = await computeChallenge("1.2.3.4", env);
+		if (challenge == null) return expect.unreachable("expected challenge");
+		// Manipulate the timestamp to be 10 minutes ago
+		const [random, ,] = challenge.nonce.split(".");
+		const oldTs = (Date.now() - 10 * 60 * 1000).toString();
+		// Re-sign with correct secret to isolate the TTL check
+		const key = await crypto.subtle.importKey(
+			"raw",
+			new TextEncoder().encode(env.JWT_ACCESS_SECRET),
+			{ name: "HMAC", hash: "SHA-256" },
+			false,
+			["sign"],
+		);
+		const sig = await crypto.subtle.sign(
+			"HMAC",
+			key,
+			new TextEncoder().encode(`${random}|${oldTs}|1.2.3.4`),
+		);
+		const mac = Array.from(new Uint8Array(sig))
+			.map((b) => b.toString(16).padStart(2, "0"))
+			.join("");
+		const expired = `${random}.${oldTs}.${mac}`;
+		expect(
+			await verifySignedNonce(expired, env.JWT_ACCESS_SECRET, "1.2.3.4"),
+		).toBe(false);
 	});
 });

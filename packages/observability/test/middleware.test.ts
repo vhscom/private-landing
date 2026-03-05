@@ -11,11 +11,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockProcessEvent = vi.fn().mockResolvedValue(undefined);
 const mockComputeChallenge = vi.fn().mockResolvedValue(null);
+const mockVerifySignedNonce = vi.fn().mockResolvedValue(true);
 
 vi.mock("../src/process-event", () => ({
 	APP_ACTOR_ID: "app:private-landing",
 	processEvent: (...args: unknown[]) => mockProcessEvent(...args),
 	computeChallenge: (...args: unknown[]) => mockComputeChallenge(...args),
+	verifySignedNonce: (...args: unknown[]) => mockVerifySignedNonce(...args),
 }));
 
 import { createAdaptiveChallenge, createObsEmit } from "../src/middleware";
@@ -143,6 +145,7 @@ describe("createAdaptiveChallenge", () => {
 	beforeEach(() => {
 		mockComputeChallenge.mockReset().mockResolvedValue(null);
 		mockProcessEvent.mockReset().mockResolvedValue(undefined);
+		mockVerifySignedNonce.mockReset().mockResolvedValue(true);
 	});
 
 	it("passes custom eventType to computeChallenge", async () => {
@@ -268,6 +271,47 @@ describe("createAdaptiveChallenge", () => {
 		expect(res.status).toBe(403);
 		const body = await res.json();
 		expect(body.error).toBe("Invalid solution");
+		expect(mockProcessEvent).toHaveBeenCalledWith(
+			expect.objectContaining({ type: "challenge.failed" }),
+			expect.anything(),
+		);
+	});
+
+	it("returns 403 when nonce verification fails (forged/expired)", async () => {
+		mockComputeChallenge.mockResolvedValue({
+			type: "pow",
+			difficulty: 1,
+			nonce: "test-nonce",
+		});
+		mockVerifySignedNonce.mockResolvedValue(false);
+
+		const middleware = createAdaptiveChallenge(() => "1.2.3.4");
+		const app = new Hono<AppEnv>();
+		app.post("/login", middleware, (ctx) => ctx.json({ ok: true }));
+
+		const execCtx = { waitUntil: vi.fn(), passThroughOnException: vi.fn() };
+		const res = await app.request(
+			"/login",
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					challengeNonce: "forged-nonce",
+					challengeSolution: "123",
+				}),
+			},
+			baseEnv,
+			execCtx,
+		);
+
+		expect(res.status).toBe(403);
+		const body = await res.json();
+		expect(body.error).toBe("Invalid or expired nonce");
+		expect(mockVerifySignedNonce).toHaveBeenCalledWith(
+			"forged-nonce",
+			"test",
+			"1.2.3.4",
+		);
 		expect(mockProcessEvent).toHaveBeenCalledWith(
 			expect.objectContaining({ type: "challenge.failed" }),
 			expect.anything(),

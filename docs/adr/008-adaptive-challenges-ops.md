@@ -125,7 +125,7 @@ All thresholds and difficulty levels are configurable.
 
 #### Design Properties
 
-- **Stateless** — nonces are generated per-request and not stored server-side; verification is symmetric (re-hash and check)
+- **Stateless** — nonces are HMAC-signed (`random.timestamp.hmac`) with the server secret, binding them to the requesting IP with a 5-minute TTL. No server-side nonce storage is required — verification re-derives the HMAC and checks authenticity, IP binding, freshness, and PoW solution
 - **Fail-open** — if the failure count query errors, the login proceeds without a challenge
 - **Complements rate limiting** — rate limits cap request volume; PoW raises per-request cost. An IP at 4 failures has not hit the rate limit (5/300s) but already faces a PoW challenge
 - **Not a CAPTCHA** — PoW does not distinguish humans from bots; it raises the cost of high-volume automated attempts. Sophisticated attackers willing to spend compute are not stopped
@@ -294,7 +294,7 @@ Write operations (revoke, provision) prompt for confirmation before executing.
 ### Negative
 
 - SQLite is not optimized for high-volume append workloads — under sustained attack, event writes add latency (mitigated by fire-and-forget and the low request volume of an auth service)
-- No real-time streaming — agents must poll to see new events
+- No real-time streaming over HTTP — agents must poll REST endpoints to see new events (mitigated by [ADR-009](009-ops-websocket-gateway.md) WebSocket `subscribe_events`)
 - Agent key rotation requires provisioning a new key and revoking the old one (no in-place rotation)
 - `detail` as untyped JSON trades schema flexibility for query ergonomics — filtering inside `detail` requires `json_extract()` in SQLite
 - PoW challenges require client-side JavaScript (or equivalent compute) — not suitable for all client types
@@ -353,7 +353,7 @@ Add event emission and challenge logic inline in `session-service.ts` and route 
 ## Deferred
 
 - **`session.revoke_all` detail missing `count`** — the ADR specifies `{ userId, count }` but `endAllSessionsForUser` returns `void`. Adding `count` requires changing the `SessionService` interface across all implementations (base, cached, mirrored). `userId` is captured on the top-level event; `count` is deferred until the interface change is warranted.
-- **`session.revoke` detail missing `sessionId`** — the ADR specifies `detail: { sessionId }` but `obsEmit("session.revoke")` does not extract the session ID from the JWT payload (`sid`). Populating it requires switching from `obsEmit` middleware to inline `obsEmitEvent` inside the logout handler. Deferred until the middleware-to-inline migration is done for the other detail gaps below.
+- ~~**`session.revoke` detail missing `sessionId`**~~ — Implemented. Switched from `obsEmit` middleware to inline `obsEmitEvent` with `{ sessionId: payload.sid }` from the JWT payload.
 - **`password.change` detail missing `userId`** — the ADR specifies `detail: { userId }` but `obsEmit("password.change")` does not populate detail. The session ID (`sid`) is also available in the JWT payload but not specified by the ADR. Requires the same middleware-to-inline switch as `session.revoke`; deferred for the same reason.
 
 ## Implementation Notes

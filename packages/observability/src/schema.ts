@@ -10,16 +10,21 @@
 import { createDbClient } from "@private-landing/infrastructure";
 import type { Env } from "@private-landing/types";
 
-let initialized = false;
+let initPromise: Promise<void> | null = null;
 
 /**
  * Ensures all observability tables exist. Runs CREATE TABLE IF NOT EXISTS
- * on first call; subsequent calls are no-ops. Catches and logs errors
- * without crashing — leaves the flag unset so next call retries.
+ * on first call; concurrent callers share the same promise.
+ * Catches and logs errors — resets the promise so the next call retries.
  */
-export async function ensureSchema(env: Env): Promise<void> {
-	if (initialized) return;
+export function ensureSchema(env: Env): Promise<void> {
+	if (!initPromise) {
+		initPromise = doInit(env);
+	}
+	return initPromise;
+}
 
+async function doInit(env: Env): Promise<void> {
 	try {
 		const db = createDbClient(env);
 		await db.execute({
@@ -36,6 +41,15 @@ export async function ensureSchema(env: Env): Promise<void> {
 			)`,
 			args: [],
 		});
+		// Indices matching 002_observability.sql migration
+		for (const idx of [
+			"CREATE INDEX IF NOT EXISTS idx_security_event_type ON security_event(type)",
+			"CREATE INDEX IF NOT EXISTS idx_security_event_created ON security_event(created_at)",
+			"CREATE INDEX IF NOT EXISTS idx_security_event_user ON security_event(user_id)",
+			"CREATE INDEX IF NOT EXISTS idx_security_event_ip ON security_event(ip_address)",
+		]) {
+			await db.execute({ sql: idx, args: [] });
+		}
 		await db.execute({
 			sql: `CREATE TABLE IF NOT EXISTS agent_credential (
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,13 +62,18 @@ export async function ensureSchema(env: Env): Promise<void> {
 			)`,
 			args: [],
 		});
-		initialized = true;
+		await db.execute({
+			sql: "CREATE INDEX IF NOT EXISTS idx_agent_credential_name ON agent_credential(name) WHERE revoked_at IS NULL",
+			args: [],
+		});
 	} catch (err) {
+		// Reset so next call retries
+		initPromise = null;
 		console.error("[obs] schema initialization failed:", err);
 	}
 }
 
-/** Reset the initialization flag. Exported for testing only. @internal */
+/** Reset the initialization state. Exported for testing only. @internal */
 export function _resetSchemaInit(): void {
-	initialized = false;
+	initPromise = null;
 }

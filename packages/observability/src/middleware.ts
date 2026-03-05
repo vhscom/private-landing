@@ -14,6 +14,7 @@ import {
 	computeChallenge,
 	processEvent,
 	type SecurityEvent,
+	verifySignedNonce,
 } from "./process-event";
 
 export interface ObsEmitDeps {
@@ -114,21 +115,40 @@ export function createAdaptiveChallenge(
 
 			if (!challenge) return next();
 
-			const contentType = ctx.req.header("content-type") ?? "";
-			if (!contentType.includes("application/json")) {
-				await emit("challenge.issued", 403, challenge.difficulty);
-				return ctx.json({ error: "Challenge required", challenge }, 403);
-			}
+			// Extract nonce/solution from JSON body (POST) or query params (GET)
+			let challengeNonce: string | undefined;
+			let challengeSolution: string | undefined;
 
-			const body = await ctx.req.raw.clone().json();
-			const { challengeNonce, challengeSolution } = body as {
-				challengeNonce?: string;
-				challengeSolution?: string;
-			};
+			if (ctx.req.method === "GET") {
+				challengeNonce = ctx.req.query("challengeNonce");
+				challengeSolution = ctx.req.query("challengeSolution");
+			} else {
+				const contentType = ctx.req.header("content-type") ?? "";
+				if (!contentType.includes("application/json")) {
+					await emit("challenge.issued", 403, challenge.difficulty);
+					return ctx.json({ error: "Challenge required", challenge }, 403);
+				}
+				const body = await ctx.req.raw.clone().json();
+				({ challengeNonce, challengeSolution } = body as {
+					challengeNonce?: string;
+					challengeSolution?: string;
+				});
+			}
 
 			if (!challengeNonce || !challengeSolution) {
 				await emit("challenge.issued", 403, challenge.difficulty);
 				return ctx.json({ error: "Challenge required", challenge }, 403);
+			}
+
+			// Verify the nonce was server-issued, bound to this IP, and not expired
+			const nonceValid = await verifySignedNonce(
+				challengeNonce,
+				ctx.env.JWT_ACCESS_SECRET,
+				ip,
+			);
+			if (!nonceValid) {
+				await emit("challenge.failed", 403, challenge.difficulty);
+				return ctx.json({ error: "Invalid or expired nonce", challenge }, 403);
 			}
 
 			const hash = Array.from(

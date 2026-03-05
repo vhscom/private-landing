@@ -44,6 +44,7 @@ describe("[obs-plugin] event emission", () => {
 	});
 
 	afterAll(async () => {
+		await cleanupSecurityEvents(dbClient);
 		await cleanupSuiteUser(dbClient, SUITE_EMAIL);
 		dbClient.close();
 	});
