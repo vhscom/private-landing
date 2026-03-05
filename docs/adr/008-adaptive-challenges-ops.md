@@ -37,13 +37,15 @@ A `security_event` table stores durable, queryable records of security-relevant 
 
 ```sql
 create table if not exists security_event (
-    id integer primary key,
+    id integer primary key autoincrement,
     type text not null,
     ip_address text not null,
     user_id integer,
+    user_agent text,
+    status integer,
     detail text,
-    created_at text not null default current_timestamp,
-    actor_id text not null
+    created_at text not null default (datetime('now')),
+    actor_id text not null default 'app:private-landing'
 );
 
 create index if not exists idx_security_event_type on security_event(type);
@@ -74,9 +76,10 @@ The `obsEmit` middleware inspects the response status — if >= 400, it rewrites
 | `session.ops_revoke` | `POST /ops/sessions/revoke` | `{ scope, id?, revoked }` |
 | `agent.provisioned` | `POST /ops/agents` | `{ name, trustLevel }` |
 | `agent.revoked` | `DELETE /ops/agents/:name` | `{ name }` |
-| `agent.auth_failure` | `requireAgentKey` middleware | `{ keyHashPrefix }` |
+| `agent.auth_failure` | `requireAgentKey` middleware | `{ code, path }` |
 | `challenge.issued` | `adaptiveChallenge` middleware | `{ difficulty }` |
 | `challenge.failed` | `adaptiveChallenge` middleware | `{ difficulty }` |
+| `registration.failure` | `/auth/register` | `{ email? }` (domain only) |
 | `rate_limit.reject` | `onLimited` callback (rate limiter) | `{ prefix }` |
 
 **Email handling:** Failed login events store only the domain portion of the submitted email (`*@example.com`) to support abuse-pattern detection without logging credentials or full identifiers.
@@ -98,7 +101,7 @@ The login endpoint can require clients to solve SHA-256 proof-of-work challenges
 
 #### Escalation Logic
 
-The `adaptiveChallenge` middleware runs before the login handler. It queries the `security_event` table for failure events from the requesting IP within a configurable time window (default: `login.failure`; configurable via `adaptiveChallengeFor({ eventType })` for other endpoints):
+The `adaptiveChallenge` middleware runs before the login handler. It queries the `security_event` table for failure events from the requesting IP within a configurable time window (default: `login.failure`; configurable via `adaptiveChallengeFor({ eventType })` for other endpoints). The failure count includes `challenge.issued` and `challenge.failed` events in addition to the configured event type, so challenge interactions themselves contribute to escalation:
 
 | Failures (window) | Response |
 |---|---|
@@ -141,11 +144,12 @@ Agents are non-human principals that interact with the `/ops` API. Each agent ha
 
 ```sql
 create table if not exists agent_credential (
-    id integer primary key,
+    id integer primary key autoincrement,
     name text not null unique,
     key_hash text not null,
-    trust_level text not null check (trust_level in ('read', 'write')),
-    created_at text not null default current_timestamp,
+    trust_level text not null default 'read' check (trust_level in ('read', 'write')),
+    description text,
+    created_at text not null default (datetime('now')),
     revoked_at text
 );
 

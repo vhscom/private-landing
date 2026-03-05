@@ -17,4 +17,5 @@ export interface Env {
 	CACHE_URL?: string;
 	CACHE_TOKEN?: string;
 	AGENT_PROVISIONING_SECRET?: string;
+	WS_ALLOWED_ORIGINS?: string;
 }

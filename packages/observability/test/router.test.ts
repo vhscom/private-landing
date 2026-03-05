@@ -12,15 +12,60 @@ import type { OpsVariables } from "../src/require-agent-key";
 
 const mockExecute = vi.fn();
 const mockEnsureSchema = vi.fn();
+const mockGetClientIp = vi.hoisted(() => vi.fn(() => "192.0.2.1"));
 
 vi.mock("@private-landing/infrastructure", () => ({
 	createDbClient: vi.fn(() => ({ execute: mockExecute })),
 }));
 
-vi.mock("@private-landing/core", () => ({
-	timingSafeEqual: vi.fn(),
-	defaultGetClientIp: vi.fn(() => "192.0.2.1"),
-}));
+vi.mock("@private-landing/core", () => {
+	// biome-ignore lint/suspicious/noExplicitAny: test mock
+	type Ctx = any;
+	return {
+		timingSafeEqual: vi.fn(),
+		defaultGetClientIp: mockGetClientIp,
+		// Mock rate limiter that mirrors the real fixed-window algorithm but
+		// uses mockGetClientIp instead of getConnInfo (unavailable in tests)
+		createRateLimiter: (
+			deps: { createCacheClient?: (env: unknown) => unknown } | null,
+		) => {
+			if (!deps) {
+				return () => async (_ctx: Ctx, next: () => Promise<void>) => next();
+			}
+			const { createCacheClient } = deps;
+			return (config: {
+				windowSeconds: number;
+				max: number;
+				prefix: string;
+				onLimited?: (ctx: Ctx) => void;
+			}) =>
+				async (ctx: Ctx, next: () => Promise<void>) => {
+					try {
+						const cache = createCacheClient?.(ctx.env) as {
+							incr: (k: string) => Promise<number>;
+							expire: (k: string, s: number) => Promise<boolean>;
+						};
+						const ip = mockGetClientIp(ctx);
+						const key = `${config.prefix}:${ip}`;
+						const count = await cache.incr(key);
+						if (count === 1) await cache.expire(key, config.windowSeconds);
+						if (count > config.max) {
+							config.onLimited?.(ctx);
+							ctx.res = ctx.json(
+								{ error: "Too many requests", code: "RATE_LIMIT" },
+								429,
+								{ "Retry-After": String(config.windowSeconds) },
+							);
+							return;
+						}
+					} catch {
+						// fail open
+					}
+					await next();
+				};
+		},
+	};
+});
 
 const mockProcessEvent = vi.fn().mockResolvedValue(undefined);
 
@@ -56,9 +101,19 @@ const baseEnv: AppEnv["Bindings"] = {
 /** Agent credential row returned by requireAgentKey's DB lookup. */
 const AGENT_ROW = { id: 1, name: "test-agent", trust_level: "write" };
 
-function buildApp() {
-	const router = createOpsRouter({});
+function buildApp(routerDeps: Parameters<typeof createOpsRouter>[0] = {}) {
+	const router = createOpsRouter(routerDeps);
 	const app = new Hono<AppEnv>();
+	// Provide mock executionCtx so waitUntil-based event emission works in tests
+	app.use("*", async (ctx, next) => {
+		Object.defineProperty(ctx, "executionCtx", {
+			get: () => ({
+				waitUntil: () => {},
+				passThroughOnException: () => {},
+			}),
+		});
+		await next();
+	});
 	app.route("/ops", router);
 	return app;
 }
@@ -616,41 +671,6 @@ describe("GET /ops/sessions", () => {
 	});
 });
 
-describe("GET /ops/events — since param", () => {
-	beforeEach(() => {
-		mockExecute.mockReset();
-	});
-
-	it("uses provided since param when valid", async () => {
-		withAgentAuth({ rows: [] });
-		const app = buildApp();
-		const since = "2026-03-01T00:00:00.000Z";
-		const res = await app.request(
-			`/ops/events?since=${since}`,
-			{ headers: { Authorization: "Bearer valid-key" } },
-			baseEnv,
-		);
-		expect(res.status).toBe(200);
-		const lastCall = mockExecute.mock.calls[mockExecute.mock.calls.length - 1];
-		expect(lastCall[0].args[0]).toBe(since);
-	});
-
-	it("falls back to 24h default when since is invalid", async () => {
-		withAgentAuth({ rows: [] });
-		const app = buildApp();
-		const res = await app.request(
-			"/ops/events?since=not-a-date",
-			{ headers: { Authorization: "Bearer valid-key" } },
-			baseEnv,
-		);
-		expect(res.status).toBe(200);
-		const lastCall = mockExecute.mock.calls[mockExecute.mock.calls.length - 1];
-		// Should be a valid ISO string (24h default), not "not-a-date"
-		expect(lastCall[0].args[0]).not.toBe("not-a-date");
-		expect(new Date(lastCall[0].args[0]).getTime()).not.toBeNaN();
-	});
-});
-
 describe("GET /ops/events — actor_id filter", () => {
 	beforeEach(() => {
 		mockExecute.mockReset();
@@ -722,6 +742,41 @@ describe("GET /ops/events — actor_id filter", () => {
 	});
 });
 
+describe("GET /ops/events — since param", () => {
+	beforeEach(() => {
+		mockExecute.mockReset();
+	});
+
+	it("uses provided since param when valid ISO date", async () => {
+		withAgentAuth({ rows: [] });
+		const app = buildApp();
+		const since = "2026-02-01T00:00:00Z";
+		const res = await app.request(
+			`/ops/events?since=${encodeURIComponent(since)}`,
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		expect(res.status).toBe(200);
+		const lastCall = mockExecute.mock.calls[mockExecute.mock.calls.length - 1];
+		expect(lastCall[0].args[0]).toBe(since);
+	});
+
+	it("falls back to 24h default when since param is invalid", async () => {
+		withAgentAuth({ rows: [] });
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/events?since=not-a-date",
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		expect(res.status).toBe(200);
+		const lastCall = mockExecute.mock.calls[mockExecute.mock.calls.length - 1];
+		// Should be an ISO date string ~24h ago, not "not-a-date"
+		expect(lastCall[0].args[0]).not.toBe("not-a-date");
+		expect(lastCall[0].args[0]).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+	});
+});
+
 describe("GET /ops/events — DB error", () => {
 	beforeEach(() => {
 		mockExecute.mockReset();
@@ -772,18 +827,18 @@ describe("GET /ops/events/stats", () => {
 	it("uses provided since param when valid", async () => {
 		withAgentAuth({ rows: [] });
 		const app = buildApp();
-		const since = "2026-03-01T00:00:00.000Z";
+		const since = "2026-02-15T12:00:00Z";
 		const res = await app.request(
-			`/ops/events/stats?since=${since}`,
+			`/ops/events/stats?since=${encodeURIComponent(since)}`,
 			{ headers: { Authorization: "Bearer valid-key" } },
 			baseEnv,
 		);
 		expect(res.status).toBe(200);
-		const lastCall = mockExecute.mock.calls[mockExecute.mock.calls.length - 1];
-		expect(lastCall[0].args[0]).toBe(since);
+		const body = await res.json();
+		expect(body.since).toBe(since);
 	});
 
-	it("falls back to 24h default when since is invalid", async () => {
+	it("falls back to 24h default when since param is invalid", async () => {
 		withAgentAuth({ rows: [] });
 		const app = buildApp();
 		const res = await app.request(
@@ -792,9 +847,9 @@ describe("GET /ops/events/stats", () => {
 			baseEnv,
 		);
 		expect(res.status).toBe(200);
-		const lastCall = mockExecute.mock.calls[mockExecute.mock.calls.length - 1];
-		expect(lastCall[0].args[0]).not.toBe("garbage");
-		expect(new Date(lastCall[0].args[0]).getTime()).not.toBeNaN();
+		const body = await res.json();
+		expect(body.since).not.toBe("garbage");
+		expect(body.since).toMatch(/^\d{4}-\d{2}-\d{2}T/);
 	});
 
 	it("returns 401 without auth", async () => {
@@ -957,6 +1012,379 @@ describe("POST /ops/sessions/revoke — validation", () => {
 		const body = await res.json();
 		expect(body.code).toBe("REVOCATION_ERROR");
 		consoleSpy.mockRestore();
+	});
+});
+
+describe("GET /ops/ws origin validation", () => {
+	beforeEach(() => {
+		mockExecute.mockReset();
+		mockProcessEvent.mockReset().mockResolvedValue(undefined);
+	});
+
+	it("passes through when no Origin header is sent", async () => {
+		withAgentAuth();
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/ws",
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		// Without a real WebSocket upgrader the request won't be 101,
+		// but it should NOT be 403 — origin middleware passed.
+		expect(res.status).not.toBe(403);
+	});
+
+	it("returns 403 when Origin is sent but WS_ALLOWED_ORIGINS is empty", async () => {
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/ws",
+			{
+				headers: {
+					Authorization: "Bearer valid-key",
+					Origin: "http://evil.com",
+				},
+			},
+			baseEnv,
+		);
+		expect(res.status).toBe(403);
+		const body = await res.json();
+		expect(body.error).toBe("Forbidden");
+	});
+
+	it("passes through when Origin matches WS_ALLOWED_ORIGINS", async () => {
+		withAgentAuth();
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/ws",
+			{
+				headers: {
+					Authorization: "Bearer valid-key",
+					Origin: "http://localhost:3000",
+				},
+			},
+			{ ...baseEnv, WS_ALLOWED_ORIGINS: "http://localhost:3000" },
+		);
+		expect(res.status).not.toBe(403);
+	});
+
+	it("returns 403 when Origin does not match WS_ALLOWED_ORIGINS", async () => {
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/ws",
+			{
+				headers: {
+					Authorization: "Bearer valid-key",
+					Origin: "http://evil.com",
+				},
+			},
+			{ ...baseEnv, WS_ALLOWED_ORIGINS: "http://localhost:3000" },
+		);
+		expect(res.status).toBe(403);
+	});
+
+	it("emits ws.connect_failure event on origin rejection", async () => {
+		const app = buildApp();
+		await app.request(
+			"/ops/ws",
+			{
+				headers: {
+					Authorization: "Bearer valid-key",
+					Origin: "http://evil.com",
+				},
+			},
+			baseEnv,
+		);
+		await vi.waitFor(() => {
+			expect(mockProcessEvent).toHaveBeenCalledWith(
+				expect.objectContaining({
+					type: "ws.connect_failure",
+					actorId: "app:private-landing",
+					detail: { reason: "origin_rejected", origin: "http://evil.com" },
+				}),
+				expect.anything(),
+			);
+		});
+	});
+});
+
+describe("GET /ops/ws rate limiting", () => {
+	/** Promises captured by mock waitUntil — await to flush onLimited events. */
+	let waitUntilPromises: Promise<unknown>[];
+
+	/** Build an app with mock executionCtx so onLimited's waitUntil works. */
+	function buildCachedApp(mockCache: ReturnType<typeof createMockCache>) {
+		waitUntilPromises = [];
+		const router = createOpsRouter({
+			createCacheClient: () => mockCache.client,
+		});
+		const app = new Hono<AppEnv>();
+		// Provide mock executionCtx.waitUntil for onLimited event emission
+		app.use("*", async (ctx, next) => {
+			Object.defineProperty(ctx, "executionCtx", {
+				get: () => ({
+					waitUntil: (p: Promise<unknown>) => {
+						waitUntilPromises.push(p);
+					},
+					passThroughOnException: () => {},
+				}),
+			});
+			await next();
+		});
+		app.route("/ops", router);
+		return app;
+	}
+
+	function createMockCache() {
+		const store = new Map<string, string>();
+		const counters = new Map<string, number>();
+		const sets = new Map<string, Set<string>>();
+		return {
+			store,
+			counters,
+			sets,
+			client: {
+				get: vi.fn(async (key: string) => store.get(key) ?? null),
+				set: vi.fn(async (key: string, val: string) => {
+					store.set(key, val);
+				}),
+				del: vi.fn(async (...keys: string[]) => {
+					let removed = 0;
+					for (const k of keys) {
+						if (store.delete(k)) removed++;
+						if (counters.delete(k)) removed++;
+						if (sets.delete(k)) removed++;
+					}
+					return removed;
+				}),
+				incr: vi.fn(async (key: string) => {
+					const val = (counters.get(key) ?? 0) + 1;
+					counters.set(key, val);
+					return val;
+				}),
+				expire: vi.fn(async () => true),
+				sadd: vi.fn(async () => 0),
+				srem: vi.fn(async () => 0),
+				scard: vi.fn(async () => 0),
+				smembers: vi.fn(async () => []),
+			},
+		};
+	}
+
+	beforeEach(() => {
+		mockExecute.mockReset();
+		mockProcessEvent.mockReset().mockResolvedValue(undefined);
+	});
+
+	it("degrades to no-op when cache is absent (default buildApp)", async () => {
+		withAgentAuth();
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/ws",
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		// No cache → rate limiter is no-op → request passes through
+		expect(res.status).not.toBe(429);
+	});
+
+	it("returns 429 when connection rate exceeds limit", async () => {
+		const mock = createMockCache();
+		const app = buildCachedApp(mock);
+
+		// Exhaust the 10-request limit
+		for (let i = 0; i < 10; i++) {
+			withAgentAuth();
+			await app.request(
+				"/ops/ws",
+				{ headers: { Authorization: "Bearer valid-key" } },
+				baseEnv,
+			);
+		}
+
+		// 11th request should be rate limited
+		const res = await app.request(
+			"/ops/ws",
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		expect(res.status).toBe(429);
+		expect(res.headers.get("Retry-After")).toBe("60");
+	});
+
+	it("emits rate_limit.reject on ws upgrade rate limit", async () => {
+		const mock = createMockCache();
+		// Pre-seed counter past limit
+		mock.counters.set("rl:ws:connect:192.0.2.1", 10);
+		const app = buildCachedApp(mock);
+
+		await app.request(
+			"/ops/ws",
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+
+		// Flush waitUntil promises from onLimited callback
+		await Promise.all(waitUntilPromises);
+
+		expect(mockProcessEvent).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "rate_limit.reject",
+				actorId: "app:private-landing",
+				detail: { path: "/ops/ws", limit: "ws:connect" },
+			}),
+			expect.anything(),
+		);
+	});
+
+	it("rate limiter runs before origin validation", async () => {
+		const mock = createMockCache();
+		mock.counters.set("rl:ws:connect:192.0.2.1", 10);
+		const app = buildCachedApp(mock);
+
+		// Send with Origin header — should get 429 (rate limit) not 403 (origin)
+		const res = await app.request(
+			"/ops/ws",
+			{
+				headers: {
+					Authorization: "Bearer valid-key",
+					Origin: "http://evil.com",
+				},
+			},
+			baseEnv,
+		);
+		expect(res.status).toBe(429);
+	});
+});
+
+describe("GET /ops/ws adaptive PoW", () => {
+	beforeEach(() => {
+		mockExecute.mockReset();
+		mockEnsureSchema.mockReset();
+		mockProcessEvent.mockReset().mockResolvedValue(undefined);
+	});
+
+	it("passes through when ws.connect_failure count is below threshold", async () => {
+		// computeChallenge query returns low failure count
+		mockExecute.mockResolvedValueOnce({ rows: [{ count: 1 }] });
+		// requireAgentKey lookup
+		withAgentAuth();
+
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/ws",
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		// Should pass adaptive challenge → hit requireAgentKey → proceed
+		expect(res.status).not.toBe(403);
+	});
+
+	it("returns 403 with challenge when ws.connect_failure count exceeds threshold", async () => {
+		// computeChallenge query returns high failure count
+		mockExecute.mockResolvedValueOnce({ rows: [{ count: 5 }] });
+
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/ws",
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		expect(res.status).toBe(403);
+		const body = await res.json();
+		expect(body.error).toBe("Challenge required");
+		expect(body.challenge).toMatchObject({
+			type: "pow",
+			difficulty: expect.any(Number),
+			nonce: expect.any(String),
+		});
+	});
+
+	it("accepts valid PoW solution via query params", async () => {
+		// computeChallenge query returns failures above threshold
+		mockExecute.mockResolvedValueOnce({ rows: [{ count: 5 }] });
+
+		const app = buildApp();
+
+		// First request to get the challenge nonce
+		const challengeRes = await app.request(
+			"/ops/ws",
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		const { challenge } = (await challengeRes.json()) as {
+			challenge: { nonce: string; difficulty: number };
+		};
+
+		// Solve the PoW
+		const prefix = "0".repeat(challenge.difficulty);
+		let solution = 0;
+		while (true) {
+			const hash = Array.from(
+				new Uint8Array(
+					await crypto.subtle.digest(
+						"SHA-256",
+						new TextEncoder().encode(challenge.nonce + String(solution)),
+					),
+				),
+			)
+				.map((b) => b.toString(16).padStart(2, "0"))
+				.join("");
+			if (hash.startsWith(prefix)) break;
+			solution++;
+		}
+
+		// Second request with solution in query params
+		mockExecute.mockResolvedValueOnce({ rows: [{ count: 5 }] });
+		withAgentAuth();
+
+		const res = await app.request(
+			`/ops/ws?challengeNonce=${challenge.nonce}&challengeSolution=${solution}`,
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		// Should pass adaptive challenge → proceed past it
+		expect(res.status).not.toBe(403);
+	});
+
+	it("rejects forged nonce", async () => {
+		// computeChallenge query returns failures above threshold
+		mockExecute.mockResolvedValueOnce({ rows: [{ count: 5 }] });
+
+		const app = buildApp();
+		const res = await app.request(
+			"/ops/ws?challengeNonce=fakecnonce&challengeSolution=wrong",
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		expect(res.status).toBe(403);
+		const body = await res.json();
+		expect(body.error).toBe("Invalid or expired nonce");
+	});
+
+	it("rejects invalid PoW solution with valid nonce", async () => {
+		// Get a real signed nonce
+		mockExecute.mockResolvedValueOnce({ rows: [{ count: 5 }] });
+
+		const app = buildApp();
+		const challengeRes = await app.request(
+			"/ops/ws",
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		const { challenge } = (await challengeRes.json()) as {
+			challenge: { nonce: string; difficulty: number };
+		};
+
+		// Submit the real nonce with a wrong solution
+		mockExecute.mockResolvedValueOnce({ rows: [{ count: 5 }] });
+		const res = await app.request(
+			`/ops/ws?challengeNonce=${challenge.nonce}&challengeSolution=wrong`,
+			{ headers: { Authorization: "Bearer valid-key" } },
+			baseEnv,
+		);
+		expect(res.status).toBe(403);
+		const body = await res.json();
+		expect(body.error).toBe("Invalid solution");
 	});
 });
 

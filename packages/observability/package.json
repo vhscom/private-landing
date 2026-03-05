@@ -34,6 +34,7 @@
 		"@private-landing/infrastructure": "workspace:*",
 		"@private-landing/types": "workspace:*",
 		"hono": "^4.11.5",
+		"nanoid": "^5.1.5",
 		"zod": "^4.3.5"
 	},
 	"devDependencies": {

@@ -5,7 +5,11 @@
  * @license Apache-2.0
  */
 
-import { defaultGetClientIp, timingSafeEqual } from "@private-landing/core";
+import {
+	createRateLimiter,
+	defaultGetClientIp,
+	timingSafeEqual,
+} from "@private-landing/core";
 import {
 	type CacheClientFactory,
 	createDbClient,
@@ -13,6 +17,7 @@ import {
 import type { Env, GetClientIpFn } from "@private-landing/types";
 import { Hono } from "hono";
 import { z } from "zod";
+import { createAdaptiveChallenge } from "./middleware";
 import { APP_ACTOR_ID, processEvent } from "./process-event";
 import {
 	getAgentPrincipal,
@@ -21,6 +26,8 @@ import {
 	requireAgentKey,
 } from "./require-agent-key";
 import { ensureSchema } from "./schema";
+import { createWsHandler } from "./ws";
+import { upgradeWebSocket } from "./ws/upgrade";
 
 export interface OpsRouterDeps {
 	createCacheClient?: CacheClientFactory;
@@ -35,6 +42,24 @@ export function createOpsRouter(deps: OpsRouterDeps) {
 	}>();
 
 	const getClientIp = deps.getClientIp ?? defaultGetClientIp;
+
+	const wsConnectLimit = createRateLimiter(
+		deps.createCacheClient
+			? { createCacheClient: deps.createCacheClient }
+			: null,
+	)({
+		windowSeconds: 60,
+		max: 10,
+		prefix: "rl:ws:connect",
+		onLimited: (ctx) => {
+			ctx.executionCtx.waitUntil(
+				emitOpsEvent(ctx, "rate_limit.reject", APP_ACTOR_ID, {
+					path: "/ops/ws",
+					limit: "ws:connect",
+				}),
+			);
+		},
+	});
 
 	/** Awaited event emission for mutating ops routes. */
 	async function emitOpsEvent(
@@ -427,6 +452,52 @@ export function createOpsRouter(deps: OpsRouterDeps) {
 			return ctx.json({ error: "Internal error", code: "INTERNAL_ERROR" }, 500);
 		}
 	});
+
+	// WebSocket gateway — capability negotiation + RPC dispatch (ADR-009)
+	router.get(
+		"/ws",
+		// ADR-009 Phase 0 step 2: IP-keyed rate limit (degrades to no-op without cache)
+		wsConnectLimit,
+		// ADR-009 Phase 0 step 3: origin validation — browser CSRF defense only.
+		// Non-browser clients (CLI agents, curl) omit Origin and bypass this check;
+		// they are authenticated downstream by requireAgentKey (Bearer token).
+		async (ctx, next) => {
+			const origin = ctx.req.header("origin");
+			if (origin !== undefined) {
+				const allowed = (ctx.env.WS_ALLOWED_ORIGINS ?? "")
+					.split(",")
+					.filter(Boolean);
+				if (!allowed.includes(origin)) {
+					await emitOpsEvent(ctx, "ws.connect_failure", APP_ACTOR_ID, {
+						reason: "origin_rejected",
+						origin,
+					});
+					return ctx.json({ error: "Forbidden" }, 403);
+				}
+			}
+			return next();
+		},
+		// ADR-009 Phase 0 step 4: adaptive PoW (triggers on ws.connect_failure history)
+		createAdaptiveChallenge(getClientIp, { eventType: "ws.connect_failure" }),
+		requireAgentKey,
+		/* v8 ignore start — callback runs inside WebSocketPair upgrade; handler logic covered by test/ws/handler.test.ts */
+		upgradeWebSocket((ctx) => {
+			const principal = getAgentPrincipal(ctx);
+			let ipAddress = "unknown";
+			try {
+				ipAddress = getClientIp(ctx as unknown as Parameters<GetClientIpFn>[0]);
+			} catch {
+				// getConnInfo may not be available in all contexts
+			}
+			return createWsHandler(principal, {
+				env: ctx.env,
+				ipAddress,
+				ua: ctx.req.header("user-agent") ?? "",
+				createCacheClient: deps.createCacheClient,
+			});
+		}),
+		/* v8 ignore stop */
+	);
 
 	return router;
 }

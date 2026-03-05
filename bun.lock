@@ -12,7 +12,7 @@
     },
     "apps/cloudflare-workers": {
       "name": "@private-landing/cloudflare-workers",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "dependencies": {
         "@libsql/client": "^0.15.0",
         "@private-landing/core": "workspace:*",
@@ -37,7 +37,7 @@
     },
     "packages/core": {
       "name": "@private-landing/core",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "dependencies": {
         "@libsql/client": "^0.15.0",
         "@private-landing/infrastructure": "workspace:*",
@@ -54,7 +54,7 @@
     },
     "packages/infrastructure": {
       "name": "@private-landing/infrastructure",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "dependencies": {
         "@libsql/client": "^0.15.0",
         "@private-landing/types": "workspace:*",
@@ -67,12 +67,13 @@
     },
     "packages/observability": {
       "name": "@private-landing/observability",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "dependencies": {
         "@private-landing/core": "workspace:*",
         "@private-landing/infrastructure": "workspace:*",
         "@private-landing/types": "workspace:*",
         "hono": "^4.11.5",
+        "nanoid": "^5.1.5",
         "zod": "^4.3.5",
       },
       "devDependencies": {
@@ -83,7 +84,7 @@
     },
     "packages/schemas": {
       "name": "@private-landing/schemas",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "dependencies": {
         "zod": "^4.3.5",
       },
@@ -95,7 +96,7 @@
     },
     "packages/types": {
       "name": "@private-landing/types",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "dependencies": {
         "hono": "^4.11.5",
       },
@@ -404,7 +405,7 @@
 
     "brace-expansion": ["brace-expansion@2.0.2", "", { "dependencies": { "balanced-match": "^1.0.0" } }, "sha512-Jt0vHyM+jmUBqojB7E1NIYadt0vI0Qxjxd2TErW94wDz+E2LAm5vKMXXwg6ZZBTHPuUlDgQHKXvjGBdfcF1ZDQ=="],
 
-    "bun-types": ["bun-types@1.3.9", "", { "dependencies": { "@types/node": "*" } }, "sha512-+UBWWOakIP4Tswh0Bt0QD0alpTY8cb5hvgiYeWCMet9YukHbzuruIEeXC2D7nMJPB12kbh8C7XJykSexEqGKJg=="],
+    "bun-types": ["bun-types@1.3.10", "", { "dependencies": { "@types/node": "*" } }, "sha512-tcpfCCl6XWo6nCVnpcVrxQ+9AYN1iqMIzgrSKYMB/fjLtV2eyAVEg7AxQJuCq/26R6HpKWykQXuSOq/21RYcbg=="],
 
     "cac": ["cac@6.7.14", "", {}, "sha512-b6Ilus+c3RrdDk+JhLKUAQfzzgLEPy6wcXqS7f/xe1EETvsDP6GORG7SFuOs6cID5YkqchW/LXZbX5bc8j7ZcQ=="],
 
@@ -621,8 +622,6 @@
     "@poppinss/dumper/supports-color": ["supports-color@10.2.2", "", {}, "sha512-SS+jx45GF1QjgEXQx4NJZV9ImqmO2NPz5FNsIHrsDjh2YsHnawpan7SNQ1o8NuhrbHZy9AZhIoCUiCeaW/C80g=="],
 
     "@private-landing/infrastructure/@cloudflare/workers-types": ["@cloudflare/workers-types@4.20250224.0", "", {}, "sha512-j6ZwQ5G2moQRaEtGI2u5TBQhVXv/XwOS5jfBAheZHcpCM07zm8j0i8jZHHLq/6VA8e6VRjKohOyj5j6tZ1KHLQ=="],
-
-    "@private-landing/types/bun-types": ["bun-types@1.3.10", "", { "dependencies": { "@types/node": "*" } }, "sha512-tcpfCCl6XWo6nCVnpcVrxQ+9AYN1iqMIzgrSKYMB/fjLtV2eyAVEg7AxQJuCq/26R6HpKWykQXuSOq/21RYcbg=="],
 
     "@types/bun/bun-types": ["bun-types@1.3.6", "", { "dependencies": { "@types/node": "*" } }, "sha512-OlFwHcnNV99r//9v5IIOgQ9Uk37gZqrNMCcqEaExdkVq3Avwqok1bJFmvGMCkCE0FqzdY8VMOZpfpR3lwI+CsQ=="],
 
