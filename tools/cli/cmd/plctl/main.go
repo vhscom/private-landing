@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
@@ -14,6 +16,7 @@ import (
 	"github.com/private-landing/cli/internal/api"
 	"github.com/private-landing/cli/internal/session"
 	"github.com/private-landing/cli/internal/ui"
+	"github.com/coder/websocket"
 )
 
 // states
@@ -29,6 +32,7 @@ const (
 	stateEventDetail
 	stateEventStats
 	stateAgents
+	stateTailEvents
 )
 
 type action int
@@ -44,6 +48,7 @@ const (
 	actionViewEvents
 	actionViewEventsForUser
 	actionViewEventStats
+	actionTailEvents
 	// Agents
 	actionListAgents
 	actionProvisionAgent
@@ -68,6 +73,7 @@ var menuItems = []menuItem{
 	{label: "View recent events", action: actionViewEvents},
 	{label: "View events for user", action: actionViewEventsForUser},
 	{label: "View event stats", action: actionViewEventStats},
+	{label: "Tail events (live)", action: actionTailEvents},
 
 	{label: "AGENTS", isHeader: true},
 	{label: "List agents", action: actionListAgents},
@@ -102,6 +108,24 @@ type agentsMsg struct {
 	err    error
 }
 
+type tailChallengeMsg struct {
+	challenge *api.ChallengeResult
+	err       error
+}
+
+type tailConnectedMsg struct {
+	conn *websocket.Conn
+	err  error
+}
+
+type tailEventMsg struct {
+	event api.Event
+}
+
+type tailErrorMsg struct {
+	err error
+}
+
 type model struct {
 	client   *api.Client
 	state    state
@@ -114,6 +138,7 @@ type model struct {
 	inputField  int
 	inputLabels []string
 	inputs      []string
+	inputHint   string
 
 	// result state
 	resultMessage string
@@ -127,6 +152,17 @@ type model struct {
 	eventSince  string
 	agents      []api.Agent
 	dataErr     error
+
+	// tail events state
+	tailEvents        []api.Event
+	tailFilter        []string // type filters (e.g. "login.*")
+	tailErr           error
+	tailConn          *websocket.Conn
+	tailChallenge     *api.ChallengeResult
+	tailKeepaliveStop chan struct{}
+
+	// terminal dimensions
+	width int
 }
 
 func initialModel(client *api.Client) model {
@@ -150,6 +186,9 @@ func (m model) Init() tea.Cmd {
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		return m, nil
 	case tea.KeyMsg:
 		return m.handleKey(msg)
 	case resultMsg:
@@ -181,6 +220,36 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.dataErr = msg.err
 		m.state = stateAgents
 		return m, nil
+	case tailChallengeMsg:
+		if msg.err != nil {
+			m.tailErr = msg.err
+			m.state = stateTailEvents
+			return m, nil
+		}
+		m.tailChallenge = msg.challenge
+		return m, m.dialAndSubscribe()
+	case tailConnectedMsg:
+		if msg.err != nil {
+			m.tailErr = msg.err
+			m.state = stateTailEvents
+			return m, nil
+		}
+		m.tailConn = msg.conn
+		m.tailKeepaliveStop = make(chan struct{})
+		go keepAlive(m.tailConn, m.tailKeepaliveStop)
+		m.state = stateTailEvents
+		return m, m.readNextEvent()
+	case tailEventMsg:
+		if msg.event.Type != "" {
+			m.tailEvents = append(m.tailEvents, msg.event)
+			if len(m.tailEvents) > 100 {
+				m.tailEvents = m.tailEvents[len(m.tailEvents)-100:]
+			}
+		}
+		return m, m.readNextEvent()
+	case tailErrorMsg:
+		m.tailErr = msg.err
+		return m, nil
 	}
 	return m, nil
 }
@@ -204,6 +273,8 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleEventsView(msg)
 	case stateEventDetail:
 		return m.handleEventDetail(msg)
+	case stateTailEvents:
+		return m.handleTailView(key)
 	case stateResult, stateSessions, stateEventStats, stateAgents:
 		return m.handleDataView(key)
 	}
@@ -260,6 +331,16 @@ func (m model) dispatchAction() (model, tea.Cmd) {
 	case actionViewEventStats:
 		m.eventStats = nil
 		return m, m.fetchEventStats()
+	case actionTailEvents:
+		m.tailEvents = nil
+		m.tailFilter = nil
+		m.tailErr = nil
+		m.tailConn = nil
+		m.tailChallenge = nil
+		m.startInput([]string{"Type filter (optional)"})
+		m.inputHint = "  Examples:  login.*, session.revoke, ws.*\n" +
+			"  Available: login.*, password.*, session.*, agent.*, challenge.*, ws.*, registration.*, rate_limit.*\n" +
+			"  Combine:   login.*,session.revoke"
 	case actionListAgents:
 		m.agents = nil
 		return m, m.fetchAgents()
@@ -290,6 +371,7 @@ func (m *model) startInput(labels []string) {
 	m.inputField = 0
 	m.inputLabels = labels
 	m.inputs = make([]string, 0, len(labels))
+	m.inputHint = ""
 	m.input.Clear()
 }
 
@@ -336,6 +418,16 @@ func (m model) afterInputComplete() (model, tea.Cmd) {
 		m.state = stateEvents
 		m.events = nil
 		return m, m.fetchEvents(m.inputs[0])
+	case actionTailEvents:
+		filter := strings.TrimSpace(m.inputs[0])
+		if filter != "" {
+			m.tailFilter = strings.Split(filter, ",")
+			for i := range m.tailFilter {
+				m.tailFilter[i] = strings.TrimSpace(m.tailFilter[i])
+			}
+		}
+		m.state = stateTailEvents
+		return m, m.probeChallenge()
 	case actionProvisionAgent:
 		m.state = stateConfirm
 		return m, nil
@@ -495,6 +587,184 @@ func (m model) fetchAgents() tea.Cmd {
 	}
 }
 
+func (m model) probeChallenge() tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		result, err := m.client.ProbeChallenge(ctx)
+		return tailChallengeMsg{challenge: result, err: err}
+	}
+}
+
+func (m model) dialAndSubscribe() tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+
+		conn, err := m.client.ConnectWS(ctx, m.tailChallenge)
+		if err != nil {
+			return tailConnectedMsg{err: err}
+		}
+
+		// Send capability.request
+		capReq := api.WSCapabilitiesRequest{
+			Type:         "capability.request",
+			Capabilities: []string{"subscribe_events"},
+		}
+		data, _ := json.Marshal(capReq)
+		if err := conn.Write(ctx, websocket.MessageText, data); err != nil {
+			conn.Close(websocket.StatusNormalClosure, "")
+			return tailConnectedMsg{err: fmt.Errorf("write capabilities: %w", err)}
+		}
+
+		// Read capability.granted
+		_, capResp, err := conn.Read(ctx)
+		if err != nil {
+			conn.Close(websocket.StatusNormalClosure, "")
+			return tailConnectedMsg{err: fmt.Errorf("read capabilities: %w", err)}
+		}
+		var granted api.WSCapabilitiesGranted
+		if err := json.Unmarshal(capResp, &granted); err != nil {
+			conn.Close(websocket.StatusNormalClosure, "")
+			return tailConnectedMsg{err: fmt.Errorf("decode capabilities: %w", err)}
+		}
+		hasSubscribe := false
+		for _, c := range granted.Granted {
+			if c == "subscribe_events" {
+				hasSubscribe = true
+				break
+			}
+		}
+		if !hasSubscribe {
+			conn.Close(websocket.StatusNormalClosure, "")
+			return tailConnectedMsg{err: fmt.Errorf("subscribe_events capability denied")}
+		}
+
+		// Send subscribe_events
+		subReq := api.WSSubscribeRequest{
+			Type:    "subscribe_events",
+			ID:      "tail-1",
+			Payload: api.WSSubscribePayload{Types: m.tailFilter},
+		}
+		data, _ = json.Marshal(subReq)
+		if err := conn.Write(ctx, websocket.MessageText, data); err != nil {
+			conn.Close(websocket.StatusNormalClosure, "")
+			return tailConnectedMsg{err: fmt.Errorf("write subscribe: %w", err)}
+		}
+
+		// Read subscribe ack
+		_, subResp, err := conn.Read(ctx)
+		if err != nil {
+			conn.Close(websocket.StatusNormalClosure, "")
+			return tailConnectedMsg{err: fmt.Errorf("read subscribe ack: %w", err)}
+		}
+		var envelope api.WSEnvelope
+		if err := json.Unmarshal(subResp, &envelope); err != nil || (envelope.OK != nil && !*envelope.OK) {
+			conn.Close(websocket.StatusNormalClosure, "")
+			return tailConnectedMsg{err: fmt.Errorf("subscribe rejected")}
+		}
+
+		return tailConnectedMsg{conn: conn}
+	}
+}
+
+func (m model) readNextEvent() tea.Cmd {
+	return func() tea.Msg {
+		if m.tailConn == nil {
+			return tailErrorMsg{err: fmt.Errorf("no connection")}
+		}
+		_, data, err := m.tailConn.Read(context.Background())
+		if err != nil {
+			return tailErrorMsg{err: err}
+		}
+		var envelope api.WSEnvelope
+		if err := json.Unmarshal(data, &envelope); err != nil {
+			return tailErrorMsg{err: fmt.Errorf("decode message: %w", err)}
+		}
+		switch envelope.Type {
+		case "credential.revoked":
+			return tailErrorMsg{err: fmt.Errorf("agent credential revoked")}
+		case "event":
+			var wsEvt api.WSEvent
+			if err := json.Unmarshal(data, &wsEvt); err != nil {
+				return tailErrorMsg{err: fmt.Errorf("decode event: %w", err)}
+			}
+			p := wsEvt.Payload
+			var detail *string
+			if p.Detail != nil {
+				s := string(*p.Detail)
+				detail = &s
+			}
+			return tailEventMsg{event: api.Event{
+				ID:        p.EventID,
+				Type:      p.EventType,
+				IPAddress: p.IPAddress,
+				UserID:    p.UserID,
+				Detail:    detail,
+				CreatedAt: p.CreatedAt,
+				ActorID:   p.ActorID,
+			}}
+		default:
+			// Protocol messages (heartbeat, pong) — skip and read next
+			return tailEventMsg{event: api.Event{Type: ""}}
+		}
+	}
+}
+
+func (m *model) closeTail() {
+	if m.tailKeepaliveStop != nil {
+		close(m.tailKeepaliveStop)
+		m.tailKeepaliveStop = nil
+	}
+	if m.tailConn != nil {
+		// Best-effort unsubscribe
+		unsub := api.WSUnsubscribeRequest{Type: "unsubscribe_events", ID: "tail-2"}
+		data, _ := json.Marshal(unsub)
+		_ = m.tailConn.Write(context.Background(), websocket.MessageText, data)
+		m.tailConn.Close(websocket.StatusNormalClosure, "client disconnected")
+		m.tailConn = nil
+	}
+}
+
+// keepAlive sends application-level ping messages to prevent ping timeout.
+// Runs as a goroutine alongside the read loop; github.com/coder/websocket supports
+// one concurrent reader + one concurrent writer.
+func keepAlive(conn *websocket.Conn, stop <-chan struct{}) {
+	ticker := time.NewTicker(60 * time.Second)
+	defer ticker.Stop()
+	seq := 0
+	for {
+		select {
+		case <-stop:
+			return
+		case <-ticker.C:
+			seq++
+			ping := api.WSPingRequest{
+				Type: "ping",
+				ID:   fmt.Sprintf("keepalive-%d", seq),
+			}
+			data, _ := json.Marshal(ping)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			_ = conn.Write(ctx, websocket.MessageText, data)
+			cancel()
+		}
+	}
+}
+
+func (m model) handleTailView(key string) (tea.Model, tea.Cmd) {
+	switch key {
+	case "esc":
+		m.closeTail()
+		m.state = stateMenu
+		m.tailEvents = nil
+		m.tailErr = nil
+		return m, nil
+	case "q":
+		m.closeTail()
+		m.quitting = true
+		return m, tea.Quit
+	}
+	return m, nil
+}
+
 func (m model) executeAction() tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
@@ -570,6 +840,8 @@ func (m model) View() string {
 		b.WriteString(m.viewEventStats())
 	case stateAgents:
 		b.WriteString(m.viewAgents())
+	case stateTailEvents:
+		b.WriteString(m.viewTailEvents())
 	}
 
 	b.WriteString("\n")
@@ -618,6 +890,10 @@ func (m model) viewInput() string {
 	b.WriteString(ui.PromptStyle.Render(fmt.Sprintf("Enter %s: ", label)))
 	b.WriteString(m.input.Value)
 	b.WriteString("█")
+	if m.inputHint != "" {
+		b.WriteString("\n\n")
+		b.WriteString(ui.DimStyle.Render(m.inputHint))
+	}
 	b.WriteString(ui.DimStyle.Render("\n\nenter confirm • esc back"))
 	return b.String()
 }
@@ -753,16 +1029,33 @@ func (m model) viewEventDetail() string {
 	if e.UserID != nil {
 		userID = fmt.Sprintf("%d", *e.UserID)
 	}
+	labels := []string{"Type", "IP", "User", "Actor", "Time"}
+	values := []string{e.Type, e.IPAddress, userID, e.ActorID, e.CreatedAt}
+
+	for i, label := range labels {
+		b.WriteString(fmt.Sprintf("  %s  %s\n", ui.HeaderStyle.Render(fmt.Sprintf("%-10s", label)), values[i]))
+	}
+
 	detail := "-"
 	if e.Detail != nil {
 		detail = *e.Detail
 	}
-
-	labels := []string{"Type", "IP", "User", "Actor", "Time", "Detail"}
-	values := []string{e.Type, e.IPAddress, userID, e.ActorID, e.CreatedAt, detail}
-
-	for i, label := range labels {
-		b.WriteString(fmt.Sprintf("  %s  %s\n", ui.HeaderStyle.Render(fmt.Sprintf("%-10s", label)), values[i]))
+	const labelWidth = 15 // "  " + 10-char label + "  "
+	maxDetail := m.width - labelWidth
+	if maxDetail < 20 {
+		maxDetail = 80
+	}
+	prefix := fmt.Sprintf("  %s  ", ui.HeaderStyle.Render(fmt.Sprintf("%-10s", "Detail")))
+	pad := strings.Repeat(" ", labelWidth)
+	for i := 0; i < len(detail); i += maxDetail {
+		end := min(i+maxDetail, len(detail))
+		if i == 0 {
+			b.WriteString(prefix)
+		} else {
+			b.WriteString(pad)
+		}
+		b.WriteString(detail[i:end])
+		b.WriteString("\n")
 	}
 
 	b.WriteString(ui.DimStyle.Render("\nesc back • q quit"))
@@ -856,6 +1149,69 @@ func (m model) viewAgents() string {
 	return b.String()
 }
 
+func (m model) viewTailEvents() string {
+	var b strings.Builder
+
+	if m.tailErr != nil {
+		b.WriteString(ui.ErrorStyle.Render(fmt.Sprintf("Error: %v", m.tailErr)))
+		b.WriteString(ui.DimStyle.Render("\n\nesc back • q quit"))
+		return b.String()
+	}
+
+	if m.tailConn == nil {
+		if m.tailChallenge != nil && m.tailChallenge.Required {
+			b.WriteString(ui.DimStyle.Render(
+				fmt.Sprintf("Solved PoW challenge (difficulty %d), connecting...", m.tailChallenge.Difficulty)))
+		} else if m.tailChallenge != nil {
+			b.WriteString(ui.DimStyle.Render("Connecting..."))
+		} else {
+			b.WriteString(ui.DimStyle.Render("Probing for PoW challenge..."))
+		}
+		return b.String()
+	}
+
+	header := "Tailing events (live)"
+	if len(m.tailFilter) > 0 {
+		header += fmt.Sprintf("  [%s]", strings.Join(m.tailFilter, ", "))
+	}
+	b.WriteString(ui.HeaderStyle.Render(header))
+	if len(m.tailEvents) > 0 {
+		b.WriteString(ui.DimStyle.Render(fmt.Sprintf("  %d event(s)", len(m.tailEvents))))
+	}
+	b.WriteString("\n\n")
+
+	if len(m.tailEvents) == 0 {
+		b.WriteString(ui.DimStyle.Render("Waiting for events..."))
+	} else {
+		// Show last 20 events that fit on screen
+		start := 0
+		if len(m.tailEvents) > 20 {
+			start = len(m.tailEvents) - 20
+		}
+		for _, e := range m.tailEvents[start:] {
+			// Extract just the time portion from ISO timestamp
+			ts := e.CreatedAt
+			if len(ts) >= 19 {
+				ts = ts[11:19]
+			}
+			userID := "-"
+			if e.UserID != nil {
+				userID = fmt.Sprintf("user:%d", *e.UserID)
+			}
+			line := fmt.Sprintf("  %s  %-24s  %-16s  %-10s  %s",
+				ts, e.Type, e.IPAddress, userID, e.ActorID)
+			if m.width > 0 && len(line) > m.width {
+				line = line[:m.width]
+			}
+			b.WriteString(line)
+			b.WriteString("\n")
+		}
+	}
+
+	b.WriteString(ui.DimStyle.Render("\nesc stop • q quit"))
+	return b.String()
+}
+
 func isSafeTarget(rawURL string) bool {
 	u, err := url.Parse(rawURL)
 	if err != nil {
@@ -903,6 +1259,7 @@ func printUsage() {
 	fmt.Println("    View recent events            " + dim("List security events (last 24h)"))
 	fmt.Println("    View events for user          " + dim("List events filtered by user ID"))
 	fmt.Println("    View event stats              " + dim("Aggregate event counts by type"))
+	fmt.Println("    Tail events (live)            " + dim("Stream security events in real time (supports filters: login.*, session.revoke)"))
 	fmt.Println()
 	fmt.Println("  " + label("Agents"))
 	fmt.Println("    List agents                   " + dim("Show active agent credentials"))
