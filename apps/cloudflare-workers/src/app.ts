@@ -162,18 +162,29 @@ app.use("/auth/*", rateLimit(rateLimits.auth));
 
 app.post("/auth/register", rateLimit(rateLimits.register), async (ctx) => {
 	const json = wantsJson(ctx);
+	let domain: string | undefined;
 	try {
 		const body = await parseRequestBody(ctx);
+		const email = (body as { email?: string }).email ?? "";
+		domain = email.includes("@") ? `*@${email.split("@").pop()}` : undefined;
 		await auth.accounts.createAccount(
 			body as { email: string; password: string },
 			ctx.env,
 		);
+		obsEmitEvent(ctx, {
+			type: "registration.success",
+			detail: { email: domain },
+		});
 		if (json) {
 			return ctx.json({ success: true, message: "Account created" }, 201);
 		}
 		return ctx.redirect("/#registered");
 	} catch (error: unknown) {
 		console.error("Registration error:", error);
+		obsEmitEvent(ctx, {
+			type: "registration.failure",
+			detail: { email: domain },
+		});
 		if (json) {
 			if (error instanceof ValidationError) {
 				return ctx.json({ error: error.message, code: error.code }, 400);

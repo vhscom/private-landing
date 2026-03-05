@@ -394,7 +394,8 @@ login.success        login.failure           password.change
 session.revoke       session.revoke_all      session.ops_revoke
 agent.auth_failure   agent.provisioned       agent.revoked
 capability.granted   capability.denied       challenge.issued
-challenge.failed     registration.failure    rate_limit.reject
+challenge.failed     registration.success    registration.failure
+rate_limit.reject
 ws.connect           ws.connect_failure      ws.disconnect
 ws.unauthorized      ws.credential_revoked
 ```

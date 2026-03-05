@@ -46,7 +46,39 @@ describe("[obs-plugin] event emission", () => {
 	afterAll(async () => {
 		await cleanupSecurityEvents(dbClient);
 		await cleanupSuiteUser(dbClient, SUITE_EMAIL);
+		await dbClient.execute(
+			"DELETE FROM account WHERE email LIKE 'obs-reg-%@example.com'",
+		);
 		dbClient.close();
+	});
+
+	it("stores registration.success event after successful registration", async () => {
+		await cleanupSecurityEvents(dbClient);
+
+		const formData = createCredentialsFormData(
+			`obs-reg-success-${Date.now()}@example.com`,
+			"SecurePassword123!",
+		);
+		await makeRequest("/auth/register", {
+			method: "POST",
+			body: formData,
+			headers: { Accept: "application/json" },
+		});
+
+		expect(await pollForEvent("registration.success")).toBe(true);
+	});
+
+	it("stores registration.failure event after failed registration", async () => {
+		await cleanupSecurityEvents(dbClient);
+
+		const formData = createCredentialsFormData("not-an-email", "short");
+		await makeRequest("/auth/register", {
+			method: "POST",
+			body: formData,
+			headers: { Accept: "application/json" },
+		});
+
+		expect(await pollForEvent("registration.failure")).toBe(true);
 	});
 
 	it("stores login.failure event after failed login", async () => {

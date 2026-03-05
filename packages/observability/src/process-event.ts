@@ -28,6 +28,7 @@ export const EventTypes = {
 	AGENT_REVOKED: "agent.revoked",
 	CHALLENGE_ISSUED: "challenge.issued",
 	CHALLENGE_FAILED: "challenge.failed",
+	REGISTRATION_SUCCESS: "registration.success",
 	REGISTRATION_FAILURE: "registration.failure",
 	RATE_LIMITED: "rate_limit.reject",
 	WS_CONNECT: "ws.connect",
