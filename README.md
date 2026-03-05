@@ -25,22 +25,12 @@ Every design choice traces back to a standard: [NIST SP 800-63B](https://pages.n
 
 > **Shipping a product?** Use **[Better Auth](https://www.better-auth.com)** instead — it covers OAuth, passkeys, MFA, rate limiting, and more out of the box with an active plugin ecosystem. This repo exists to teach you *how* auth works, not to replace a production library.
 
-### Security Status
-
-- ✅ Rate limiting ([ADR-006](docs/adr/006-rate-limiting.md))
-- ✅ Structured audit logging ([ADR-008](docs/adr/008-adaptive-challenges-ops.md))
-- ✅ Adaptive PoW challenges ([ADR-008](docs/adr/008-adaptive-challenges-ops.md))
-- ✅ Agent-authenticated ops surface ([ADR-008](docs/adr/008-adaptive-challenges-ops.md))
-- ⚠️ Planned: `aud` claim hardening
-- ⚠️ Planned: Refresh token rotation
-- ⚠️ Planned: Breached-password checks
-
 ### Why this repo
 
 - **Read the code, not just the docs** — every security property (timing-safe rejection, session-linked revocation, algorithm pinning) is implemented and tested, not just described
 - **NIST + OWASP + RFC references** throughout — learn the *why* behind each decision
-- **420+ tests** including attack-vector suites (token tampering, algorithm confusion, unicode edge cases)
-- **Plugin architecture** — observability (events, adaptive challenges, ops API) bolts on via Hono middleware without modifying core auth services
+- **630+ tests** including attack-vector suites (token tampering, algorithm confusion, unicode edge cases)
+- **Observability plugin** — structured audit logging, adaptive PoW challenges, agent-authenticated ops API, and WebSocket event streaming — bolts on via Hono middleware without modifying core auth
 - **Built for the edge** — runs on Cloudflare Workers with Web Crypto API, no Node.js dependencies
 - **Apache-2.0** — fork it, teach with it, learn from it
 
