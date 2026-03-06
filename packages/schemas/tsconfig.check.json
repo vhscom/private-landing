@@ -1,0 +1,9 @@
+{
+	"extends": "../../tsconfig.packages.jsonc",
+	"compilerOptions": {
+		"composite": false,
+		"declaration": false,
+		"noEmit": true
+	},
+	"include": ["src/**/*.ts", "test/**/*.ts"]
+}

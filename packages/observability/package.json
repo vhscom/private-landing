@@ -27,7 +27,7 @@
 	"scripts": {
 		"clean": "rm -rf dist tsconfig.tsbuildinfo",
 		"build": "tsc --build",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc -p tsconfig.check.json"
 	},
 	"dependencies": {
 		"@private-landing/core": "workspace:*",

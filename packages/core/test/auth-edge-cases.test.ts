@@ -213,6 +213,7 @@ describe("information disclosure prevention", () => {
 				createSession: vi.fn(),
 				endSession: vi.fn(),
 				cleanupExpiredSessions: vi.fn(),
+				endAllSessionsForUser: vi.fn(),
 			},
 			tokenService: {
 				generateTokens: vi.fn(),
@@ -283,6 +284,7 @@ describe("information disclosure prevention", () => {
 				createSession: vi.fn(),
 				endSession: vi.fn(),
 				cleanupExpiredSessions: vi.fn(),
+				endAllSessionsForUser: vi.fn(),
 			},
 			tokenService: {
 				generateTokens: vi.fn(),
@@ -351,6 +353,7 @@ describe("cookie attribute enforcement", () => {
 					});
 				}),
 				cleanupExpiredSessions: vi.fn(),
+				endAllSessionsForUser: vi.fn(),
 			},
 			tokenService: {
 				generateTokens: vi.fn(),

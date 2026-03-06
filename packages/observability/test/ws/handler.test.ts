@@ -1,4 +1,5 @@
 import "./polyfills";
+import type { CacheClientFactory } from "@private-landing/infrastructure";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentPrincipal } from "../../src/types";
 import type { WsHandlerDeps } from "../../src/ws/handler";
@@ -35,6 +36,12 @@ interface WsResponse {
 	denied?: { capability: string; reason: string }[];
 	error?: { code: string; message: string };
 	payload?: Record<string, unknown>;
+	reason?: string;
+	guidance?: string;
+	ts?: string;
+	next_check_ms?: number;
+	ping_timeout_ms?: number;
+	capabilities?: string[];
 }
 
 /** Minimal WSContext mock capturing sends and closes. */
@@ -757,7 +764,9 @@ describe("createWsHandler", () => {
 				smembers: vi.fn().mockResolvedValue(["sid-1", "sid-2"]),
 				del: vi.fn().mockResolvedValue(true),
 			};
-			const createCacheClient = vi.fn(() => mockCache);
+			const createCacheClient = vi.fn(
+				() => mockCache,
+			) as unknown as CacheClientFactory;
 
 			// First call: collect affected user IDs
 			mockExecute
@@ -828,7 +837,9 @@ describe("createWsHandler", () => {
 				smembers: vi.fn().mockResolvedValue(["sid-1"]),
 				del: vi.fn().mockResolvedValue(true),
 			};
-			const createCacheClient = vi.fn(() => mockCache);
+			const createCacheClient = vi.fn(
+				() => mockCache,
+			) as unknown as CacheClientFactory;
 
 			mockExecute.mockResolvedValueOnce({ rows: [], rowsAffected: 2 });
 
@@ -865,7 +876,9 @@ describe("createWsHandler", () => {
 				del: vi.fn().mockResolvedValue(true),
 				srem: vi.fn().mockResolvedValue(1),
 			};
-			const createCacheClient = vi.fn(() => mockCache);
+			const createCacheClient = vi.fn(
+				() => mockCache,
+			) as unknown as CacheClientFactory;
 
 			mockExecute.mockResolvedValueOnce({ rows: [], rowsAffected: 1 });
 
@@ -904,7 +917,9 @@ describe("createWsHandler", () => {
 				smembers: vi.fn().mockRejectedValue(new Error("cache error")),
 				del: vi.fn().mockResolvedValue(true),
 			};
-			const createCacheClient = vi.fn(() => mockCache);
+			const createCacheClient = vi.fn(
+				() => mockCache,
+			) as unknown as CacheClientFactory;
 			const consoleSpy = vi
 				.spyOn(console, "error")
 				.mockImplementation(() => {});
@@ -1642,12 +1657,8 @@ describe("createWsHandler", () => {
 			const messages = mock.parsed();
 			const revokedMsg = messages.find((m) => m.type === "credential.revoked");
 			expect(revokedMsg).toBeDefined();
-			expect((revokedMsg as Record<string, unknown>).reason).toBe(
-				"key_revoked",
-			);
-			expect((revokedMsg as Record<string, unknown>).guidance).toBe(
-				"Re-authenticate with a new agent key",
-			);
+			expect(revokedMsg?.reason).toBe("key_revoked");
+			expect(revokedMsg?.guidance).toBe("Re-authenticate with a new agent key");
 
 			const revokedEvent = mockProcessEvent.mock.calls.find(
 				(c) => (c[0] as { type: string }).type === "ws.credential_revoked",
@@ -1878,15 +1889,12 @@ describe("createWsHandler", () => {
 			await vi.advanceTimersByTimeAsync(25_000);
 
 			const messages = sent.map((s) => JSON.parse(s) as WsResponse);
-			const hb = messages.find((m) => m.type === "heartbeat") as Record<
-				string,
-				unknown
-			>;
+			const hb = messages.find((m) => m.type === "heartbeat");
 			expect(hb).toBeDefined();
-			expect(hb.ts).toBeDefined();
-			expect(hb.next_check_ms).toBe(25_000);
-			expect(hb.ping_timeout_ms).toBe(90_000);
-			expect(hb.capabilities).toEqual(
+			expect(hb?.ts).toBeDefined();
+			expect(hb?.next_check_ms).toBe(25_000);
+			expect(hb?.ping_timeout_ms).toBe(90_000);
+			expect(hb?.capabilities).toEqual(
 				expect.arrayContaining([
 					"query_events",
 					"query_sessions",

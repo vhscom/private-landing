@@ -33,6 +33,7 @@ function createMockServices(options: {
 			createSession: vi.fn(),
 			endSession: vi.fn(),
 			cleanupExpiredSessions: vi.fn(),
+			endAllSessionsForUser: vi.fn(),
 		},
 		tokenService: {
 			generateTokens: vi.fn(),

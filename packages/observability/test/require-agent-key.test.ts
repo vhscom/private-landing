@@ -78,7 +78,7 @@ describe("requireAgentKey", () => {
 		const app = createApp();
 		const res = await app.request("/test", {}, env);
 		expect(res.status).toBe(401);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.code).toBe("MISSING_API_KEY");
 	});
 
@@ -90,7 +90,7 @@ describe("requireAgentKey", () => {
 			env,
 		);
 		expect(res.status).toBe(401);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.code).toBe("MISSING_API_KEY");
 	});
 
@@ -103,7 +103,7 @@ describe("requireAgentKey", () => {
 			env,
 		);
 		expect(res.status).toBe(401);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.code).toBe("INVALID_API_KEY");
 	});
 
@@ -117,7 +117,7 @@ describe("requireAgentKey", () => {
 			env,
 		);
 		expect(res.status).toBe(401);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.code).toBe("INVALID_API_KEY");
 		consoleSpy.mockRestore();
 	});
@@ -172,7 +172,7 @@ describe("requireAgentKey", () => {
 			env,
 		);
 		expect(res.status).toBe(200);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.agent).toBe("test-agent");
 	});
 });

@@ -7,7 +7,8 @@
  */
 
 // CloseEvent is not available in Node.js but is used by WebSocket close handlers.
-globalThis.CloseEvent ??= class CloseEvent extends Event {
+// biome-ignore lint/suspicious/noExplicitAny: polyfill assignment to globalThis
+(globalThis as any).CloseEvent ??= class CloseEvent extends Event {
 	readonly code: number;
 	readonly reason: string;
 	readonly wasClean: boolean;
@@ -18,4 +19,4 @@ globalThis.CloseEvent ??= class CloseEvent extends Event {
 		this.reason = init?.reason ?? "";
 		this.wasClean = init?.wasClean ?? false;
 	}
-} as typeof globalThis.CloseEvent;
+};

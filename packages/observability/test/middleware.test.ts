@@ -117,7 +117,10 @@ describe("createObsEmit", () => {
 			ctx.json({ ok: true }),
 		);
 
-		const execCtx = { waitUntil: vi.fn(), passThroughOnException: vi.fn() };
+		const execCtx = {
+			waitUntil: vi.fn(),
+			passThroughOnException: vi.fn(),
+		} as unknown as ExecutionContext;
 		await app.request("/login", { method: "POST" }, baseEnv, execCtx);
 
 		expect(mockProcessEvent).toHaveBeenCalledTimes(1);
@@ -190,7 +193,10 @@ describe("createAdaptiveChallenge", () => {
 		const app = new Hono<AppEnv>();
 		app.post("/login", middleware, (ctx) => ctx.json({ ok: true }));
 
-		const execCtx = { waitUntil: vi.fn(), passThroughOnException: vi.fn() };
+		const execCtx = {
+			waitUntil: vi.fn(),
+			passThroughOnException: vi.fn(),
+		} as unknown as ExecutionContext;
 		const res = await app.request(
 			"/login",
 			{
@@ -203,9 +209,11 @@ describe("createAdaptiveChallenge", () => {
 		);
 
 		expect(res.status).toBe(403);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.error).toBe("Challenge required");
-		expect(body.challenge.nonce).toBe("test-nonce");
+		expect((body.challenge as Record<string, unknown>).nonce).toBe(
+			"test-nonce",
+		);
 		expect(mockProcessEvent).toHaveBeenCalledWith(
 			expect.objectContaining({ type: "challenge.issued", status: 403 }),
 			expect.anything(),
@@ -222,7 +230,10 @@ describe("createAdaptiveChallenge", () => {
 		const app = new Hono<AppEnv>();
 		app.post("/login", middleware, (ctx) => ctx.json({ ok: true }));
 
-		const execCtx = { waitUntil: vi.fn(), passThroughOnException: vi.fn() };
+		const execCtx = {
+			waitUntil: vi.fn(),
+			passThroughOnException: vi.fn(),
+		} as unknown as ExecutionContext;
 		const res = await app.request(
 			"/login",
 			{
@@ -235,7 +246,7 @@ describe("createAdaptiveChallenge", () => {
 		);
 
 		expect(res.status).toBe(403);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.error).toBe("Challenge required");
 		expect(mockProcessEvent).toHaveBeenCalledWith(
 			expect.objectContaining({ type: "challenge.issued" }),
@@ -253,7 +264,10 @@ describe("createAdaptiveChallenge", () => {
 		const app = new Hono<AppEnv>();
 		app.post("/login", middleware, (ctx) => ctx.json({ ok: true }));
 
-		const execCtx = { waitUntil: vi.fn(), passThroughOnException: vi.fn() };
+		const execCtx = {
+			waitUntil: vi.fn(),
+			passThroughOnException: vi.fn(),
+		} as unknown as ExecutionContext;
 		const res = await app.request(
 			"/login",
 			{
@@ -269,7 +283,7 @@ describe("createAdaptiveChallenge", () => {
 		);
 
 		expect(res.status).toBe(403);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.error).toBe("Invalid solution");
 		expect(mockProcessEvent).toHaveBeenCalledWith(
 			expect.objectContaining({ type: "challenge.failed" }),
@@ -289,7 +303,10 @@ describe("createAdaptiveChallenge", () => {
 		const app = new Hono<AppEnv>();
 		app.post("/login", middleware, (ctx) => ctx.json({ ok: true }));
 
-		const execCtx = { waitUntil: vi.fn(), passThroughOnException: vi.fn() };
+		const execCtx = {
+			waitUntil: vi.fn(),
+			passThroughOnException: vi.fn(),
+		} as unknown as ExecutionContext;
 		const res = await app.request(
 			"/login",
 			{
@@ -305,7 +322,7 @@ describe("createAdaptiveChallenge", () => {
 		);
 
 		expect(res.status).toBe(403);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.error).toBe("Invalid or expired nonce");
 		expect(mockVerifySignedNonce).toHaveBeenCalledWith(
 			"forged-nonce",
@@ -366,7 +383,7 @@ describe("createAdaptiveChallenge", () => {
 		);
 
 		expect(res.status).toBe(200);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.ok).toBe(true);
 	});
 
@@ -383,7 +400,11 @@ describe("createAdaptiveChallenge", () => {
 		const app = new Hono<AppEnv>();
 		app.post("/login", middleware, (ctx) => ctx.json({ ok: true }));
 
-		const execCtx = { waitUntil: vi.fn(), passThroughOnException: vi.fn() };
+		const mockWaitUntil = vi.fn();
+		const execCtx = {
+			waitUntil: mockWaitUntil,
+			passThroughOnException: vi.fn(),
+		} as unknown as ExecutionContext;
 		const res = await app.request(
 			"/login",
 			{
@@ -397,7 +418,7 @@ describe("createAdaptiveChallenge", () => {
 
 		expect(res.status).toBe(403);
 		// waitUntil receives the promise; wait for it to settle
-		await execCtx.waitUntil.mock.calls[0][0];
+		await mockWaitUntil.mock.calls[0][0];
 		expect(consoleSpy).toHaveBeenCalledWith(
 			"[obs] challenge event failed:",
 			expect.any(Error),
@@ -419,7 +440,7 @@ describe("createAdaptiveChallenge", () => {
 		const execCtx = {
 			waitUntil: undefined as unknown,
 			passThroughOnException: vi.fn(),
-		};
+		} as unknown as ExecutionContext;
 		const res = await app.request(
 			"/login",
 			{
@@ -449,7 +470,7 @@ describe("createAdaptiveChallenge", () => {
 		const res = await app.request("/login", { method: "POST" }, baseEnv);
 
 		expect(res.status).toBe(200);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.ok).toBe(true);
 		expect(consoleSpy).toHaveBeenCalledWith(
 			expect.stringContaining("[obs] adaptive challenge error:"),

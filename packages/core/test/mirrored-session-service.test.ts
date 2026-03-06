@@ -86,7 +86,8 @@ describe("MirroredSessionService", () => {
 
 		service = createMirroredSessionService({
 			inner,
-			createDbClient: () => ({ execute: mockExecute }) as SqliteClient,
+			createDbClient: () =>
+				({ execute: mockExecute }) as unknown as SqliteClient,
 		});
 	});
 
@@ -188,7 +189,8 @@ describe("MirroredSessionService", () => {
 
 		const svc = createMirroredSessionService({
 			inner,
-			createDbClient: () => ({ execute: localExecute }) as SqliteClient,
+			createDbClient: () =>
+				({ execute: localExecute }) as unknown as SqliteClient,
 			getClientIp: () => "10.0.0.1",
 		});
 
@@ -217,7 +219,8 @@ describe("MirroredSessionService", () => {
 
 		const svc = createMirroredSessionService({
 			inner,
-			createDbClient: () => ({ execute: localExecute }) as SqliteClient,
+			createDbClient: () =>
+				({ execute: localExecute }) as unknown as SqliteClient,
 			getClientIp: () => {
 				throw new Error("no conn info");
 			},
@@ -248,7 +251,8 @@ describe("MirroredSessionService", () => {
 
 		const svc = createMirroredSessionService({
 			inner,
-			createDbClient: () => ({ execute: localExecute }) as SqliteClient,
+			createDbClient: () =>
+				({ execute: localExecute }) as unknown as SqliteClient,
 		});
 
 		const ctx = createMockAuthContext();
@@ -281,7 +285,8 @@ describe("MirroredSessionService", () => {
 
 		const svc = createMirroredSessionService({
 			inner,
-			createDbClient: () => ({ execute: localExecute }) as SqliteClient,
+			createDbClient: () =>
+				({ execute: localExecute }) as unknown as SqliteClient,
 		});
 
 		const ctx = createMockAuthContext();

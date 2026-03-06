@@ -12,7 +12,7 @@ import type { OpsVariables } from "../src/require-agent-key";
 
 const mockExecute = vi.fn();
 const mockEnsureSchema = vi.fn();
-const mockGetClientIp = vi.hoisted(() => vi.fn(() => "192.0.2.1"));
+const mockGetClientIp = vi.hoisted(() => vi.fn((_ctx: unknown) => "192.0.2.1"));
 
 vi.mock("@private-landing/infrastructure", () => ({
 	createDbClient: vi.fn(() => ({ execute: mockExecute })),
@@ -209,7 +209,7 @@ describe("POST /ops/agents", () => {
 			baseEnv,
 		);
 		expect(res.status).toBe(200);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.name).toBe("new-agent");
 		expect(body.apiKey).toMatch(/^[0-9a-f]{64}$/);
 	});
@@ -239,9 +239,9 @@ describe("GET /ops/agents", () => {
 			baseEnv,
 		);
 		expect(res.status).toBe(200);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.agents).toHaveLength(1);
-		expect(body.agents[0].name).toBe("agent-a");
+		expect((body.agents as Record<string, unknown>[])[0].name).toBe("agent-a");
 	});
 
 	it("returns 401 without auth", async () => {
@@ -274,7 +274,7 @@ describe("GET /ops/events", () => {
 			baseEnv,
 		);
 		expect(res.status).toBe(200);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.events).toHaveLength(1);
 	});
 
@@ -326,7 +326,7 @@ describe("POST /ops/sessions/revoke", () => {
 			baseEnv,
 		);
 		expect(res.status).toBe(400);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.code).toBe("VALIDATION_ERROR");
 	});
 
@@ -346,7 +346,7 @@ describe("POST /ops/sessions/revoke", () => {
 			baseEnv,
 		);
 		expect(res.status).toBe(200);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.success).toBe(true);
 		expect(body.revoked).toBe(3);
 	});
@@ -555,7 +555,7 @@ describe("POST /ops/sessions/revoke — cache invalidation", () => {
 		);
 
 		expect(res.status).toBe(200);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.success).toBe(true);
 		expect(body.revoked).toBe(2);
 		// Cache cleanup should not have run (affectedUserIds is empty)
@@ -617,7 +617,7 @@ describe("GET /ops/sessions", () => {
 			baseEnv,
 		);
 		expect(res.status).toBe(200);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.sessions).toHaveLength(1);
 		expect(body.count).toBe(1);
 	});
@@ -659,7 +659,7 @@ describe("GET /ops/sessions", () => {
 			baseEnv,
 		);
 		expect(res.status).toBe(500);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.code).toBe("INTERNAL_ERROR");
 		consoleSpy.mockRestore();
 	});
@@ -733,7 +733,7 @@ describe("GET /ops/events — actor_id filter", () => {
 			baseEnv,
 		);
 		expect(res.status).toBe(200);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.events).toHaveLength(1);
 		// Verify actor_id was passed as a SQL arg
 		const lastExecuteCall =
@@ -793,7 +793,7 @@ describe("GET /ops/events — DB error", () => {
 			baseEnv,
 		);
 		expect(res.status).toBe(500);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.code).toBe("INTERNAL_ERROR");
 		consoleSpy.mockRestore();
 	});
@@ -818,9 +818,9 @@ describe("GET /ops/events/stats", () => {
 			baseEnv,
 		);
 		expect(res.status).toBe(200);
-		const body = await res.json();
-		expect(body.stats["login.success"]).toBe(10);
-		expect(body.stats["login.failure"]).toBe(3);
+		const body = (await res.json()) as Record<string, unknown>;
+		expect((body.stats as Record<string, unknown>)["login.success"]).toBe(10);
+		expect((body.stats as Record<string, unknown>)["login.failure"]).toBe(3);
 		expect(body.since).toBeDefined();
 	});
 
@@ -834,7 +834,7 @@ describe("GET /ops/events/stats", () => {
 			baseEnv,
 		);
 		expect(res.status).toBe(200);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.since).toBe(since);
 	});
 
@@ -847,7 +847,7 @@ describe("GET /ops/events/stats", () => {
 			baseEnv,
 		);
 		expect(res.status).toBe(200);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.since).not.toBe("garbage");
 		expect(body.since).toMatch(/^\d{4}-\d{2}-\d{2}T/);
 	});
@@ -869,7 +869,7 @@ describe("GET /ops/events/stats", () => {
 			baseEnv,
 		);
 		expect(res.status).toBe(500);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.code).toBe("INTERNAL_ERROR");
 		consoleSpy.mockRestore();
 	});
@@ -900,7 +900,7 @@ describe("POST /ops/agents — error paths", () => {
 			baseEnv,
 		);
 		expect(res.status).toBe(409);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.code).toBe("AGENT_EXISTS");
 		consoleSpy.mockRestore();
 	});
@@ -925,7 +925,7 @@ describe("DELETE /ops/agents/:name — error paths", () => {
 			baseEnv,
 		);
 		expect(res.status).toBe(404);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.code).toBe("NOT_FOUND");
 	});
 
@@ -960,7 +960,7 @@ describe("GET /ops/agents — error paths", () => {
 			baseEnv,
 		);
 		expect(res.status).toBe(500);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.code).toBe("INTERNAL_ERROR");
 		consoleSpy.mockRestore();
 	});
@@ -987,7 +987,7 @@ describe("POST /ops/sessions/revoke — validation", () => {
 			baseEnv,
 		);
 		expect(res.status).toBe(400);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.error).toBe("Invalid body");
 	});
 
@@ -1009,7 +1009,7 @@ describe("POST /ops/sessions/revoke — validation", () => {
 			baseEnv,
 		);
 		expect(res.status).toBe(500);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.code).toBe("REVOCATION_ERROR");
 		consoleSpy.mockRestore();
 	});
@@ -1047,7 +1047,7 @@ describe("GET /ops/ws origin validation", () => {
 			baseEnv,
 		);
 		expect(res.status).toBe(403);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.error).toBe("Forbidden");
 	});
 
@@ -1290,7 +1290,7 @@ describe("GET /ops/ws adaptive PoW", () => {
 			baseEnv,
 		);
 		expect(res.status).toBe(403);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.error).toBe("Challenge required");
 		expect(body.challenge).toMatchObject({
 			type: "pow",
@@ -1357,7 +1357,7 @@ describe("GET /ops/ws adaptive PoW", () => {
 			baseEnv,
 		);
 		expect(res.status).toBe(403);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.error).toBe("Invalid or expired nonce");
 	});
 
@@ -1383,7 +1383,7 @@ describe("GET /ops/ws adaptive PoW", () => {
 			baseEnv,
 		);
 		expect(res.status).toBe(403);
-		const body = await res.json();
+		const body = (await res.json()) as Record<string, unknown>;
 		expect(body.error).toBe("Invalid solution");
 	});
 });
