@@ -11,7 +11,7 @@
  */
 export interface Env {
 	AUTH_DB_URL: string;
-	AUTH_DB_TOKEN: string;
+	AUTH_DB_TOKEN?: string;
 	JWT_ACCESS_SECRET: string;
 	JWT_REFRESH_SECRET: string;
 	CACHE_URL?: string;

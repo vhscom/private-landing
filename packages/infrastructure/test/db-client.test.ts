@@ -5,19 +5,20 @@
  * @license Apache-2.0
  */
 
+import { createClient } from "@libsql/client";
 import { describe, expect, it, vi } from "vitest";
 import { createDbClient } from "../src/db/client";
 
 // Mock @libsql/client
 vi.mock("@libsql/client", () => ({
-	createClient: vi.fn((config: { url: string; authToken: string }) => ({
-		url: config.url,
-		authToken: config.authToken,
+	createClient: vi.fn(() => ({
 		execute: vi.fn(),
 		batch: vi.fn(),
 		close: vi.fn(),
 	})),
 }));
+
+const mockCreateClient = vi.mocked(createClient);
 
 describe("createDbClient", () => {
 	describe("successful creation", () => {
@@ -30,8 +31,10 @@ describe("createDbClient", () => {
 			const client = createDbClient(env as never);
 
 			expect(client).toBeDefined();
-			expect(client.url).toBe("libsql://test.turso.io");
-			expect(client.authToken).toBe("test-token-123");
+			expect(mockCreateClient).toHaveBeenCalledWith({
+				url: "libsql://test.turso.io",
+				authToken: "test-token-123",
+			});
 		});
 
 		it("should trim whitespace from url", () => {
@@ -40,9 +43,12 @@ describe("createDbClient", () => {
 				AUTH_DB_TOKEN: "test-token",
 			};
 
-			const client = createDbClient(env as never);
+			createDbClient(env as never);
 
-			expect(client.url).toBe("libsql://test.turso.io");
+			expect(mockCreateClient).toHaveBeenCalledWith({
+				url: "libsql://test.turso.io",
+				authToken: "test-token",
+			});
 		});
 
 		it("should trim whitespace from auth token", () => {
@@ -51,9 +57,12 @@ describe("createDbClient", () => {
 				AUTH_DB_TOKEN: "  test-token  ",
 			};
 
-			const client = createDbClient(env as never);
+			createDbClient(env as never);
 
-			expect(client.authToken).toBe("test-token");
+			expect(mockCreateClient).toHaveBeenCalledWith({
+				url: "libsql://test.turso.io",
+				authToken: "test-token",
+			});
 		});
 
 		it("should handle url with trailing newline", () => {
@@ -62,9 +71,12 @@ describe("createDbClient", () => {
 				AUTH_DB_TOKEN: "test-token",
 			};
 
-			const client = createDbClient(env as never);
+			createDbClient(env as never);
 
-			expect(client.url).toBe("libsql://test.turso.io");
+			expect(mockCreateClient).toHaveBeenCalledWith({
+				url: "libsql://test.turso.io",
+				authToken: "test-token",
+			});
 		});
 	});
 
@@ -104,7 +116,7 @@ describe("createDbClient", () => {
 			expect(() => createDbClient(env as never)).toThrow("No URL");
 		});
 
-		it("should throw error when auth token is missing", () => {
+		it("should throw error when auth token is missing for remote url", () => {
 			const env = {
 				AUTH_DB_URL: "libsql://test.turso.io",
 			};
@@ -114,7 +126,7 @@ describe("createDbClient", () => {
 			);
 		});
 
-		it("should throw error when auth token is undefined", () => {
+		it("should throw error when auth token is undefined for remote url", () => {
 			const env = {
 				AUTH_DB_URL: "libsql://test.turso.io",
 				AUTH_DB_TOKEN: undefined,
@@ -125,7 +137,7 @@ describe("createDbClient", () => {
 			);
 		});
 
-		it("should throw error when auth token is empty string", () => {
+		it("should throw error when auth token is empty string for remote url", () => {
 			const env = {
 				AUTH_DB_URL: "libsql://test.turso.io",
 				AUTH_DB_TOKEN: "",
@@ -136,7 +148,7 @@ describe("createDbClient", () => {
 			);
 		});
 
-		it("should throw error when auth token is whitespace only", () => {
+		it("should throw error when auth token is whitespace only for remote url", () => {
 			const env = {
 				AUTH_DB_URL: "libsql://test.turso.io",
 				AUTH_DB_TOKEN: "   ",
@@ -148,6 +160,40 @@ describe("createDbClient", () => {
 		});
 	});
 
+	describe("local database urls", () => {
+		it("should create client for file: url without auth token", () => {
+			const env = {
+				AUTH_DB_URL: "file:local.db",
+			};
+
+			createDbClient(env as never);
+
+			expect(mockCreateClient).toHaveBeenCalledWith({ url: "file:local.db" });
+		});
+
+		it("should create client for file: url with absolute path", () => {
+			const env = {
+				AUTH_DB_URL: "file:/tmp/test.db",
+			};
+
+			createDbClient(env as never);
+
+			expect(mockCreateClient).toHaveBeenCalledWith({
+				url: "file:/tmp/test.db",
+			});
+		});
+
+		it("should create client for :memory: url without auth token", () => {
+			const env = {
+				AUTH_DB_URL: ":memory:",
+			};
+
+			createDbClient(env as never);
+
+			expect(mockCreateClient).toHaveBeenCalledWith({ url: ":memory:" });
+		});
+	});
+
 	describe("edge cases", () => {
 		it("should handle url with special characters", () => {
 			const env = {
@@ -155,9 +201,12 @@ describe("createDbClient", () => {
 				AUTH_DB_TOKEN: "token",
 			};
 
-			const client = createDbClient(env as never);
+			createDbClient(env as never);
 
-			expect(client.url).toBe("libsql://my-db-123.turso.io");
+			expect(mockCreateClient).toHaveBeenCalledWith({
+				url: "libsql://my-db-123.turso.io",
+				authToken: "token",
+			});
 		});
 
 		it("should handle token with special characters", () => {
@@ -166,11 +215,12 @@ describe("createDbClient", () => {
 				AUTH_DB_TOKEN: "eyJhbGciOiJIUzI1NiJ9.token+value/special=",
 			};
 
-			const client = createDbClient(env as never);
+			createDbClient(env as never);
 
-			expect(client.authToken).toBe(
-				"eyJhbGciOiJIUzI1NiJ9.token+value/special=",
-			);
+			expect(mockCreateClient).toHaveBeenCalledWith({
+				url: "libsql://test.turso.io",
+				authToken: "eyJhbGciOiJIUzI1NiJ9.token+value/special=",
+			});
 		});
 	});
 });

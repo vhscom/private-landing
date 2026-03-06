@@ -19,7 +19,8 @@ interface ProvidedEnv extends Env {
 
 export function serveStatic(_opts: ServeStaticOptions) {
 	return createMiddleware<{ Bindings: ProvidedEnv }>(async (ctx, next) => {
-		const binding = ctx.env.ASSETS as Fetcher;
+		const binding = ctx.env.ASSETS as Fetcher | undefined;
+		if (!binding?.fetch) return await next();
 		const response = await binding.fetch(
 			ctx.req.url,
 			/**

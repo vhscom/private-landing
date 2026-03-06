@@ -16,9 +16,21 @@ export type { SqliteClient };
  */
 export type DbClientFactory = (env: Env) => SqliteClient;
 
+/**
+ * Returns true when the URL targets a local libSQL/SQLite database
+ * (file path or in-memory) that does not require an auth token.
+ */
+function isLocalUrl(url: string): boolean {
+	return url.startsWith("file:") || url === ":memory:";
+}
+
 export function createDbClient(env: Env): SqliteClient {
 	const url = env.AUTH_DB_URL?.trim();
 	if (!url) throw new Error("No URL");
+
+	if (isLocalUrl(url)) {
+		return createClient({ url });
+	}
 
 	const authToken = env.AUTH_DB_TOKEN?.trim();
 	if (!authToken) throw new Error("No auth token provided");
