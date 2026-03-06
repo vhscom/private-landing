@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-03-06
+
+### Added
+
+- Zero-config local development — `bun run dev` works without Turso credentials, `.env` files, or any external accounts
+  - Bun dev server with auto-migrating local SQLite via `@libsql/client` `file:` URLs
+  - Auto-detects `.dev.vars`: present delegates to wrangler, absent starts local server
+  - `bun run dev:local` forces local SQLite even when `.dev.vars` exists
+- WebSocket gateway `GET /ops/ws` with authenticate-once upgrade, capability negotiation, heartbeat with credential re-validation, and origin blocking ([ADR-009](docs/adr/009-websocket-gateway.md))
+- `plctl tail` command for live WebSocket event streaming
+- HMAC-signed nonces for adaptive PoW challenges — prevents nonce forgery and replay
+- Registration success/failure event emission via `obsEmit` middleware
+- `tsconfig.check.json` per package — test files now included in typecheck
+
+### Fixed
+
+- `AUTH_DB_TOKEN` made optional at the type level — local SQLite URLs (`file:`, `:memory:`) no longer require a token
+- `serveStatic` middleware guards against missing `ASSETS` binding in non-Workers runtimes
+- `plctl` uses `ENVIRONMENT` binding instead of URL heuristics for production safeguard
+- Pre-existing type errors in test files across core and observability packages (incomplete mock interfaces, untyped `.json()` returns, partial `ExecutionContext` mocks)
+
+### Changed
+
+- Biome upgraded from 2.3.14 to 2.4.6
+
+### Documentation
+
+- ADR-009: WebSocket gateway decision record
+- WebSocket gateway security audit and STRIDE threat model update
+- README, CONTRIBUTING, and CLAUDE.md updated for zero-config local dev
+- README streamlined: Why This Repo section condensed
+
 ## [1.5.0] - 2026-03-01
 
 ### Added
@@ -162,6 +194,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Architecture Decision Records in `docs/adr/`
 - Security audit reports in `docs/audits/`
 
+[1.6.0]: https://github.com/vhscom/private-landing/compare/1.5.0...1.6.0
 [1.5.0]: https://github.com/vhscom/private-landing/compare/1.4.0...1.5.0
 [1.4.0]: https://github.com/vhscom/private-landing/compare/1.3.0...1.4.0
 [1.3.0]: https://github.com/vhscom/private-landing/compare/1.2.0...1.3.0
