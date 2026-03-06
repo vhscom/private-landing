@@ -117,19 +117,17 @@ All of these are excellent reasons to reach for [Better Auth](https://www.better
 ## Getting Started
 
 ```bash
-# Clone and install
 git clone https://github.com/vhscom/private-landing.git
 cd private-landing
 bun install
-
-# Build packages
-bun run build
-
-# Start dev server
 bun run dev
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed setup and testing instructions.
+That's it — no accounts, no API keys, no `.env` files. The dev server starts with a local SQLite database and generated secrets. Open `http://localhost:8788` to register an account and explore the auth flows.
+
+> **Have a Turso account?** Drop a `.dev.vars` file in `apps/cloudflare-workers/` (see [`.dev.vars.example`](apps/cloudflare-workers/.dev.vars.example)) and `bun run dev` will automatically use wrangler with your remote database instead. Use `bun run dev:local` to force the local server regardless.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for testing and deployment instructions.
 
 ## Using with AI
 

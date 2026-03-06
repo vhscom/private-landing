@@ -5,38 +5,24 @@ Thank you for your interest in contributing! This guide will help you get starte
 ## Prerequisites
 
 - [Bun](https://bun.sh/) >= 1.0.0
-- [Node.js](https://nodejs.org/) >= 24.0.0
-- A [Turso](https://turso.tech/) database (for integration tests)
-- An [Upstash](https://upstash.com/) Redis database (optional, for cache-backed session testing)
+
+That's it for local development. Additional services are needed only for specific workflows:
+
+- A [Turso](https://turso.tech/) database — for integration tests and production deployment
+- An [Upstash](https://upstash.com/) Redis database — optional, for cache-backed session testing
 
 ## Getting Started
 
-1. **Clone the repository**
+```bash
+git clone https://github.com/vhscom/private-landing.git
+cd private-landing
+bun install
+bun run dev
+```
 
-   ```bash
-   git clone https://github.com/vhscom/private-landing.git
-   cd private-landing
-   ```
+No accounts, API keys, or `.env` files needed. The dev server starts with a local SQLite database and generated secrets at `http://localhost:8788`. Register an account and explore the auth flows.
 
-2. **Install dependencies**
-
-   ```bash
-   bun install
-   ```
-
-3. **Build packages**
-
-   ```bash
-   bun run build
-   ```
-
-4. **Run the development server**
-
-   ```bash
-   bun run dev
-   ```
-
-   The worker will be available at `http://localhost:8788`.
+> **Have a Turso account?** Drop a `.dev.vars` file in `apps/cloudflare-workers/` (see [`.dev.vars.example`](apps/cloudflare-workers/.dev.vars.example)) and `bun run dev` will automatically use wrangler with your remote database instead. Use `bun run dev:local` to force the local server regardless.
 
 ## Project Structure
 
@@ -84,7 +70,7 @@ cp .dev.vars.example .dev.vars
 # Edit .dev.vars with your Turso credentials
 ```
 
-The same `.dev.vars` file is used for both local development and integration tests. A separate `.dev.vars.production` (see `.dev.vars.production.example`) is used for the deployed Workers environment.
+> **Note:** `.dev.vars` is not needed for unit tests or local development — only for integration tests and wrangler-based development. A separate `.dev.vars.production` (see `.dev.vars.production.example`) is used for the deployed Workers environment.
 
 Then run:
 

@@ -45,7 +45,8 @@ tools/cli/                  # plctl — Go TUI for the /ops API (not a Bun works
 bun install              # Install dependencies
 bun run clean            # Clean all build artifacts
 bun run build            # Build all packages
-bun run dev              # Start dev server (port 8788)
+bun run dev              # Start dev server (zero-config local SQLite, or wrangler if .dev.vars exists)
+bun run dev:local        # Force local SQLite dev server even when .dev.vars is present
 bun run test:unit        # Run unit tests
 bun run test:integration # Run integration tests (requires .dev.vars)
 bun run test:plugins     # Run observability plugin integration tests
@@ -59,9 +60,20 @@ bun run cli:start        # Run plctl
 bun run cli:test         # Run Go tests for plctl
 ```
 
+## Local Development
+
+`bun run dev` works with zero configuration — no Turso account, no `.env` files. The dev entry point (`apps/cloudflare-workers/src/dev.ts`) auto-detects the environment:
+
+- **No `.dev.vars`**: Starts a Bun server with local SQLite (auto-migrated), generated JWT secrets, and static file serving
+- **`.dev.vars` present**: Delegates to wrangler for a full Workers-like environment
+- **`bun run dev:local`**: Forces the local SQLite server even when `.dev.vars` exists
+
+The local database lives at `apps/cloudflare-workers/.wrangler/state/local.db` and is excluded from git. It persists across restarts but can be deleted manually to reset state.
+
 ## Testing
 
 - Unit tests are co-located with source files (`*.test.ts`)
+- Unit tests require no external services — run with `bun run test:unit`
 - Integration tests require a Turso database configured in `apps/cloudflare-workers/.dev.vars`
 - Plugin integration tests (`test:plugins`) use a separate `vitest.config.plugins.ts` targeting `test/integration/plugins/**`
 - Cache-backed session tests use `createMemoryCacheClient()` from `packages/infrastructure` — no external Redis/Valkey needed
