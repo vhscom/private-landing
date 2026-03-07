@@ -17,6 +17,11 @@ import {
 	verifySignedNonce,
 } from "./process-event";
 
+/**
+ * Dependencies for the obsEmit middleware factory.
+ * @property getClientIp - IP extraction function (defaults to "unknown")
+ * @property actorId - Override for the actor identity on emitted events
+ */
 export interface ObsEmitDeps {
 	getClientIp?: GetClientIpFn;
 	actorId?: string;

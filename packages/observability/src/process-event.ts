@@ -38,7 +38,17 @@ export const EventTypes = {
 	WS_CREDENTIAL_REVOKED: "ws.credential_revoked",
 } as const;
 
-/** Structured security event for the observability pipeline. */
+/**
+ * Structured security event for the observability pipeline.
+ * @property type - Event type from EventTypes or a custom string
+ * @property created_at - ISO-8601 timestamp of the event
+ * @property userId - Associated user ID (omitted for anonymous events)
+ * @property ipAddress - Client IP address
+ * @property ua - User-Agent string
+ * @property status - HTTP status code associated with the event
+ * @property detail - Arbitrary metadata stored as JSON in the database
+ * @property actorId - Identity that triggered the event (defaults to APP_ACTOR_ID)
+ */
 export interface SecurityEvent {
 	type: string;
 	created_at: string;
@@ -61,6 +71,10 @@ export const securityEventSchema = z.object({
 	actorId: z.string().optional(),
 });
 
+/**
+ * Dependencies for event persistence.
+ * @property env - Worker environment bindings (provides database connection)
+ */
 export interface ProcessEventDeps {
 	env: Env;
 }
@@ -95,7 +109,12 @@ export async function processEvent(
 	}
 }
 
-/** PoW challenge returned by computeChallenge when failures exceed threshold. */
+/**
+ * PoW challenge returned by computeChallenge when failures exceed threshold.
+ * @property type - Challenge type (always "pow")
+ * @property difficulty - Required leading hex zero characters in SHA-256 hash
+ * @property nonce - HMAC-signed composite nonce bound to the requesting IP
+ */
 export interface AdaptiveChallenge {
 	type: string;
 	difficulty: number;

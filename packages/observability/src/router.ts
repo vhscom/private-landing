@@ -29,6 +29,11 @@ import { ensureSchema } from "./schema";
 import { createWsHandler } from "./ws";
 import { upgradeWebSocket } from "./ws/upgrade";
 
+/**
+ * Dependencies for the /ops sub-router.
+ * @property createCacheClient - Cache factory for session revocation cache invalidation
+ * @property getClientIp - IP extraction function for rate limiting and audit trail
+ */
 export interface OpsRouterDeps {
 	createCacheClient?: CacheClientFactory;
 	getClientIp?: GetClientIpFn;

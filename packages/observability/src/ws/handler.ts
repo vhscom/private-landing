@@ -20,7 +20,13 @@ import {
 	inboundMessageSchema,
 } from "./schemas";
 
-/** Dependencies injected from the router's upgrade callback. */
+/**
+ * Dependencies injected from the router's upgrade callback.
+ * @property env - Worker environment bindings
+ * @property ipAddress - Client IP for audit trail
+ * @property ua - User-Agent string for audit trail
+ * @property createCacheClient - Cache factory for session revocation cache invalidation
+ */
 export interface WsHandlerDeps {
 	env: Env;
 	ipAddress: string;

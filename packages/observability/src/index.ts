@@ -30,6 +30,11 @@ export type { SecurityEvent };
 export { getAgentPrincipal, requireAgentKey } from "./require-agent-key";
 export { upgradeWebSocket, type WSEvents } from "./ws/upgrade";
 
+/**
+ * Dependencies for the observability plugin.
+ * @property getClientIp - IP extraction function for rate limiting and audit trail
+ * @property actorId - Override for the actor identity on emitted events
+ */
 export interface ObservabilityPluginDeps extends OpsRouterDeps {
 	getClientIp?: GetClientIpFn;
 	actorId?: string;
@@ -90,6 +95,11 @@ type EmitCtx = {
 	executionCtx?: WaitUntilCtx;
 };
 
+/**
+ * Dependencies for the fire-and-forget event emitter.
+ * @property getClientIp - IP extraction function (defaults to "unknown")
+ * @property actorId - Override for the actor identity on emitted events
+ */
 interface ObsEmitEventDeps {
 	getClientIp?: GetClientIpFn;
 	actorId?: string;
