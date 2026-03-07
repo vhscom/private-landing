@@ -1,14 +1,14 @@
 # Private Landing Exp v2.0 — WebSocket Bridge Prototype
 
-Self-contained WebSocket bridge/gate with JWT auth, HMAC-signed PoW capability negotiation, and bidirectional JSON relay to a mock backend. Designed to later proxy to OpenClaw.
+Self-contained WebSocket bridge/gate with agent-key auth, PoW capability negotiation, and bidirectional JSON relay to a mock backend. Designed to later proxy to OpenClaw.
 
 ## Summary
 
-- **JWT auth on upgrade**: Bearer token validated before WebSocket connection is established
-- **PoW capability negotiation**: Server sends nonce + difficulty; client solves SHA-256 PoW; server grants capabilities based on JWT role claims
+- **Agent-key auth on upgrade**: SHA-256 hashed API key validated before WebSocket connection is established
+- **PoW capability negotiation**: Server sends nonce + difficulty; client solves SHA-256 PoW; server grants capabilities based on agent trust level
 - **Bidirectional relay**: Messages forwarded to/from backend, filtered by granted capability namespaces
 - **Mock backend**: Standalone WS server with JSON-RPC handlers for `chat.*` methods and event broadcasting
-- **Intentional simplifications**: Single-process, in-memory state, mock HMAC (SHA-256 PoW), console.log observability
+- **Intentional simplifications**: Single-process, in-memory credential store, static PoW difficulty, console.log observability
 
 ## Setup
 
@@ -34,53 +34,38 @@ bun run dev
 ## Test
 
 ```bash
-bun run test
+bun test
 ```
 
 ## Client Example (JavaScript)
 
 ```javascript
-import { SignJWT } from "jose";
+import { provisionAgent } from "./src/middleware/auth";
+import { solveChallenge } from "./src/bridge/relay";
 
-const secret = new TextEncoder().encode("exp-v2-prototype-secret-replace-me");
+// Provision an agent (in production, this happens via /ops/agents API)
+const { rawKey } = await provisionAgent("my-agent", "write");
 
-// Create a token
-const token = await new SignJWT({ sub: "user1", roles: ["admin"] })
-  .setProtectedHeader({ alg: "HS256" })
-  .setSubject("user1")
-  .setIssuedAt()
-  .setExpirationTime("1h")
-  .sign(secret);
-
-// Connect
+// Connect with the raw key
 const ws = new WebSocket("ws://localhost:18800/ops", {
-  headers: { Authorization: `Bearer ${token}` },
+  headers: { Authorization: `Bearer ${rawKey}` },
 });
 
 ws.onmessage = async (ev) => {
   const msg = JSON.parse(ev.data);
-  console.log("<<", msg);
 
   if (msg.type === "negotiate") {
-    // Solve PoW (difficulty 8 = 1 leading zero byte in SHA-256)
-    let counter = 0;
-    while (true) {
-      const input = new TextEncoder().encode(msg.nonce + counter);
-      const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", input));
-      if (hash[0] === 0) {
-        ws.send(JSON.stringify({
-          type: "negotiate",
-          solution: counter.toString(),
-          capabilities: ["chat", "health"],
-        }));
-        break;
-      }
-      counter++;
-    }
+    const diffMatch = msg.challenge.match(/difficulty (\d+)/);
+    const difficulty = diffMatch?.[1] ? parseInt(diffMatch[1], 10) : 8;
+    const solution = await solveChallenge(msg.nonce, difficulty);
+    ws.send(JSON.stringify({
+      type: "negotiate",
+      solution,
+      capabilities: ["chat", "health"],
+    }));
   }
 
   if (msg.type === "negotiated") {
-    // Send a chat message
     ws.send(JSON.stringify({
       type: "relay",
       method: "chat.send",
@@ -91,30 +76,25 @@ ws.onmessage = async (ev) => {
 };
 ```
 
-## Client Example (wscat)
-
-wscat doesn't support custom headers, so use the JS snippet above or curl for initial testing.
-
 ## Architecture
 
 ```
-Client ──[JWT]──> Bridge Server (:18800/ops) ──> Mock Backend (:18790)
-                   │
-                   ├─ JWT validation on upgrade
-                   ├─ PoW challenge/response
-                   ├─ Capability grant (role-based)
-                   ├─ Bidirectional relay (filtered)
-                   ├─ Rate limiting (10 msg/s)
-                   └─ Idle timeout (30 min)
+Client ──[API key]──> Bridge Server (:18800/ops) ──> Mock Backend (:18790)
+                       │
+                       ├─ Agent key verification on upgrade
+                       ├─ PoW challenge/response
+                       ├─ Capability grant (trust-level based)
+                       ├─ Bidirectional relay (filtered)
+                       ├─ Rate limiting (10 msg/s)
+                       └─ Idle timeout (30 min)
 ```
 
-## Roles & Capabilities
+## Trust Levels & Capabilities
 
-| Role     | Capabilities                        |
-|----------|-------------------------------------|
-| admin    | chat, agent, presence, health       |
-| operator | chat, presence, health              |
-| viewer   | chat, health                        |
+| Trust Level | Capabilities                  |
+|-------------|-------------------------------|
+| write       | chat, agent, presence, health |
+| read        | chat, health                  |
 
 ## Configuration
 
