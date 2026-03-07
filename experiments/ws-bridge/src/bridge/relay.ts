@@ -374,10 +374,7 @@ export class BridgeRelay {
 			const valid = checkCredentialValid(conn.agent.id);
 			if (!valid) {
 				conn.credentialCheckFailures++;
-				if (
-					conn.credentialCheckFailures >= MAX_CREDENTIAL_CHECK_FAILURES ||
-					!valid
-				) {
+				if (conn.credentialCheckFailures >= MAX_CREDENTIAL_CHECK_FAILURES) {
 					this.log("credential.revoked", {
 						connId: conn.id,
 						agent: conn.agent.name,
