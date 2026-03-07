@@ -349,7 +349,7 @@ export class BridgeRelay {
 		const response: NegotiatedMessage = {
 			type: "negotiated",
 			granted,
-			session: sessionKey,
+			sessionKey,
 		};
 		ws.send(JSON.stringify(response));
 

@@ -137,12 +137,12 @@ async function fullHandshake(
 	const negotiated = await readMessage<{
 		type: string;
 		granted: string[];
-		session: string;
+		sessionKey: string;
 	}>(ws);
 
 	return {
 		ws,
-		session: negotiated.session,
+		session: negotiated.sessionKey,
 		granted: negotiated.granted,
 		rawKey,
 	};

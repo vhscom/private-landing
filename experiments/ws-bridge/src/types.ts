@@ -43,7 +43,7 @@ export interface NegotiateResponse {
 export interface NegotiatedMessage {
 	type: "negotiated";
 	granted: string[];
-	session: string;
+	sessionKey: string;
 }
 
 /** Error envelope for denied operations or protocol violations. */
