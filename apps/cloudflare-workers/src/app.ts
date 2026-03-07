@@ -71,7 +71,7 @@ let obsEmit: (eventType: string) => MiddlewareHandler<AppEnv> = () => noop;
 let obsEmitEvent: (ctx: any, event: any) => void = () => {};
 let adaptiveChallenge: MiddlewareHandler<AppEnv> = noop;
 
-// [obs-plugin 2/2] Remove this override and the import above to disable observability
+// [obs-plugin 2/2 begin] Remove through end marker (and import) to disable observability
 const obs = observabilityPlugin(app, {
 	createCacheClient: createCacheClient ?? undefined,
 	getClientIp: defaultGetClientIp,

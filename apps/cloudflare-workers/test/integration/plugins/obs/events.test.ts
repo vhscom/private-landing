@@ -6,6 +6,7 @@
  * @license Apache-2.0
  */
 
+import { env } from "cloudflare:test";
 import type { SqliteClient } from "@private-landing/infrastructure";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -23,15 +24,55 @@ import {
 const SUITE_EMAIL = "obs-events-suite@example.com";
 
 let dbClient: SqliteClient;
+let agentKey: string;
 
-/** Poll security_event for a specific event type, retrying for async writes. */
+/**
+ * Provision a test agent via /ops/agents.
+ * Requires AGENT_PROVISIONING_SECRET in the worker environment.
+ */
+async function provisionTestAgent(): Promise<string> {
+	const secret = env.AGENT_PROVISIONING_SECRET;
+	if (!secret) {
+		throw new Error(
+			"AGENT_PROVISIONING_SECRET not set — cannot provision test agent",
+		);
+	}
+
+	const name = `test-events-${Date.now()}`;
+	const res = await makeRequest("/ops/agents", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			"x-provisioning-secret": secret,
+		},
+		body: JSON.stringify({ name, trustLevel: "read" }),
+	});
+
+	if (!res.ok) {
+		throw new Error(`Agent provisioning failed: ${res.status}`);
+	}
+
+	const body = (await res.json()) as { apiKey: string };
+	return body.apiKey;
+}
+
+/** Poll /ops/events for a specific event type via the API. */
 async function pollForEvent(type: string, maxAttempts = 10): Promise<boolean> {
+	const since = new Date(Date.now() - 60_000).toISOString();
 	for (let i = 0; i < maxAttempts; i++) {
-		const result = await dbClient.execute({
-			sql: "SELECT type FROM security_event WHERE type = ?",
-			args: [type],
-		});
-		if (result.rows.length > 0) return true;
+		const res = await makeRequest(
+			`/ops/events?type=${encodeURIComponent(type)}&since=${encodeURIComponent(since)}`,
+			{
+				headers: {
+					Authorization: `Bearer ${agentKey}`,
+					Accept: "application/json",
+				},
+			},
+		);
+		if (res.ok) {
+			const body = (await res.json()) as { events: unknown[]; count: number };
+			if (body.count > 0) return true;
+		}
 		await new Promise((r) => setTimeout(r, 200));
 	}
 	return false;
@@ -41,6 +82,7 @@ describe("[obs-plugin] event emission", () => {
 	beforeAll(async () => {
 		dbClient = await initTestDb();
 		await createSuiteUser(dbClient, SUITE_EMAIL);
+		agentKey = await provisionTestAgent();
 	});
 
 	afterAll(async () => {
@@ -48,6 +90,9 @@ describe("[obs-plugin] event emission", () => {
 		await cleanupSuiteUser(dbClient, SUITE_EMAIL);
 		await dbClient.execute(
 			"DELETE FROM account WHERE email LIKE 'obs-reg-%@example.com'",
+		);
+		await dbClient.execute(
+			"DELETE FROM agent_credential WHERE name LIKE 'test-events-%'",
 		);
 		dbClient.close();
 	});
@@ -91,7 +136,6 @@ describe("[obs-plugin] event emission", () => {
 			headers: { Accept: "application/json" },
 		});
 
-		// obsEmitEvent fires via waitUntil — poll for the async write
 		expect(await pollForEvent("login.failure")).toBe(true);
 	});
 
@@ -105,7 +149,6 @@ describe("[obs-plugin] event emission", () => {
 			headers: { Accept: "application/json" },
 		});
 
-		// obsEmitEvent fires via waitUntil — poll for the async write
 		expect(await pollForEvent("login.success")).toBe(true);
 	});
 
@@ -121,7 +164,7 @@ describe("[obs-plugin] event emission", () => {
 		});
 
 		expect(await pollForEvent("session.revoke")).toBe(true);
-	}, 15_000);
+	});
 
 	it("stores password.change event after password change", async () => {
 		await cleanupSecurityEvents(dbClient);
@@ -142,5 +185,5 @@ describe("[obs-plugin] event emission", () => {
 		});
 
 		expect(await pollForEvent("password.change")).toBe(true);
-	}, 15_000);
+	});
 });
