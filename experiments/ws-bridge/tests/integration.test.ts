@@ -167,7 +167,7 @@ describe("Full agent lifecycle", () => {
 			["chat", "health"],
 		);
 
-		expect(session).toMatch(/^exp-lifecycle-agent-/);
+		expect(session).toBe("agent:lifecycle-agent:main");
 		expect(granted).toEqual(["chat", "health"]);
 
 		// Send a message

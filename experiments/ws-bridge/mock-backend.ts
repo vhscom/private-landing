@@ -97,12 +97,6 @@ export function createMockBackend(port: number) {
 			return;
 		}
 
-		// Acknowledge ko-olleh
-		if (method === "ko-olleh") {
-			sendRes(ws, id, { ack: true });
-			return;
-		}
-
 		// Reject pre-handshake requests
 		if (!ws.data.connected) {
 			sendResError(ws, id, "protocol_error", "Not connected");
@@ -110,7 +104,7 @@ export function createMockBackend(port: number) {
 		}
 
 		const sessionName =
-			(params?.session as string) ?? ws.data.session ?? "default";
+			(params?.sessionKey as string) ?? ws.data.session ?? "default";
 		ws.data.session = sessionName;
 		const session = getSession(sessionName);
 

@@ -325,9 +325,9 @@ export class BridgeRelay {
 			return;
 		}
 
-		const session = `exp-${conn.agent.name}-${nanoid(8)}`;
+		const sessionKey = `agent:${conn.agent.name}:main`;
 		conn.granted = granted;
-		conn.session = session;
+		conn.session = sessionKey;
 		conn.state = "active";
 
 		this.resetIdleTimer(conn, ws);
@@ -349,7 +349,7 @@ export class BridgeRelay {
 		const response: NegotiatedMessage = {
 			type: "negotiated",
 			granted,
-			session,
+			session: sessionKey,
 		};
 		ws.send(JSON.stringify(response));
 
@@ -357,7 +357,7 @@ export class BridgeRelay {
 			connId: conn.id,
 			agent: conn.agent.name,
 			granted,
-			session,
+			sessionKey,
 		});
 	}
 
@@ -460,7 +460,7 @@ export class BridgeRelay {
 		const frame = {
 			type: "req",
 			method: msg.method,
-			params: { ...msg.params, session: conn.session },
+			params: { ...msg.params, sessionKey: conn.session },
 			id: msg.id,
 		};
 		conn.backendWs.send(JSON.stringify(frame));
@@ -548,13 +548,6 @@ export class BridgeRelay {
 						if (payload?.type === "hello-ok") {
 							clearTimeout(timeout);
 							handshakePhase = "ready";
-							backend.send(
-								JSON.stringify({
-									type: "req",
-									method: "ko-olleh",
-									id: "_ack",
-								}),
-							);
 							this.log("backend.handshake_complete", { connId: conn.id });
 							resolve();
 						} else {
@@ -579,7 +572,7 @@ export class BridgeRelay {
 							params: frame.params as Record<string, unknown> | undefined,
 						};
 						ws.send(JSON.stringify(relay));
-					} else if (frame.type === "res" && frame.id !== "_ack") {
+					} else if (frame.type === "res") {
 						const relay: RelayMessage = {
 							type: "relay",
 							result: frame.payload,

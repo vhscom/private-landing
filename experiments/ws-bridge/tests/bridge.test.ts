@@ -179,7 +179,7 @@ describe("Negotiation", () => {
 		expect(negotiated.type).toBe("negotiated");
 		expect(negotiated.granted).toContain("chat");
 		expect(negotiated.granted).toContain("health");
-		expect(negotiated.session).toMatch(/^exp-test-agent-/);
+		expect(negotiated.session).toBe("agent:test-agent:main");
 
 		ws.close();
 	});
