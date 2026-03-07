@@ -83,7 +83,7 @@ export function createMockBackend(port: number) {
 				JSON.stringify({
 					type: "res",
 					id,
-					result: { status: "hello-ok" },
+					result: { type: "hello-ok" },
 				}),
 			);
 			return;

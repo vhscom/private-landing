@@ -521,10 +521,12 @@ export class BridgeRelay {
 								method: "connect",
 								id: "_connect",
 								params: {
-									role: "operator",
+									id: "gateway-client",
+									mode: "backend",
+									minProtocol: 3,
+									maxProtocol: 3,
 									scopes: ["operator.read", "operator.write"],
 									auth: { token: this.gatewayToken ?? "" },
-									device: { type: "bridge", version: "2.0.0-exp" },
 								},
 							}),
 						);
@@ -533,11 +535,11 @@ export class BridgeRelay {
 
 					// Handshake phase 2: wait for hello-ok
 					if (handshakePhase === "awaiting_hello" && frame.type === "res") {
-						const result = frame.result as
-							| { status?: string }
+						const payload = frame.result as
+							| { type?: string }
 							| null
 							| undefined;
-						if (result?.status === "hello-ok") {
+						if (payload?.type === "hello-ok") {
 							clearTimeout(timeout);
 							handshakePhase = "ready";
 							backend.send(
