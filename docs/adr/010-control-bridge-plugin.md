@@ -1,6 +1,6 @@
 # ADR-010: Control Bridge Plugin
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-03-07
 - **Decision-makers:** @vhscom
 
@@ -63,49 +63,58 @@ export function observabilityPlugin(app, deps) {
   const opsRouter = createOpsRouter(deps);
   app.route("/ops", opsRouter);
   // ... existing middleware factories ...
-  return { obsEmit, obsEmitEvent, adaptiveChallenge, adaptiveChallengeFor, opsRouter };
+  return { obsEmit, obsEmitEvent, adaptiveChallenge, adaptiveChallengeFor, opsRouter, mountAgentWs, getClientIp: deps.getClientIp };
 }
 ```
 
-The control plugin receives the ops router and mounts its routes on it:
+The control plugin receives the ops router and mounts its routes on it. It inherits `getClientIp` from the obs return value so both plugins use the same IP extraction function:
 
 ```typescript
 // packages/control/src/index.ts
 export function controlPlugin(
-  opsRouter: Hono<OpsEnv>,
+  opsRouter: Hono<any>,
   deps: ControlPluginDeps,
 ): void;
 
 export interface ControlPluginDeps {
   requireAuth: MiddlewareHandler;
   obsEmitEvent?: ObsEmitEventFn;  // from observability, for audit logging
-  gatewayUrl?: string;             // default: env.GATEWAY_URL
-  gatewayToken?: string;           // default: env.GATEWAY_TOKEN
+  getClientIp?: GetClientIpFn;    // from observability, for IP allowlist + audit
 }
 ```
+
+Gateway credentials (`GATEWAY_URL`, `GATEWAY_TOKEN`) are read from the Worker environment at request time, not passed as constructor arguments — this avoids duplicating secrets in the wiring code.
 
 ### Wiring in app.ts
 
 ```typescript
-// [obs-plugin 1/2] Remove this import and the override below to disable observability
-import { observabilityPlugin } from "@private-landing/observability";
 // [control-plugin 1/2] Remove this import and the call below to disable control bridge
 import { controlPlugin } from "@private-landing/control";
+// [obs-plugin 1/2] Remove this import and the override below to disable observability
+import { observabilityPlugin } from "@private-landing/observability";
 
-// [obs-plugin 2/2] Remove this override and the import above to disable observability
-const { obsEmit, obsEmitEvent, adaptiveChallenge, opsRouter, mountAgentWs } =
-  observabilityPlugin(app, {
-    createCacheClient: createCacheClient ?? undefined,
-    getClientIp: defaultGetClientIp,
-  });
+// [obs-plugin 2/2 begin] Remove through end marker (and import) to disable observability
+const obs = observabilityPlugin(app, {
+  createCacheClient: createCacheClient ?? undefined,
+  getClientIp: defaultGetClientIp,
+});
+({ obsEmit, obsEmitEvent, adaptiveChallenge } = obs);
 
-// [control-plugin 2/2] Remove this call and the import above to disable control bridge
-// When control is absent, uncomment mountAgentWs to restore agent-key WS access.
-controlPlugin(opsRouter, { requireAuth, obsEmitEvent });
-// mountAgentWs(opsRouter);
+// [control-plugin 2/2 begin] Remove through end marker (and import) to disable control bridge
+controlPlugin(obs.opsRouter, {
+  requireAuth,
+  obsEmitEvent: obs.obsEmitEvent,
+  getClientIp: obs.getClientIp,
+});
+// [control-plugin 2/2 end] Uncomment next line when control is removed:
+// obs.mountAgentWs(obs.opsRouter);
+
+// [obs-plugin 2/2 end]
 ```
 
-The dependency is visible in the code: `controlPlugin` receives `opsRouter` from `observabilityPlugin`. Remove the observability lines and `opsRouter` does not exist — the control call fails at compile time, not at runtime. This is deliberate. A runtime check ("is observability loaded?") would hide the dependency; a compile-time reference makes it explicit.
+The markers use begin/end delimiters so CI scripts can `sed` between them reliably. The control block is nested inside the obs block — removing obs automatically removes control. Removing control alone leaves obs intact, and the `mountAgentWs` call can be uncommented to restore agent-key WebSocket access.
+
+The dependency is visible in the code: `controlPlugin` receives `obs.opsRouter` from `observabilityPlugin`. Remove the observability lines and `obs` does not exist — the control call fails at compile time, not at runtime. This is deliberate. A runtime check ("is observability loaded?") would hide the dependency; a compile-time reference makes it explicit.
 
 The WebSocket handler is mutually exclusive — either control owns `/ops/ws` (JWT auth, bridge to gateway) or observability does (agent-key auth, direct gateway). The choice is expressed in `app.ts` by which call is active, not by route priority.
 
@@ -147,14 +156,13 @@ Observability ([ADR-009](009-ops-websocket-gateway.md)) and control both want `/
 The solution: observability does not register `/ops/ws` by default. Instead, `observabilityPlugin` returns a `mountAgentWs` function alongside the ops router. The WebSocket handler is mounted explicitly in `app.ts`, making the choice visible:
 
 ```typescript
-const { obsEmit, obsEmitEvent, adaptiveChallenge, opsRouter, mountAgentWs } =
-  observabilityPlugin(app, deps);
+const obs = observabilityPlugin(app, deps);
 
 // When control is active, it owns /ops/ws (JWT auth, bridge to gateway):
-controlPlugin(opsRouter, { requireAuth, obsEmitEvent });
+controlPlugin(obs.opsRouter, { requireAuth, obsEmitEvent: obs.obsEmitEvent, getClientIp: obs.getClientIp });
 
 // When control is absent, uncomment to restore agent-key WS:
-// mountAgentWs(opsRouter);
+// obs.mountAgentWs(obs.opsRouter);
 ```
 
 Only one WebSocket handler is active at a time. The mutual exclusion is expressed in code, not in route priority rules. Removing the `controlPlugin` call and uncommenting `mountAgentWs` restores the original agent-key behavior with no other changes.
@@ -361,12 +369,16 @@ Bundle the control UI into Private Landing's static file serving.
 
 ## Implementation Notes
 
-- **Package:** `packages/control/` — depends on `@private-landing/observability` (for `opsRouter` type and `obsEmitEvent`) and `@private-landing/core` (for `requireAuth` type)
-- **Relay extraction:** The relay protocol logic (PoW, capability filtering, frame translation, heartbeat) ports from `experiments/ws-bridge/src/` to `packages/control/src/bridge/`, replacing Bun-native WebSocket APIs with Workers-compatible equivalents (`WSContext`, `WebSocketPair`, standard `WebSocket` constructor). The experiment directory can be archived or kept as a standalone test harness
-- **Observability change:** `observabilityPlugin` returns `opsRouter` in addition to existing middleware factories. This is additive — existing destructuring patterns continue to work
-- **Route mounting:** Control plugin calls `opsRouter.all("/control/*", ...)` and `opsRouter.get("/ws", ...)` — routes are added to the same sub-router that observability created, inheriting its middleware stack
-- **Testing:** Unit tests mock the gateway WebSocket and verify JWT-to-bridge auth swap, user 1 guard, and proxy forwarding. Integration tests reuse the mock backend from the experiment
-- **Environment:** `GATEWAY_URL` and `GATEWAY_TOKEN` in Worker env (`.dev.vars` for local development)
+- **Package:** `packages/control/` — depends on `@private-landing/observability` (for `upgradeWebSocket`, `WSEvents`, `opsRouter`), `@private-landing/infrastructure` (for `createDbClient` in session-bound heartbeat), `@private-landing/core`, and `@private-landing/types`
+- **File structure:** `src/index.ts` (plugin entry), `src/types.ts` (bindings), `src/proxy.ts` (reverse proxy), `src/middleware/` (user-one-guard, ip-allowlist), `src/bridge/` (handler, pow, schemas, types)
+- **Message validation:** Inbound bridge messages are validated with a Zod discriminated union (`negotiate | relay | ping`) in `src/bridge/schemas.ts`, matching the pattern in `packages/observability/src/ws/schemas.ts`
+- **Relay extraction:** The relay protocol logic (PoW, capability filtering, frame translation, heartbeat) ported from `experiments/ws-bridge/src/` to `packages/control/src/bridge/`, replacing Bun-native WebSocket APIs with Workers-compatible equivalents (`WSContext<WebSocket>` front door, standard `new WebSocket(url)` back door)
+- **Observability changes:** `observabilityPlugin` returns `opsRouter`, `mountAgentWs`, and `getClientIp` in addition to existing middleware factories. This is additive — existing destructuring patterns continue to work
+- **Route mounting:** Control plugin calls `opsRouter.all("/control/*", ...)` and `opsRouter.get("/ws", ...)` — routes are added to the same sub-router that observability created, inheriting its cloaking middleware
+- **Plugin removal:** `app.ts` uses nested begin/end markers (`[obs-plugin 2/2 begin]`/`[obs-plugin 2/2 end]`) that CI scripts can `sed` between. The control block nests inside the obs block. CI jobs verify build, typecheck, and unit tests pass after removal of control alone or both plugins
+- **Testing:** Unit tests in `packages/control/test/` cover PoW verification, handler lifecycle, concurrent connection limit, rate limiting, user-1 guard, IP allowlist, and reverse proxy. Integration tests in `apps/cloudflare-workers/test/integration/plugins/control/` verify access control layers end-to-end
+- **Bundle size:** CI reports wrangler bundle sizes in GitHub step summaries for each removal configuration (all plugins, without control, without both)
+- **Environment:** `GATEWAY_URL` and `GATEWAY_TOKEN` in Worker env (`.dev.vars` for local development). `CONTROL_ALLOWED_IPS` is optional
 
 ## References
 
