@@ -15,14 +15,22 @@ import { MAX_MESSAGE_BYTES, type WsData } from "./types";
 
 const PORT = Number.parseInt(process.env.PORT || "18800", 10);
 const BACKEND_URL = process.env.BACKEND_URL || "ws://localhost:18790";
+const GATEWAY_TOKEN = process.env.GATEWAY_TOKEN;
 
 const app = new Hono();
 
 app.get("/health", (c) => c.json({ status: "ok", version: "2.0.0-exp" }));
 
 /** Creates the bridge server with agent auth on /ops and health check on /health. */
-export function createServer(port: number, backendUrl?: string) {
-	const relay = new BridgeRelay(backendUrl ?? BACKEND_URL);
+export function createServer(
+	port: number,
+	backendUrl?: string,
+	gatewayToken?: string,
+) {
+	const relay = new BridgeRelay(
+		backendUrl ?? BACKEND_URL,
+		gatewayToken ?? GATEWAY_TOKEN,
+	);
 
 	const server = Bun.serve<WsData>({
 		port,

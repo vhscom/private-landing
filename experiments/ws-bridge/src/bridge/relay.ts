@@ -38,6 +38,7 @@ import {
 export class BridgeRelay {
 	private connections = new Map<string, BridgeConnection>();
 	private backendUrl: string;
+	private gatewayToken: string | undefined;
 	private powConfig: AdaptivePoWConfig;
 
 	/** Per-IP connection count within the adaptive window */
@@ -50,8 +51,13 @@ export class BridgeRelay {
 	private seenNonces = new Map<string, number>();
 	private nonceCleanupTimer: ReturnType<typeof setInterval>;
 
-	constructor(backendUrl: string, powConfig?: Partial<AdaptivePoWConfig>) {
+	constructor(
+		backendUrl: string,
+		gatewayToken?: string,
+		powConfig?: Partial<AdaptivePoWConfig>,
+	) {
 		this.backendUrl = backendUrl;
+		this.gatewayToken = gatewayToken;
 		this.powConfig = { ...POW_DEFAULTS, ...powConfig };
 
 		// Periodic cleanup of expired nonces
@@ -464,7 +470,12 @@ export class BridgeRelay {
 		ws: ServerWebSocket<WsData>,
 	): Promise<void> {
 		return new Promise((resolve, reject) => {
-			const backend = new WebSocket(this.backendUrl);
+			const backend = this.gatewayToken
+				? new WebSocket(this.backendUrl, {
+						// @ts-expect-error Bun supports headers on client WebSocket
+						headers: { Authorization: `Bearer ${this.gatewayToken}` },
+					})
+				: new WebSocket(this.backendUrl);
 
 			const timeout = setTimeout(() => {
 				backend.close();
