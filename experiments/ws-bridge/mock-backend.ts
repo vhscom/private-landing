@@ -24,7 +24,8 @@ interface GatewayFrame {
 	method?: string;
 	event?: string;
 	params?: Record<string, unknown>;
-	result?: unknown;
+	ok?: boolean;
+	payload?: unknown;
 	error?: { type: string; message: string };
 	id?: string | number;
 }
@@ -59,7 +60,7 @@ export function createMockBackend(port: number) {
 		id: string | number | undefined,
 		result: unknown,
 	): void {
-		ws.send(JSON.stringify({ type: "res", id, result }));
+		ws.send(JSON.stringify({ type: "res", id, ok: true, payload: result }));
 	}
 
 	function sendResError(
@@ -69,7 +70,12 @@ export function createMockBackend(port: number) {
 		message: string,
 	): void {
 		ws.send(
-			JSON.stringify({ type: "res", id, error: { type: errorType, message } }),
+			JSON.stringify({
+				type: "res",
+				id,
+				ok: false,
+				error: { type: errorType, message },
+			}),
 		);
 	}
 
@@ -83,7 +89,8 @@ export function createMockBackend(port: number) {
 				JSON.stringify({
 					type: "res",
 					id,
-					result: { type: "hello-ok" },
+					ok: true,
+					payload: { type: "hello-ok" },
 				}),
 			);
 			return;
