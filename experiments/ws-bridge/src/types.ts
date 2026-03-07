@@ -60,7 +60,7 @@ export interface RelayMessage {
 	method?: string;
 	event?: string;
 	params?: Record<string, unknown>;
-	id?: string | number;
+	id?: string;
 	result?: unknown;
 }
 

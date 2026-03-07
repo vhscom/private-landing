@@ -5,6 +5,7 @@
  */
 
 import type { ServerWebSocket } from "bun";
+import { nanoid } from "nanoid";
 
 const PORT = Number.parseInt(process.env.MOCK_PORT || "18790", 10);
 
@@ -27,7 +28,7 @@ interface GatewayFrame {
 	ok?: boolean;
 	payload?: unknown;
 	error?: { type: string; message: string };
-	id?: string | number;
+	id?: string;
 }
 
 export function createMockBackend(port: number) {
@@ -57,7 +58,7 @@ export function createMockBackend(port: number) {
 
 	function sendRes(
 		ws: ServerWebSocket<WsData>,
-		id: string | number | undefined,
+		id: string | undefined,
 		result: unknown,
 	): void {
 		ws.send(JSON.stringify({ type: "res", id, ok: true, payload: result }));
@@ -65,7 +66,7 @@ export function createMockBackend(port: number) {
 
 	function sendResError(
 		ws: ServerWebSocket<WsData>,
-		id: string | number | undefined,
+		id: string | undefined,
 		errorType: string,
 		message: string,
 	): void {
@@ -159,7 +160,7 @@ export function createMockBackend(port: number) {
 		port,
 		fetch(req, server) {
 			const upgraded = server.upgrade(req, {
-				data: { id: crypto.randomUUID(), session: null, connected: false },
+				data: { id: nanoid(), session: null, connected: false },
 			});
 			if (upgraded) return undefined;
 			return new Response("WebSocket only", { status: 426 });
@@ -180,7 +181,7 @@ export function createMockBackend(port: number) {
 					JSON.stringify({
 						type: "event",
 						event: "connect.challenge",
-						params: { nonce: crypto.randomUUID() },
+						params: { nonce: nanoid() },
 					}),
 				);
 			},

@@ -8,6 +8,7 @@
  */
 
 import type { ServerWebSocket } from "bun";
+import { nanoid } from "nanoid";
 import { checkCredentialValid } from "../middleware/auth";
 import {
 	type AdaptivePoWConfig,
@@ -73,7 +74,7 @@ export class BridgeRelay {
 		agent: AgentPrincipal,
 		clientIp?: string,
 	): void {
-		const connId = crypto.randomUUID();
+		const connId = nanoid();
 		const nonce = this.generateNonce();
 		const difficulty = this.computeDifficulty(clientIp);
 
@@ -324,7 +325,7 @@ export class BridgeRelay {
 			return;
 		}
 
-		const session = `exp-${conn.agent.name}-${crypto.randomUUID().slice(0, 8)}`;
+		const session = `exp-${conn.agent.name}-${nanoid(8)}`;
 		conn.granted = granted;
 		conn.session = session;
 		conn.state = "active";
@@ -582,7 +583,7 @@ export class BridgeRelay {
 						const relay: RelayMessage = {
 							type: "relay",
 							result: frame.payload,
-							id: frame.id as string | number | undefined,
+							id: frame.id as string | undefined,
 						};
 						if (frame.error) {
 							ws.send(

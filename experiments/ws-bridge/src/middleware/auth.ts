@@ -7,6 +7,7 @@
  * @license Apache-2.0
  */
 
+import { nanoid } from "nanoid";
 import type { AgentCredential, AgentPrincipal, TrustLevel } from "../types";
 
 /** In-memory credential store keyed by SHA-256 hex digest of the raw API key. */
@@ -45,7 +46,7 @@ export async function provisionAgent(
 
 	const keyHash = await hashApiKey(rawKey);
 	const credential: AgentCredential = {
-		id: crypto.randomUUID(),
+		id: nanoid(),
 		name,
 		keyHash,
 		trustLevel,
