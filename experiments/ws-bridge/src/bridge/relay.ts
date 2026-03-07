@@ -455,16 +455,25 @@ export class BridgeRelay {
 			return;
 		}
 
-		const backendMsg = {
+		// Gateway frame format: {type: "req", id, method, params}
+		const frame = {
+			type: "req",
 			method: msg.method,
 			params: { ...msg.params, session: conn.session },
 			id: msg.id,
 		};
-		conn.backendWs.send(JSON.stringify(backendMsg));
+		conn.backendWs.send(JSON.stringify(frame));
 	}
 
 	// --- Backend ---
 
+	/**
+	 * Connects to the gateway backend and completes the handshake:
+	 * 1. Wait for connect.challenge event
+	 * 2. Send connect req with role, scopes, auth
+	 * 3. Wait for hello-ok response
+	 * Then installs the message handler for relaying res/event frames.
+	 */
 	private connectBackend(
 		conn: BridgeConnection,
 		ws: ServerWebSocket<WsData>,
@@ -482,11 +491,12 @@ export class BridgeRelay {
 				reject(new Error("Backend connection timeout"));
 			}, 5000);
 
+			let handshakePhase: "awaiting_challenge" | "awaiting_hello" | "ready" =
+				"awaiting_challenge";
+
 			backend.onopen = () => {
-				clearTimeout(timeout);
 				conn.backendWs = backend;
 				this.log("backend.connected", { connId: conn.id });
-				resolve();
 			};
 
 			backend.onerror = () => {
@@ -496,24 +506,89 @@ export class BridgeRelay {
 
 			backend.onmessage = (ev) => {
 				try {
-					const data = JSON.parse(String(ev.data)) as Record<string, unknown>;
-					const eventNamespace =
-						typeof data.event === "string"
-							? data.event.split(".")[0]
-							: undefined;
+					const frame = JSON.parse(String(ev.data)) as Record<string, unknown>;
 
-					if (eventNamespace && !conn.granted.includes(eventNamespace)) {
+					// Handshake phase 1: wait for connect.challenge
+					if (
+						handshakePhase === "awaiting_challenge" &&
+						frame.type === "event" &&
+						frame.event === "connect.challenge"
+					) {
+						handshakePhase = "awaiting_hello";
+						backend.send(
+							JSON.stringify({
+								type: "req",
+								method: "connect",
+								id: "_connect",
+								params: {
+									role: "operator",
+									scopes: ["operator.read", "operator.write"],
+									auth: { token: this.gatewayToken ?? "" },
+									device: { type: "bridge", version: "2.0.0-exp" },
+								},
+							}),
+						);
 						return;
 					}
 
-					const relay: RelayMessage = {
-						type: "relay",
-						event: data.event as string | undefined,
-						result: data.result,
-						id: data.id as string | number | undefined,
-						params: data.params as Record<string, unknown> | undefined,
-					};
-					ws.send(JSON.stringify(relay));
+					// Handshake phase 2: wait for hello-ok
+					if (handshakePhase === "awaiting_hello" && frame.type === "res") {
+						const result = frame.result as
+							| { status?: string }
+							| null
+							| undefined;
+						if (result?.status === "hello-ok") {
+							clearTimeout(timeout);
+							handshakePhase = "ready";
+							backend.send(
+								JSON.stringify({
+									type: "req",
+									method: "ko-olleh",
+									id: "_ack",
+								}),
+							);
+							this.log("backend.handshake_complete", { connId: conn.id });
+							resolve();
+						} else {
+							clearTimeout(timeout);
+							reject(new Error("Backend handshake rejected"));
+						}
+						return;
+					}
+
+					// Post-handshake: relay res/event frames to client
+					if (handshakePhase !== "ready") return;
+
+					if (frame.type === "event") {
+						const eventName = frame.event as string | undefined;
+						const eventNamespace = eventName?.split(".")[0];
+						if (eventNamespace && !conn.granted.includes(eventNamespace)) {
+							return;
+						}
+						const relay: RelayMessage = {
+							type: "relay",
+							event: eventName,
+							params: frame.params as Record<string, unknown> | undefined,
+						};
+						ws.send(JSON.stringify(relay));
+					} else if (frame.type === "res" && frame.id !== "_ack") {
+						const relay: RelayMessage = {
+							type: "relay",
+							result: frame.result,
+							id: frame.id as string | number | undefined,
+						};
+						if (frame.error) {
+							ws.send(
+								JSON.stringify({
+									type: "relay",
+									id: frame.id,
+									error: frame.error,
+								}),
+							);
+						} else {
+							ws.send(JSON.stringify(relay));
+						}
+					}
 				} catch {
 					// Drop unparseable backend messages
 				}

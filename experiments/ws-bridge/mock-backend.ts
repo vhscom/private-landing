@@ -1,7 +1,7 @@
 /**
- * Mock OpenClaw WebSocket backend.
- * Handles JSON-RPC style messages and broadcasts events.
- * Listens on ws://localhost:18790
+ * Mock gateway backend speaking the gateway frame protocol.
+ * Handshake: connect.challenge → connect req → hello-ok
+ * Frames: {type: "req"} / {type: "res"} / {type: "event"}
  */
 
 import type { ServerWebSocket } from "bun";
@@ -16,11 +16,16 @@ interface SessionState {
 interface WsData {
 	id: string;
 	session: string | null;
+	connected: boolean;
 }
 
-interface RpcMessage {
+interface GatewayFrame {
+	type: "req" | "res" | "event";
 	method?: string;
+	event?: string;
 	params?: Record<string, unknown>;
+	result?: unknown;
+	error?: { type: string; message: string };
 	id?: string | number;
 }
 
@@ -37,9 +42,10 @@ export function createMockBackend(port: number) {
 		return s;
 	}
 
-	function broadcast(event: string, data: Record<string, unknown>): void {
-		const msg = JSON.stringify({ event, ...data });
+	function broadcast(event: string, params: Record<string, unknown>): void {
+		const msg = JSON.stringify({ type: "event", event, params });
 		for (const ws of clients) {
+			if (!ws.data.connected) continue;
 			try {
 				ws.send(msg);
 			} catch {
@@ -48,8 +54,53 @@ export function createMockBackend(port: number) {
 		}
 	}
 
-	function handleRpc(ws: ServerWebSocket<WsData>, msg: RpcMessage): void {
-		const { method, params, id } = msg;
+	function sendRes(
+		ws: ServerWebSocket<WsData>,
+		id: string | number | undefined,
+		result: unknown,
+	): void {
+		ws.send(JSON.stringify({ type: "res", id, result }));
+	}
+
+	function sendResError(
+		ws: ServerWebSocket<WsData>,
+		id: string | number | undefined,
+		errorType: string,
+		message: string,
+	): void {
+		ws.send(
+			JSON.stringify({ type: "res", id, error: { type: errorType, message } }),
+		);
+	}
+
+	function handleReq(ws: ServerWebSocket<WsData>, frame: GatewayFrame): void {
+		const { method, params, id } = frame;
+
+		// Connect handshake
+		if (method === "connect") {
+			ws.data.connected = true;
+			ws.send(
+				JSON.stringify({
+					type: "res",
+					id,
+					result: { status: "hello-ok" },
+				}),
+			);
+			return;
+		}
+
+		// Acknowledge ko-olleh
+		if (method === "ko-olleh") {
+			sendRes(ws, id, { ack: true });
+			return;
+		}
+
+		// Reject pre-handshake requests
+		if (!ws.data.connected) {
+			sendResError(ws, id, "protocol_error", "Not connected");
+			return;
+		}
+
 		const sessionName =
 			(params?.session as string) ?? ws.data.session ?? "default";
 		ws.data.session = sessionName;
@@ -57,7 +108,7 @@ export function createMockBackend(port: number) {
 
 		switch (method) {
 			case "chat.history": {
-				ws.send(JSON.stringify({ id, result: { history: session.history } }));
+				sendRes(ws, id, { history: session.history });
 				break;
 			}
 			case "chat.send": {
@@ -65,7 +116,6 @@ export function createMockBackend(port: number) {
 				session.aborted = false;
 				session.history.push({ role: "user", content, ts: Date.now() });
 
-				// Simulate assistant response
 				const reply = `Echo: ${content}`;
 				session.history.push({
 					role: "assistant",
@@ -73,34 +123,28 @@ export function createMockBackend(port: number) {
 					ts: Date.now(),
 				});
 
-				ws.send(JSON.stringify({ id, result: { content: reply } }));
+				sendRes(ws, id, { content: reply });
 				broadcast("chat.message", {
-					params: { session: sessionName, role: "assistant", content: reply },
+					session: sessionName,
+					role: "assistant",
+					content: reply,
 				});
 				break;
 			}
 			case "chat.abort": {
 				session.aborted = true;
-				ws.send(JSON.stringify({ id, result: { aborted: true } }));
+				sendRes(ws, id, { aborted: true });
 				break;
 			}
 			case "chat.inject": {
 				const role = (params?.role as string) ?? "system";
 				const content = (params?.content as string) ?? "";
 				session.history.push({ role, content, ts: Date.now() });
-				ws.send(JSON.stringify({ id, result: { injected: true } }));
+				sendRes(ws, id, { injected: true });
 				break;
 			}
 			default:
-				ws.send(
-					JSON.stringify({
-						id,
-						error: {
-							type: "unknown_method",
-							message: `Unknown method: ${method}`,
-						},
-					}),
-				);
+				sendResError(ws, id, "unknown_method", `Unknown method: ${method}`);
 		}
 	}
 
@@ -108,7 +152,7 @@ export function createMockBackend(port: number) {
 		port,
 		fetch(req, server) {
 			const upgraded = server.upgrade(req, {
-				data: { id: crypto.randomUUID(), session: null },
+				data: { id: crypto.randomUUID(), session: null, connected: false },
 			});
 			if (upgraded) return undefined;
 			return new Response("WebSocket only", { status: 426 });
@@ -123,14 +167,33 @@ export function createMockBackend(port: number) {
 						id: ws.data.id,
 					}),
 				);
+
+				// Send connect.challenge
+				ws.send(
+					JSON.stringify({
+						type: "event",
+						event: "connect.challenge",
+						params: { nonce: crypto.randomUUID() },
+					}),
+				);
 			},
 			message(ws, raw) {
 				try {
-					const msg = JSON.parse(String(raw)) as RpcMessage;
-					handleRpc(ws, msg);
+					const frame = JSON.parse(String(raw)) as GatewayFrame;
+					if (frame.type === "req") {
+						handleReq(ws, frame);
+					} else {
+						sendResError(
+							ws,
+							undefined,
+							"protocol_error",
+							`Unexpected frame type: ${frame.type}`,
+						);
+					}
 				} catch {
 					ws.send(
 						JSON.stringify({
+							type: "res",
 							error: { type: "parse_error", message: "Invalid JSON" },
 						}),
 					);
@@ -149,10 +212,10 @@ export function createMockBackend(port: number) {
 		},
 	});
 
-	// Periodic health broadcast every 10s
 	const healthInterval = setInterval(() => {
 		broadcast("health.ping", {
-			params: { uptime: process.uptime(), clients: clients.size },
+			uptime: process.uptime(),
+			clients: clients.size,
 		});
 	}, 10_000);
 
