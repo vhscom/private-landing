@@ -1,0 +1,16 @@
+{
+	"extends": "../../tsconfig.packages.jsonc",
+	"compilerOptions": {
+		"composite": false,
+		"declaration": false,
+		"noEmit": true,
+		"types": ["@cloudflare/workers-types/experimental"]
+	},
+	"include": ["src/**/*.ts", "test/**/*.ts"],
+	"references": [
+		{ "path": "../core" },
+		{ "path": "../infrastructure" },
+		{ "path": "../types" },
+		{ "path": "../observability" }
+	]
+}

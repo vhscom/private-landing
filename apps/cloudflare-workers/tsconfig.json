@@ -11,6 +11,7 @@
 	},
 	"include": ["src/**/*.ts", "test/**/*.ts", "worker-configuration.d.ts"],
 	"references": [
+		{ "path": "../../packages/control" },
 		{ "path": "../../packages/core" },
 		{ "path": "../../packages/types" },
 		{ "path": "../../packages/schemas" },

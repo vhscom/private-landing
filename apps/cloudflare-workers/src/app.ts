@@ -5,6 +5,8 @@
  * @license Apache-2.0
  */
 
+// [ctl-plugin 1/2] Remove this import and the call below to disable control bridge
+import { controlPlugin } from "@private-landing/control";
 import {
 	createAuthSystem,
 	createMirroredSessionService,
@@ -75,9 +77,18 @@ const obs = observabilityPlugin(app, {
 	getClientIp: defaultGetClientIp,
 });
 ({ obsEmit, obsEmitEvent, adaptiveChallenge } = obs);
-// [control-plugin] When control plugin is active, replace mountAgentWs with controlPlugin (ADR-010)
-obs.mountAgentWs(obs.opsRouter);
+
+// [ctl-plugin 2/2 begin] Remove through end marker (and import) to disable control bridge
+controlPlugin(obs.opsRouter, {
+	requireAuth,
+	obsEmitEvent: obs.obsEmitEvent,
+	getClientIp: obs.getClientIp,
+});
+// [ctl-plugin 2/2 end] Uncomment next line when control is removed:
+// obs.mountAgentWs(obs.opsRouter);
+
 obs.mountOps();
+// [obs-plugin 2/2 end]
 
 // Emit rate_limit.blocked event when a request is rate-limited
 const onLimited = (prefix: string) => (ctx: Context<AppEnv>) => {

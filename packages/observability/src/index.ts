@@ -28,6 +28,7 @@ export type { AgentPrincipal, TrustLevel } from "./types";
 export { APP_ACTOR_ID, EventTypes };
 export type { SecurityEvent };
 export { getAgentPrincipal, requireAgentKey } from "./require-agent-key";
+export { upgradeWebSocket, type WSEvents } from "./ws/upgrade";
 
 export interface ObservabilityPluginDeps extends OpsRouterDeps {
 	getClientIp?: GetClientIpFn;
@@ -73,6 +74,7 @@ export function observabilityPlugin(
 		opsRouter,
 		mountOps,
 		mountAgentWs,
+		getClientIp: deps.getClientIp,
 	};
 }
 

@@ -43,6 +43,7 @@
 	},
 	"dependencies": {
 		"@libsql/client": "^0.15.0",
+		"@private-landing/control": "workspace:*",
 		"@private-landing/core": "workspace:*",
 		"@private-landing/infrastructure": "workspace:*",
 		"@private-landing/observability": "workspace:*",
