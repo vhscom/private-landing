@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, exp/pow-gate]
   pull_request:
     branches: [main]
 
@@ -90,6 +90,26 @@ jobs:
 
       - name: Unit tests
         run: bun run test:unit
+
+  exp-ws-bridge:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        working-directory: experiments/ws-bridge
+        run: bun install --frozen-lockfile
+
+      - name: Test
+        working-directory: experiments/ws-bridge
+        run: bun test
 
   cli:
     runs-on: ubuntu-latest
