@@ -36,7 +36,10 @@ export interface ObservabilityPluginDeps extends OpsRouterDeps {
 
 /**
  * Mount the observability sub-router at /ops and return bound helpers.
- * Call once in app.ts: `const { obsEmit, obsEmitEvent, adaptiveChallenge } = observabilityPlugin(app, deps)`
+ * Call once in app.ts: `const { obsEmit, obsEmitEvent, adaptiveChallenge, opsRouter, mountAgentWs } = observabilityPlugin(app, deps)`
+ *
+ * The agent-key WebSocket handler is NOT mounted by default — call `mountAgentWs(opsRouter)`
+ * in app.ts to enable it, or use the control plugin which provides its own /ops/ws handler (ADR-010).
  */
 export function observabilityPlugin(
 	app: Hono<{
@@ -45,7 +48,10 @@ export function observabilityPlugin(
 	}>,
 	deps: ObservabilityPluginDeps = {},
 ) {
-	app.route("/ops", createOpsRouter(deps));
+	const { router: opsRouter, mountAgentWs } = createOpsRouter(deps);
+
+	/** Mount /ops routes. Call after all plugins have registered on opsRouter. */
+	const mountOps = () => app.route("/ops", opsRouter);
 
 	const obsEmit = createObsEmit({
 		getClientIp: deps.getClientIp,
@@ -59,7 +65,15 @@ export function observabilityPlugin(
 	const adaptiveChallengeFor = (opts: AdaptiveChallengeOpts) =>
 		createAdaptiveChallenge(deps.getClientIp, opts);
 
-	return { obsEmit, obsEmitEvent, adaptiveChallenge, adaptiveChallengeFor };
+	return {
+		obsEmit,
+		obsEmitEvent,
+		adaptiveChallenge,
+		adaptiveChallengeFor,
+		opsRouter,
+		mountOps,
+		mountAgentWs,
+	};
 }
 
 /** Structural subset of ExecutionContext — avoids leaking @cloudflare/workers-types. */

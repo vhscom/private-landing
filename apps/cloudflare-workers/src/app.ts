@@ -70,10 +70,14 @@ let obsEmitEvent: (ctx: any, event: any) => void = () => {};
 let adaptiveChallenge: MiddlewareHandler<AppEnv> = noop;
 
 // [obs-plugin 2/2] Remove this override and the import above to disable observability
-({ obsEmit, obsEmitEvent, adaptiveChallenge } = observabilityPlugin(app, {
+const obs = observabilityPlugin(app, {
 	createCacheClient: createCacheClient ?? undefined,
 	getClientIp: defaultGetClientIp,
-}));
+});
+({ obsEmit, obsEmitEvent, adaptiveChallenge } = obs);
+// [control-plugin] When control plugin is active, replace mountAgentWs with controlPlugin (ADR-010)
+obs.mountAgentWs(obs.opsRouter);
+obs.mountOps();
 
 // Emit rate_limit.blocked event when a request is rate-limited
 const onLimited = (prefix: string) => (ctx: Context<AppEnv>) => {
