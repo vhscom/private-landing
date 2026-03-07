@@ -9,9 +9,7 @@ const BACKEND_URL = process.env.BACKEND_URL || "ws://localhost:18790";
 
 const app = new Hono();
 
-app.get("/health", (c) =>
-	c.json({ status: "ok", version: "2.0.0-exp" }),
-);
+app.get("/health", (c) => c.json({ status: "ok", version: "2.0.0-exp" }));
 
 export function createServer(port: number, backendUrl?: string) {
 	const relay = new BridgeRelay(backendUrl ?? BACKEND_URL);

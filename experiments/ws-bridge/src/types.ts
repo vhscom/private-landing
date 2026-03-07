@@ -1,5 +1,5 @@
 /** Agent trust levels governing bridge capability access. */
-export type TrustLevel = "read" | "write";
+export type TrustLevel = "read" | "write" | "admin";
 
 /** Runtime representation of an authenticated agent. */
 export interface AgentPrincipal {
@@ -15,6 +15,7 @@ export interface AgentCredential {
 	keyHash: string;
 	trustLevel: TrustLevel;
 	revokedAt: string | null;
+	expiresAt: string | null;
 }
 
 /** WebSocket data attached during upgrade, shared by index.ts and relay.ts */
@@ -63,16 +64,20 @@ export interface BridgeConnection {
 	granted: string[];
 	session: string;
 	nonce: string;
+	difficulty: number;
 	backendWs: WebSocket | null;
 	lastActivity: number;
 	messageCount: number;
 	messageWindowStart: number;
 	negotiationTimer: ReturnType<typeof setTimeout> | null;
 	idleTimer: ReturnType<typeof setTimeout> | null;
+	heartbeatTimer: ReturnType<typeof setInterval> | null;
+	credentialCheckFailures: number;
 }
 
 /** Trust level -> allowed capability namespaces */
 export const TRUST_CAPABILITIES: Record<TrustLevel, string[]> = {
+	admin: ["chat", "agent", "presence", "health", "system"],
 	write: ["chat", "agent", "presence", "health"],
 	read: ["chat", "health"],
 };
@@ -82,5 +87,29 @@ export const NEGOTIATION_TIMEOUT_MS = 5_000;
 export const IDLE_TIMEOUT_MS = 30 * 60_000;
 export const RATE_LIMIT_WINDOW_MS = 1_000;
 export const RATE_LIMIT_MAX = 10;
-export const POW_DIFFICULTY = 8; // leading zero bits required
 export const MAX_MESSAGE_BYTES = 1024 * 1024; // 1 MiB per frame
+
+/** Heartbeat constants (matching core's ws/handler.ts pattern) */
+export const HEARTBEAT_INTERVAL_MS = 25_000;
+export const HEARTBEAT_TIMEOUT_MS = 90_000;
+export const MAX_CREDENTIAL_CHECK_FAILURES = 3;
+
+/** Adaptive PoW configuration */
+export interface AdaptivePoWConfig {
+	baseDifficulty: number;
+	highDifficulty: number;
+	pressureThreshold: number;
+	highPressureThreshold: number;
+	windowMs: number;
+}
+
+export const POW_DEFAULTS: AdaptivePoWConfig = {
+	baseDifficulty: 8,
+	highDifficulty: 16,
+	pressureThreshold: 10,
+	highPressureThreshold: 25,
+	windowMs: 60_000,
+};
+
+/** Nonce TTL for seen-set dedup */
+export const NONCE_TTL_MS = 30_000;

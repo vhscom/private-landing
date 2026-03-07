@@ -1,14 +1,20 @@
 import type { ServerWebSocket } from "bun";
+import { checkCredentialValid } from "../middleware/auth";
 import {
+	type AdaptivePoWConfig,
 	type AgentPrincipal,
 	type BridgeConnection,
 	type ErrorMessage,
+	HEARTBEAT_INTERVAL_MS,
+	HEARTBEAT_TIMEOUT_MS,
 	IDLE_TIMEOUT_MS,
+	MAX_CREDENTIAL_CHECK_FAILURES,
 	MAX_MESSAGE_BYTES,
 	NEGOTIATION_TIMEOUT_MS,
 	type NegotiatedMessage,
 	type NegotiateResponse,
-	POW_DIFFICULTY,
+	NONCE_TTL_MS,
+	POW_DEFAULTS,
 	RATE_LIMIT_MAX,
 	RATE_LIMIT_WINDOW_MS,
 	type RelayMessage,
@@ -23,15 +29,38 @@ import {
 export class BridgeRelay {
 	private connections = new Map<string, BridgeConnection>();
 	private backendUrl: string;
+	private powConfig: AdaptivePoWConfig;
 
-	constructor(backendUrl: string) {
+	/** Per-IP connection count within the adaptive window */
+	private connectionPressure = new Map<
+		string,
+		{ count: number; windowStart: number }
+	>();
+
+	/** Seen nonces with expiry timestamps for replay prevention */
+	private seenNonces = new Map<string, number>();
+	private nonceCleanupTimer: ReturnType<typeof setInterval>;
+
+	constructor(backendUrl: string, powConfig?: Partial<AdaptivePoWConfig>) {
 		this.backendUrl = backendUrl;
+		this.powConfig = { ...POW_DEFAULTS, ...powConfig };
+
+		// Periodic cleanup of expired nonces
+		this.nonceCleanupTimer = setInterval(
+			() => this.pruneExpiredNonces(),
+			NONCE_TTL_MS,
+		);
 	}
 
 	/** Called when a WebSocket connection opens after upgrade */
-	handleOpen(ws: ServerWebSocket<WsData>, agent: AgentPrincipal): void {
+	handleOpen(
+		ws: ServerWebSocket<WsData>,
+		agent: AgentPrincipal,
+		clientIp?: string,
+	): void {
 		const connId = crypto.randomUUID();
 		const nonce = this.generateNonce();
+		const difficulty = this.computeDifficulty(clientIp);
 
 		const conn: BridgeConnection = {
 			id: connId,
@@ -40,22 +69,30 @@ export class BridgeRelay {
 			granted: [],
 			session: "",
 			nonce,
+			difficulty,
 			backendWs: null,
 			lastActivity: Date.now(),
 			messageCount: 0,
 			messageWindowStart: Date.now(),
 			negotiationTimer: null,
 			idleTimer: null,
+			heartbeatTimer: null,
+			credentialCheckFailures: 0,
 		};
 
-		// Store connection ID without overwriting other ws.data fields
 		ws.data.connId = connId;
 		this.connections.set(connId, conn);
+
+		// Track connection pressure per IP
+		if (clientIp) {
+			this.recordConnectionPressure(clientIp);
+		}
 
 		this.log("connection.open", {
 			connId,
 			agent: agent.name,
 			trustLevel: agent.trustLevel,
+			difficulty,
 		});
 
 		// Start negotiation timeout
@@ -68,13 +105,12 @@ export class BridgeRelay {
 			}
 		}, NEGOTIATION_TIMEOUT_MS);
 
-		// Send challenge
-		const challenge = `PoW difficulty ${POW_DIFFICULTY}`;
+		// Send challenge with adaptive difficulty
 		ws.send(
 			JSON.stringify({
 				type: "negotiate",
 				nonce,
-				challenge,
+				challenge: `PoW difficulty ${difficulty}`,
 			}),
 		);
 	}
@@ -89,7 +125,6 @@ export class BridgeRelay {
 
 		conn.lastActivity = Date.now();
 
-		// Message size check
 		if (raw.length > MAX_MESSAGE_BYTES) {
 			this.sendError(
 				ws,
@@ -99,7 +134,6 @@ export class BridgeRelay {
 			return;
 		}
 
-		// Rate limiting
 		if (!this.checkRateLimit(conn)) {
 			this.sendError(ws, "rate_limited", "Too many messages");
 			return;
@@ -122,8 +156,20 @@ export class BridgeRelay {
 			return;
 		}
 
-		if (conn.state === "active" && msg.type === "relay") {
-			this.handleRelayToBackend(conn, ws, msg as RelayMessage);
+		if (conn.state === "active") {
+			if (msg.type === "relay") {
+				this.handleRelayToBackend(conn, ws, msg as RelayMessage);
+			} else if ((msg as Record<string, unknown>).type === "ping") {
+				ws.send(
+					JSON.stringify({
+						type: "pong",
+						id: (msg as Record<string, unknown>).id,
+						ok: true,
+					}),
+				);
+			} else {
+				this.sendError(ws, "protocol_error", "Unexpected message");
+			}
 			return;
 		}
 
@@ -139,21 +185,101 @@ export class BridgeRelay {
 		}
 	}
 
-	// --- Private ---
+	/** Shutdown cleanup (for testing) */
+	destroy(): void {
+		clearInterval(this.nonceCleanupTimer);
+	}
+
+	// --- Adaptive PoW ---
+
+	private computeDifficulty(clientIp?: string): number {
+		if (!clientIp) return this.powConfig.baseDifficulty;
+
+		const pressure = this.connectionPressure.get(clientIp);
+		if (!pressure) return this.powConfig.baseDifficulty;
+
+		const now = Date.now();
+		if (now - pressure.windowStart > this.powConfig.windowMs) {
+			return this.powConfig.baseDifficulty;
+		}
+
+		if (pressure.count >= this.powConfig.highPressureThreshold) {
+			return this.powConfig.highDifficulty;
+		}
+		if (pressure.count >= this.powConfig.pressureThreshold) {
+			// Linear interpolation between base and high
+			const range =
+				this.powConfig.highPressureThreshold - this.powConfig.pressureThreshold;
+			const progress =
+				(pressure.count - this.powConfig.pressureThreshold) / range;
+			return Math.round(
+				this.powConfig.baseDifficulty +
+					(this.powConfig.highDifficulty - this.powConfig.baseDifficulty) *
+						progress,
+			);
+		}
+
+		return this.powConfig.baseDifficulty;
+	}
+
+	private recordConnectionPressure(clientIp: string): void {
+		const now = Date.now();
+		const existing = this.connectionPressure.get(clientIp);
+		if (!existing || now - existing.windowStart > this.powConfig.windowMs) {
+			this.connectionPressure.set(clientIp, { count: 1, windowStart: now });
+		} else {
+			existing.count++;
+		}
+	}
+
+	// --- Nonce dedup ---
+
+	private consumeNonce(nonce: string): boolean {
+		if (this.seenNonces.has(nonce)) {
+			return false;
+		}
+		this.seenNonces.set(nonce, Date.now() + NONCE_TTL_MS);
+		return true;
+	}
+
+	private pruneExpiredNonces(): void {
+		const now = Date.now();
+		for (const [nonce, expiry] of this.seenNonces) {
+			if (expiry <= now) {
+				this.seenNonces.delete(nonce);
+			}
+		}
+	}
+
+	// --- Negotiation ---
 
 	private async handleNegotiateResponse(
 		conn: BridgeConnection,
 		ws: ServerWebSocket<WsData>,
 		msg: NegotiateResponse,
 	): Promise<void> {
-		// Clear negotiation timer
 		if (conn.negotiationTimer) {
 			clearTimeout(conn.negotiationTimer);
 			conn.negotiationTimer = null;
 		}
 
-		// Verify PoW solution
-		const valid = await this.verifyPoW(conn.nonce, msg.solution);
+		// Nonce replay check
+		if (!this.consumeNonce(conn.nonce)) {
+			this.log("negotiation.failed", {
+				connId: conn.id,
+				reason: "nonce_replay",
+			});
+			this.sendError(ws, "negotiation_failed", "Nonce already consumed");
+			ws.close(4403, "Nonce replay");
+			this.cleanup(conn.id);
+			return;
+		}
+
+		const valid = await this.verifyPoW(
+			conn.nonce,
+			msg.solution,
+			conn.difficulty,
+		);
 		if (!valid) {
 			this.log("negotiation.failed", {
 				connId: conn.id,
@@ -165,7 +291,6 @@ export class BridgeRelay {
 			return;
 		}
 
-		// Determine granted capabilities from trust level
 		const allowed = TRUST_CAPABILITIES[conn.agent.trustLevel] ?? [];
 		const granted = msg.capabilities.filter((c) => allowed.includes(c));
 
@@ -189,10 +314,9 @@ export class BridgeRelay {
 		conn.session = session;
 		conn.state = "active";
 
-		// Start idle timeout
 		this.resetIdleTimer(conn, ws);
+		this.startHeartbeat(conn, ws);
 
-		// Connect to backend
 		try {
 			await this.connectBackend(conn, ws);
 		} catch (err) {
@@ -221,6 +345,71 @@ export class BridgeRelay {
 		});
 	}
 
+	// --- Heartbeat (matching core ws/handler.ts pattern) ---
+
+	private startHeartbeat(
+		conn: BridgeConnection,
+		ws: ServerWebSocket<WsData>,
+	): void {
+		conn.heartbeatTimer = setInterval(() => {
+			// Idle detection
+			if (Date.now() - conn.lastActivity > HEARTBEAT_TIMEOUT_MS) {
+				this.log("connection.ping_timeout", { connId: conn.id });
+				this.sendError(ws, "ping_timeout", "No activity detected");
+				ws.close(4408, "Ping timeout");
+				this.cleanup(conn.id);
+				return;
+			}
+
+			// Credential re-validation
+			const valid = checkCredentialValid(conn.agent.id);
+			if (!valid) {
+				conn.credentialCheckFailures++;
+				if (
+					conn.credentialCheckFailures >= MAX_CREDENTIAL_CHECK_FAILURES ||
+					!valid
+				) {
+					this.log("credential.revoked", {
+						connId: conn.id,
+						agent: conn.agent.name,
+					});
+					try {
+						ws.send(
+							JSON.stringify({
+								type: "credential.revoked",
+								reason: "key_revoked_or_expired",
+								guidance: "Re-authenticate with a valid agent key",
+							}),
+						);
+					} catch {
+						// Connection may be closing
+					}
+					ws.close(4010, "Credential revoked");
+					this.cleanup(conn.id);
+					return;
+				}
+			} else {
+				conn.credentialCheckFailures = 0;
+			}
+
+			// Send heartbeat
+			try {
+				ws.send(
+					JSON.stringify({
+						type: "heartbeat",
+						ts: Date.now(),
+						next_check_ms: HEARTBEAT_INTERVAL_MS,
+						capabilities: conn.granted,
+					}),
+				);
+			} catch {
+				// Connection may be closing
+			}
+		}, HEARTBEAT_INTERVAL_MS);
+	}
+
+	// --- Relay ---
+
 	private handleRelayToBackend(
 		conn: BridgeConnection,
 		ws: ServerWebSocket<WsData>,
@@ -228,7 +417,6 @@ export class BridgeRelay {
 	): void {
 		this.resetIdleTimer(conn, ws);
 
-		// Capability check: method "chat.send" requires "chat" capability
 		const namespace = msg.method?.split(".")[0] ?? msg.event?.split(".")[0];
 		if (namespace && !conn.granted.includes(namespace)) {
 			this.log("capability.denied", {
@@ -255,7 +443,6 @@ export class BridgeRelay {
 			return;
 		}
 
-		// Forward to backend with session context
 		const backendMsg = {
 			method: msg.method,
 			params: { ...msg.params, session: conn.session },
@@ -263,6 +450,8 @@ export class BridgeRelay {
 		};
 		conn.backendWs.send(JSON.stringify(backendMsg));
 	}
+
+	// --- Backend ---
 
 	private connectBackend(
 		conn: BridgeConnection,
@@ -289,7 +478,6 @@ export class BridgeRelay {
 			};
 
 			backend.onmessage = (ev) => {
-				// Relay backend messages to client, filtered by capabilities
 				try {
 					const data = JSON.parse(String(ev.data)) as Record<string, unknown>;
 					const eventNamespace =
@@ -298,7 +486,6 @@ export class BridgeRelay {
 							: undefined;
 
 					if (eventNamespace && !conn.granted.includes(eventNamespace)) {
-						// Silently drop events the client isn't subscribed to
 						return;
 					}
 
@@ -326,16 +513,22 @@ export class BridgeRelay {
 		});
 	}
 
+	// --- Utilities ---
+
 	private generateNonce(): string {
 		const bytes = new Uint8Array(32);
 		crypto.getRandomValues(bytes);
 		return btoa(String.fromCharCode(...bytes));
 	}
 
-	private async verifyPoW(nonce: string, solution: string): Promise<boolean> {
+	private async verifyPoW(
+		nonce: string,
+		solution: string,
+		difficulty: number,
+	): Promise<boolean> {
 		const input = new TextEncoder().encode(nonce + solution);
 		const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", input));
-		return checkLeadingZeroBits(hash, POW_DIFFICULTY);
+		return checkLeadingZeroBits(hash, difficulty);
 	}
 
 	private checkRateLimit(conn: BridgeConnection): boolean {
@@ -382,6 +575,7 @@ export class BridgeRelay {
 		conn.state = "closed";
 		if (conn.negotiationTimer) clearTimeout(conn.negotiationTimer);
 		if (conn.idleTimer) clearTimeout(conn.idleTimer);
+		if (conn.heartbeatTimer) clearInterval(conn.heartbeatTimer);
 		if (conn.backendWs) {
 			try {
 				conn.backendWs.close();

@@ -28,6 +28,7 @@ export async function hashApiKey(rawKey: string): Promise<string> {
 export async function provisionAgent(
 	name: string,
 	trustLevel: TrustLevel,
+	expiresInMs?: number,
 ): Promise<{ rawKey: string; credential: AgentCredential }> {
 	const rawKeyBytes = new Uint8Array(32);
 	crypto.getRandomValues(rawKeyBytes);
@@ -42,6 +43,9 @@ export async function provisionAgent(
 		keyHash,
 		trustLevel,
 		revokedAt: null,
+		expiresAt: expiresInMs
+			? new Date(Date.now() + expiresInMs).toISOString()
+			: null,
 	};
 
 	credentials.set(keyHash, credential);
@@ -51,6 +55,7 @@ export async function provisionAgent(
 /**
  * Verify a raw API key against the credential store.
  * Returns the agent principal on success, null on failure.
+ * Checks revocation and expiry.
  */
 export async function verifyAgentKey(
 	rawKey: string,
@@ -62,11 +67,31 @@ export async function verifyAgentKey(
 		return null;
 	}
 
+	if (cred.expiresAt && new Date(cred.expiresAt) <= new Date()) {
+		return null;
+	}
+
 	return {
 		id: cred.id,
 		name: cred.name,
 		trustLevel: cred.trustLevel,
 	};
+}
+
+/**
+ * Re-validate a credential by agent ID (for heartbeat checks).
+ * Returns true if the credential is still valid, false if revoked/expired/missing.
+ */
+export function checkCredentialValid(agentId: string): boolean {
+	for (const cred of credentials.values()) {
+		if (cred.id === agentId) {
+			if (cred.revokedAt !== null) return false;
+			if (cred.expiresAt && new Date(cred.expiresAt) <= new Date())
+				return false;
+			return true;
+		}
+	}
+	return false;
 }
 
 /** Revoke an agent credential by name. */

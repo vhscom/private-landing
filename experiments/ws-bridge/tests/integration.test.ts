@@ -427,3 +427,97 @@ describe("Protocol violations", () => {
 		expect(body.version).toBe("2.0.0-exp");
 	});
 });
+
+describe("Admin trust level", () => {
+	it("admin gets all capabilities including system", async () => {
+		const { granted } = await fullHandshake("admin-agent", "admin", [
+			"chat",
+			"agent",
+			"presence",
+			"health",
+			"system",
+		]);
+		expect(granted).toEqual(["chat", "agent", "presence", "health", "system"]);
+	});
+
+	it("write agent cannot access system namespace", async () => {
+		const { ws, granted } = await fullHandshake("write-sys-agent", "write", [
+			"chat",
+			"system",
+		]);
+		expect(granted).toEqual(["chat"]);
+
+		sendRelay(ws, "system.shutdown", 1);
+		const err = await readMessage<{ error: { type: string }; id: number }>(ws);
+		expect(err.error.type).toBe("capability_denied");
+
+		ws.close();
+	});
+});
+
+describe("Credential expiry", () => {
+	it("expired key is rejected at upgrade", async () => {
+		// Provision with 1ms expiry — will be expired by the time we connect
+		const { rawKey } = await provisionAgent("expiring-agent", "write", 1);
+		await new Promise((r) => setTimeout(r, 10));
+
+		const res = await fetch(`http://localhost:${SERVER_PORT}/ops`, {
+			headers: {
+				Upgrade: "websocket",
+				Authorization: `Bearer ${rawKey}`,
+			},
+		});
+		expect(res.status).toBe(401);
+	});
+
+	it("non-expiring key works normally", async () => {
+		const { ws, granted } = await fullHandshake("no-expiry-agent", "write", [
+			"chat",
+		]);
+		expect(granted).toEqual(["chat"]);
+		ws.close();
+	});
+});
+
+describe("Heartbeat credential re-validation", () => {
+	it("checkCredentialValid detects revoked credentials", async () => {
+		const { credential } = await provisionAgent(
+			"heartbeat-agent",
+			"write",
+		);
+
+		const { checkCredentialValid } = await import("../src/middleware/auth");
+		expect(checkCredentialValid(credential.id)).toBe(true);
+
+		revokeAgent("heartbeat-agent");
+		expect(checkCredentialValid(credential.id)).toBe(false);
+	});
+
+	it("checkCredentialValid detects expired credentials", async () => {
+		const { credential } = await provisionAgent(
+			"expiry-check-agent",
+			"write",
+			1,
+		);
+		await new Promise((r) => setTimeout(r, 10));
+
+		const { checkCredentialValid } = await import("../src/middleware/auth");
+		expect(checkCredentialValid(credential.id)).toBe(false);
+	});
+});
+
+describe("Ping/pong keepalive", () => {
+	it("responds to ping with pong", async () => {
+		const { ws } = await fullHandshake("ping-agent", "write", ["chat"]);
+
+		ws.send(JSON.stringify({ type: "ping", id: "k1" }));
+		const pong = await readMessage<{ type: string; id: string; ok: boolean }>(
+			ws,
+		);
+		expect(pong.type).toBe("pong");
+		expect(pong.id).toBe("k1");
+		expect(pong.ok).toBe(true);
+
+		ws.close();
+	});
+});
