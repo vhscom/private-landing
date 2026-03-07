@@ -4,16 +4,13 @@ import { BridgeRelay } from "./bridge/relay";
 import { verifyAgentKey } from "./middleware/auth";
 import { MAX_MESSAGE_BYTES, type WsData } from "./types";
 
-/** Toggle mock vs real backend */
-const USE_MOCK = true;
-const BACKEND_URL = USE_MOCK ? "ws://localhost:18790" : "ws://127.0.0.1:18789";
-
 const PORT = Number.parseInt(process.env.PORT || "18800", 10);
+const BACKEND_URL = process.env.BACKEND_URL || "ws://localhost:18790";
 
 const app = new Hono();
 
 app.get("/health", (c) =>
-	c.json({ status: "ok", version: "2.0.0-exp", mock: USE_MOCK }),
+	c.json({ status: "ok", version: "2.0.0-exp" }),
 );
 
 export function createServer(port: number, backendUrl?: string) {

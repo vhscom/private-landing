@@ -98,9 +98,9 @@ Client ──[API key]──> Bridge Server (:18800/ops) ──> Mock Backend (:
 
 ## Configuration
 
-In `src/index.ts`:
-```typescript
-const USE_MOCK = true;  // false → connect to real OpenClaw at ws://127.0.0.1:18789
+```bash
+PORT=18800                              # Bridge server port (default: 18800)
+BACKEND_URL=ws://127.0.0.1:18789       # Backend WebSocket URL (default: ws://localhost:18790)
 ```
 
 ## Mock Backend Methods
