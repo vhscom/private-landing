@@ -1,0 +1,13 @@
+{
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"strict": true,
+		"noUncheckedIndexedAccess": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"types": ["bun-types"]
+	},
+	"include": ["src/**/*.ts", "mock-backend.ts", "tests/**/*.ts"]
+}

@@ -1,0 +1,17 @@
+{
+	"name": "@private-landing/exp-ws-bridge",
+	"version": "2.0.0-exp",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "bun run src/index.ts",
+		"mock": "bun run mock-backend.ts",
+		"test": "bun test"
+	},
+	"dependencies": {
+		"hono": "^4.7.0"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.2.0"
+	}
+}
