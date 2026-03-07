@@ -14,7 +14,7 @@ import { createMockBackend } from "../mock-backend";
 import { solveChallenge } from "../src/bridge/relay";
 import { createServer } from "../src/index";
 import {
-	clearCredentials,
+	_clearCredentials,
 	provisionAgent,
 	revokeAgent,
 } from "../src/middleware/auth";
@@ -37,7 +37,7 @@ afterAll(() => {
 });
 
 beforeEach(() => {
-	clearCredentials();
+	_clearCredentials();
 });
 
 // --- Helpers ---
@@ -481,10 +481,7 @@ describe("Credential expiry", () => {
 
 describe("Heartbeat credential re-validation", () => {
 	it("checkCredentialValid detects revoked credentials", async () => {
-		const { credential } = await provisionAgent(
-			"heartbeat-agent",
-			"write",
-		);
+		const { credential } = await provisionAgent("heartbeat-agent", "write");
 
 		const { checkCredentialValid } = await import("../src/middleware/auth");
 		expect(checkCredentialValid(credential.id)).toBe(true);

@@ -1,3 +1,12 @@
+/**
+ * @file relay.ts
+ * WebSocket bridge relay implementing adaptive PoW negotiation, capability-filtered
+ * message forwarding, heartbeat credential re-validation, and nonce replay prevention.
+ * Experiment-only – isolated in experiments/ws-bridge.
+ *
+ * @license Apache-2.0
+ */
+
 import type { ServerWebSocket } from "bun";
 import { checkCredentialValid } from "../middleware/auth";
 import {
@@ -23,8 +32,8 @@ import {
 } from "../types";
 
 /**
- * BridgeRelay manages WebSocket connections, capability negotiation,
- * and bidirectional message relay to the backend.
+ * Manages WebSocket connections through the full lifecycle: PoW challenge,
+ * capability negotiation, namespace-filtered relay, and heartbeat monitoring.
  */
 export class BridgeRelay {
 	private connections = new Map<string, BridgeConnection>();
@@ -52,7 +61,7 @@ export class BridgeRelay {
 		);
 	}
 
-	/** Called when a WebSocket connection opens after upgrade */
+	/** Initializes connection state, computes adaptive difficulty, and sends PoW challenge. */
 	handleOpen(
 		ws: ServerWebSocket<WsData>,
 		agent: AgentPrincipal,
@@ -115,7 +124,7 @@ export class BridgeRelay {
 		);
 	}
 
-	/** Called for each incoming WebSocket message */
+	/** Routes inbound messages through size/rate checks to negotiation or relay handlers. */
 	async handleMessage(ws: ServerWebSocket<WsData>, raw: string): Promise<void> {
 		const conn = this.connections.get(ws.data.connId);
 		if (!conn) {
@@ -176,7 +185,7 @@ export class BridgeRelay {
 		this.sendError(ws, "protocol_error", "Unexpected message");
 	}
 
-	/** Called when a WebSocket connection closes */
+	/** Cleans up connection state, timers, and backend WebSocket on close. */
 	handleClose(ws: ServerWebSocket<WsData>): void {
 		const connId = ws.data?.connId;
 		if (connId) {
@@ -185,7 +194,7 @@ export class BridgeRelay {
 		}
 	}
 
-	/** Shutdown cleanup (for testing) */
+	/** Stops the nonce cleanup timer. Call on server shutdown. */
 	destroy(): void {
 		clearInterval(this.nonceCleanupTimer);
 	}
@@ -597,7 +606,7 @@ export class BridgeRelay {
 	}
 }
 
-/** Check if a hash has at least `bits` leading zero bits */
+/** Checks if a SHA-256 hash has at least `bits` leading zero bits. Bit-level precision. */
 export function checkLeadingZeroBits(hash: Uint8Array, bits: number): boolean {
 	let remaining = bits;
 	for (let i = 0; remaining > 0 && i < hash.length; i++) {

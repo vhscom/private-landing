@@ -9,7 +9,7 @@ import {
 import { createMockBackend } from "../mock-backend";
 import { solveChallenge } from "../src/bridge/relay";
 import { createServer } from "../src/index";
-import { clearCredentials, provisionAgent } from "../src/middleware/auth";
+import { _clearCredentials, provisionAgent } from "../src/middleware/auth";
 import type { TrustLevel } from "../src/types";
 
 const MOCK_PORT = 19790;
@@ -29,7 +29,7 @@ afterAll(() => {
 });
 
 beforeEach(() => {
-	clearCredentials();
+	_clearCredentials();
 });
 
 // Buffer messages per WebSocket so we never miss early server messages

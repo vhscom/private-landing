@@ -1,3 +1,12 @@
+/**
+ * @file index.ts
+ * Bridge server entry point. Hono handles /health, Bun.serve handles WebSocket
+ * upgrade on /ops with agent-key auth before connection is established.
+ * Experiment-only – isolated in experiments/ws-bridge.
+ *
+ * @license Apache-2.0
+ */
+
 import type { ServerWebSocket } from "bun";
 import { Hono } from "hono";
 import { BridgeRelay } from "./bridge/relay";
@@ -11,6 +20,7 @@ const app = new Hono();
 
 app.get("/health", (c) => c.json({ status: "ok", version: "2.0.0-exp" }));
 
+/** Creates the bridge server with agent auth on /ops and health check on /health. */
 export function createServer(port: number, backendUrl?: string) {
 	const relay = new BridgeRelay(backendUrl ?? BACKEND_URL);
 
