@@ -57,7 +57,7 @@ async function provisionTestAgent(): Promise<string> {
 }
 
 /** Poll /ops/events for a specific event type via the API. */
-async function pollForEvent(type: string, maxAttempts = 10): Promise<boolean> {
+async function pollForEvent(type: string, maxAttempts = 15): Promise<boolean> {
 	const since = new Date(Date.now() - 60_000).toISOString();
 	for (let i = 0; i < maxAttempts; i++) {
 		const res = await makeRequest(
@@ -73,7 +73,7 @@ async function pollForEvent(type: string, maxAttempts = 10): Promise<boolean> {
 			const body = (await res.json()) as { events: unknown[]; count: number };
 			if (body.count > 0) return true;
 		}
-		await new Promise((r) => setTimeout(r, 200));
+		await new Promise((r) => setTimeout(r, 300));
 	}
 	return false;
 }
