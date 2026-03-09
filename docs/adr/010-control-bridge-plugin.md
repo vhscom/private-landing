@@ -1,6 +1,6 @@
 # ADR-010: Control Plugin
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-03-07
 - **Decision-makers:** @vhscom
 
