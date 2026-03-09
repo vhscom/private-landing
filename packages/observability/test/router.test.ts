@@ -102,7 +102,8 @@ const baseEnv: AppEnv["Bindings"] = {
 const AGENT_ROW = { id: 1, name: "test-agent", trust_level: "write" };
 
 function buildApp(routerDeps: Parameters<typeof createOpsRouter>[0] = {}) {
-	const router = createOpsRouter(routerDeps);
+	const { router, mountAgentWs } = createOpsRouter(routerDeps);
+	mountAgentWs(router);
 	const app = new Hono<AppEnv>();
 	// Provide mock executionCtx so waitUntil-based event emission works in tests
 	app.use("*", async (ctx, next) => {
@@ -406,7 +407,7 @@ describe("POST /ops/sessions/revoke — cache invalidation", () => {
 	function buildAppWithCache(
 		cache: ReturnType<typeof createMockCache>["client"],
 	) {
-		const router = createOpsRouter({
+		const { router } = createOpsRouter({
 			createCacheClient: () => cache,
 		});
 		const app = new Hono<AppEnv>();
@@ -1114,9 +1115,10 @@ describe("GET /ops/ws rate limiting", () => {
 	/** Build an app with mock executionCtx so onLimited's waitUntil works. */
 	function buildCachedApp(mockCache: ReturnType<typeof createMockCache>) {
 		waitUntilPromises = [];
-		const router = createOpsRouter({
+		const { router, mountAgentWs } = createOpsRouter({
 			createCacheClient: () => mockCache.client,
 		});
+		mountAgentWs(router);
 		const app = new Hono<AppEnv>();
 		// Provide mock executionCtx.waitUntil for onLimited event emission
 		app.use("*", async (ctx, next) => {
@@ -1454,7 +1456,7 @@ describe("ops route event emission", () => {
 	});
 
 	it("emits event with ip 'unknown' when getClientIp throws", async () => {
-		const router = createOpsRouter({
+		const { router } = createOpsRouter({
 			getClientIp: () => {
 				throw new Error("getConnInfo unavailable");
 			},

@@ -1,8 +1,24 @@
-AUTH_DB_URL="libsql://your-test-db.turso.io"
-AUTH_DB_TOKEN="your-auth-token"
+# Required: Turso database
+AUTH_DB_URL="libsql://your-db.turso.io"
+AUTH_DB_TOKEN="your-turso-token"
+
+# Required: JWT signing secrets (generate with: openssl rand -hex 32)
 JWT_ACCESS_SECRET="your-access-secret"
 JWT_REFRESH_SECRET="your-refresh-secret"
 
-# Optional: cache-backed sessions (https://upstash.com/)
-# CACHE_URL="https://your-test-db.upstash.io"
-# CACHE_TOKEN="your-upstash-token"
+# Optional: cache-backed sessions and rate limiting (ADR-003/006)
+# CACHE_URL="redis://localhost:6379"
+# CACHE_TOKEN=""
+
+# Optional: observability plugin (ADR-008/009)
+# Enables /ops/* agent surface. First agent provisioned via curl.
+# AGENT_PROVISIONING_SECRET=""
+
+# Optional: WebSocket origin allowlist (comma-separated, ADR-009)
+# WS_ALLOWED_ORIGINS="https://example.com"
+
+# Optional: control plugin (ADR-010)
+# GATEWAY_URL accepts http(s):// — auto-converted to ws(s):// for proxy.
+# GATEWAY_URL="http://localhost:18789"
+# GATEWAY_TOKEN=""
+# CONTROL_ALLOWED_IPS="127.0.0.1"

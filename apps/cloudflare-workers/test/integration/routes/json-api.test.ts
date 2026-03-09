@@ -186,6 +186,16 @@ describe("POST /auth/login (JSON)", () => {
 	});
 
 	it("still redirects without Accept: application/json", async () => {
+		// Prior tests in this describe create login.failure events that can
+		// trigger the adaptive challenge.  Clear them before the raw login.
+		try {
+			await dbClient.execute(
+				"DELETE FROM security_event WHERE type IN ('login.failure', 'challenge.issued', 'challenge.failed')",
+			);
+		} catch {
+			// Table may not exist
+		}
+
 		const formData = createCredentialsFormData(SUITE_EMAIL, TEST_USER.password);
 
 		const response = await makeRequest("/auth/login", {

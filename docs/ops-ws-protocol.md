@@ -7,6 +7,8 @@ WebSocket gateway for real-time security event streaming and session management.
 **Auth:** `Authorization: Bearer <agent-api-key>` on upgrade  
 **Spec:** [ADR-009](adr/009-ops-websocket-gateway.md)
 
+> When the control plugin is loaded, `/ops/ws` is multiplexed: Bearer token connections use this agent protocol; cookie-based connections are dispatched to the control proxy ([ADR-010](adr/010-control-bridge-plugin.md)). This document covers the agent protocol only.
+
 ---
 
 ## Naming conventions

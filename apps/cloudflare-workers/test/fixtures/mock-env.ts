@@ -60,7 +60,11 @@ export async function initTestDb(): Promise<SqliteClient> {
 
 	// SAFETY: Ensure we're using a test database (not production)
 	const dbUrlLower = (env.AUTH_DB_URL ?? "").toLowerCase();
-	if (!["test-db", "dev-db"].some((keyword) => dbUrlLower.includes(keyword))) {
+	const isSafeUrl =
+		["test-db", "dev-db"].some((keyword) => dbUrlLower.includes(keyword)) ||
+		dbUrlLower.startsWith("http://localhost") ||
+		dbUrlLower.startsWith("http://127.0.0.1");
+	if (!isSafeUrl) {
 		throw new Error(
 			`AUTH_DB_URL doesn't look like a test/dev db: ${env.AUTH_DB_URL}`,
 		);
@@ -76,8 +80,18 @@ export async function initTestDb(): Promise<SqliteClient> {
 	// Insert test user
 	await dbClient.execute(TEST_USER_SQL);
 
-	// Clear stale security events from previous test runs (adaptive challenge)
-	await cleanupSecurityEvents(dbClient);
+	// Clear stale challenge-triggering events from previous test runs.
+	// Uses a 10s cutoff so we don't race with concurrent test files
+	// polling for freshly-created events.
+	try {
+		const cutoff = new Date(Date.now() - 10_000).toISOString();
+		await dbClient.execute({
+			sql: "DELETE FROM security_event WHERE type IN ('login.failure', 'challenge.issued', 'challenge.failed') AND created_at < ?",
+			args: [cutoff],
+		});
+	} catch {
+		// Table may not exist yet (created lazily by ensureSchema)
+	}
 
 	return dbClient;
 }
@@ -231,8 +245,18 @@ export async function loginAndGetCookies(
 		sql: "DELETE FROM session WHERE user_id IN (SELECT id FROM account WHERE email = ?)",
 		args: [email],
 	});
-	await cleanupSecurityEvents(dbClient);
-
+	// Clear stale challenge-triggering events to prevent PoW from blocking login.
+	// Only delete events older than 10s so we don't race with events.test.ts
+	// polling for a freshly-created login.failure.
+	try {
+		const cutoff = new Date(Date.now() - 10_000).toISOString();
+		await dbClient.execute({
+			sql: "DELETE FROM security_event WHERE type IN ('login.failure', 'challenge.issued', 'challenge.failed') AND created_at < ?",
+			args: [cutoff],
+		});
+	} catch {
+		// Table may not exist yet
+	}
 	const formData = createCredentialsFormData(email, password);
 	const response = await makeRequest("/auth/login", {
 		method: "POST",

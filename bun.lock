@@ -12,9 +12,10 @@
     },
     "apps/cloudflare-workers": {
       "name": "@private-landing/cloudflare-workers",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "dependencies": {
         "@libsql/client": "^0.15.0",
+        "@private-landing/control": "workspace:*",
         "@private-landing/core": "workspace:*",
         "@private-landing/infrastructure": "workspace:*",
         "@private-landing/observability": "workspace:*",
@@ -35,9 +36,25 @@
         "wrangler": "^4.60.0",
       },
     },
+    "packages/control": {
+      "name": "@private-landing/control",
+      "version": "1.6.0",
+      "dependencies": {
+        "@private-landing/infrastructure": "workspace:*",
+        "@private-landing/observability": "workspace:*",
+        "@private-landing/types": "workspace:*",
+        "hono": "^4.11.5",
+        "nanoid": "^5.1.5",
+      },
+      "devDependencies": {
+        "@cloudflare/workers-types": "^4.20260124.0",
+        "bun-types": "^1.2.5",
+        "typescript": "^5.8.2",
+      },
+    },
     "packages/core": {
       "name": "@private-landing/core",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "dependencies": {
         "@libsql/client": "^0.15.0",
         "@private-landing/infrastructure": "workspace:*",
@@ -54,7 +71,7 @@
     },
     "packages/infrastructure": {
       "name": "@private-landing/infrastructure",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "dependencies": {
         "@libsql/client": "^0.15.0",
         "@private-landing/types": "workspace:*",
@@ -67,7 +84,7 @@
     },
     "packages/observability": {
       "name": "@private-landing/observability",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "dependencies": {
         "@private-landing/core": "workspace:*",
         "@private-landing/infrastructure": "workspace:*",
@@ -84,7 +101,7 @@
     },
     "packages/schemas": {
       "name": "@private-landing/schemas",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "dependencies": {
         "zod": "^4.3.5",
       },
@@ -96,7 +113,7 @@
     },
     "packages/types": {
       "name": "@private-landing/types",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "dependencies": {
         "hono": "^4.11.5",
       },
@@ -308,6 +325,8 @@
     "@poppinss/exception": ["@poppinss/exception@1.2.3", "", {}, "sha512-dCED+QRChTVatE9ibtoaxc+WkdzOSjYTKi/+uacHWIsfodVfpsueo3+DKpgU5Px8qXjgmXkSvhXvSCz3fnP9lw=="],
 
     "@private-landing/cloudflare-workers": ["@private-landing/cloudflare-workers@workspace:apps/cloudflare-workers"],
+
+    "@private-landing/control": ["@private-landing/control@workspace:packages/control"],
 
     "@private-landing/core": ["@private-landing/core@workspace:packages/core"],
 

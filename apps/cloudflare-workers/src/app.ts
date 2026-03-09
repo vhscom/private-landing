@@ -5,6 +5,8 @@
  * @license Apache-2.0
  */
 
+// [ctl-plugin 1/2] Remove this import and the call below to disable control plugin
+import { controlPlugin } from "@private-landing/control";
 import {
 	createAuthSystem,
 	createMirroredSessionService,
@@ -13,6 +15,7 @@ import {
 	defaultGetClientIp,
 	type RateLimitConfig,
 	securityHeaders,
+	tokenConfig,
 } from "@private-landing/core";
 import {
 	type CacheClientFactory,
@@ -69,11 +72,24 @@ let obsEmit: (eventType: string) => MiddlewareHandler<AppEnv> = () => noop;
 let obsEmitEvent: (ctx: any, event: any) => void = () => {};
 let adaptiveChallenge: MiddlewareHandler<AppEnv> = noop;
 
-// [obs-plugin 2/2] Remove this override and the import above to disable observability
-({ obsEmit, obsEmitEvent, adaptiveChallenge } = observabilityPlugin(app, {
+// [obs-plugin 2/2 begin] Remove through end marker (and import) to disable observability
+const obs = observabilityPlugin(app, {
 	createCacheClient: createCacheClient ?? undefined,
 	getClientIp: defaultGetClientIp,
-}));
+});
+({ obsEmit, obsEmitEvent, adaptiveChallenge } = obs);
+
+// [ctl-plugin 2/2 begin] Remove through end marker (and import) to disable control plugin
+controlPlugin(obs.opsRouter, {
+	requireAuth,
+	obsEmitEvent: obs.obsEmitEvent,
+	getClientIp: obs.getClientIp,
+});
+// [ctl-plugin 2/2 end]
+
+obs.mountAgentWs(obs.opsRouter);
+obs.mountOps();
+// [obs-plugin 2/2 end]
 
 // Emit rate_limit.blocked event when a request is rate-limited
 const onLimited = (prefix: string) => (ctx: Context<AppEnv>) => {
@@ -117,6 +133,10 @@ const rateLimits = {
 } satisfies Record<string, RateLimitConfig>;
 
 // Global middleware
+app.use("*", async (ctx, next) => {
+	tokenConfig.cookieSecure = ctx.env.ENVIRONMENT !== "development";
+	await next();
+});
 app.use("*", securityHeaders);
 app.use("*", serveStatic({ cache: "key" }));
 

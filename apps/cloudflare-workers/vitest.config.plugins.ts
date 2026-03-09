@@ -11,6 +11,7 @@ export default defineWorkersConfig({
 	test: {
 		globalSetup: ["./test/setup.ts"],
 		include: ["test/integration/plugins/**/*.test.ts"],
+		testTimeout: 15_000,
 		silent: "passed-only",
 		poolOptions: {
 			workers: {

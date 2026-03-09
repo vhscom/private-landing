@@ -29,6 +29,11 @@ import { ensureSchema } from "./schema";
 import { createWsHandler } from "./ws";
 import { upgradeWebSocket } from "./ws/upgrade";
 
+/**
+ * Dependencies for the /ops sub-router.
+ * @property createCacheClient - Cache factory for session revocation cache invalidation
+ * @property getClientIp - IP extraction function for rate limiting and audit trail
+ */
 export interface OpsRouterDeps {
 	createCacheClient?: CacheClientFactory;
 	getClientIp?: GetClientIpFn;
@@ -88,13 +93,14 @@ export function createOpsRouter(deps: OpsRouterDeps) {
 		).catch((err) => console.error("[obs] ops event emit failed:", err));
 	}
 
-	// ADR-008: Cloak entire /ops surface when provisioning secret is absent
-	router.use("*", async (ctx, next) => {
-		if (!ctx.env.AGENT_PROVISIONING_SECRET) {
-			return ctx.notFound();
-		}
-		return next();
-	});
+	// ADR-008: Cloak agent surface when provisioning secret is absent.
+	// Scoped to agent routes — control routes have their own auth chain.
+	for (const path of ["/sessions/*", "/agents/*", "/events/*", "/ws"]) {
+		router.use(path, async (ctx, next) => {
+			if (!ctx.env.AGENT_PROVISIONING_SECRET) return ctx.notFound();
+			return next();
+		});
+	}
 
 	router.get("/sessions", requireAgentKey, async (ctx) => {
 		const userId = ctx.req.query("user_id");
@@ -453,51 +459,58 @@ export function createOpsRouter(deps: OpsRouterDeps) {
 		}
 	});
 
-	// WebSocket gateway — capability negotiation + RPC dispatch (ADR-009)
-	router.get(
-		"/ws",
-		// ADR-009 Phase 0 step 2: IP-keyed rate limit (degrades to no-op without cache)
-		wsConnectLimit,
-		// ADR-009 Phase 0 step 3: origin validation — browser CSRF defense only.
-		// Non-browser clients (CLI agents, curl) omit Origin and bypass this check;
-		// they are authenticated downstream by requireAgentKey (Bearer token).
-		async (ctx, next) => {
-			const origin = ctx.req.header("origin");
-			if (origin !== undefined) {
-				const allowed = (ctx.env.WS_ALLOWED_ORIGINS ?? "")
-					.split(",")
-					.filter(Boolean);
-				if (!allowed.includes(origin)) {
-					await emitOpsEvent(ctx, "ws.connect_failure", APP_ACTOR_ID, {
-						reason: "origin_rejected",
-						origin,
-					});
-					return ctx.json({ error: "Forbidden" }, 403);
+	/** Mount the agent-key WebSocket handler on the given router (ADR-009). */
+	function mountAgentWs(target: typeof router) {
+		target.get(
+			"/ws",
+			// ADR-009 Phase 0 step 2: IP-keyed rate limit (degrades to no-op without cache)
+			wsConnectLimit,
+			// ADR-009 Phase 0 step 3: origin validation — browser CSRF defense only.
+			// Non-browser clients (CLI agents, curl) omit Origin and bypass this check;
+			// they are authenticated downstream by requireAgentKey (Bearer token).
+			async (ctx, next) => {
+				const origin = ctx.req.header("origin");
+				if (origin !== undefined) {
+					const allowed = (ctx.env.WS_ALLOWED_ORIGINS ?? "")
+						.split(",")
+						.map((o) => o.trim())
+						.filter(Boolean);
+					if (!allowed.includes(origin)) {
+						await emitOpsEvent(ctx, "ws.connect_failure", APP_ACTOR_ID, {
+							reason: "origin_rejected",
+							origin,
+						});
+						return ctx.json({ error: "Forbidden" }, 403);
+					}
 				}
-			}
-			return next();
-		},
-		// ADR-009 Phase 0 step 4: adaptive PoW (triggers on ws.connect_failure history)
-		createAdaptiveChallenge(getClientIp, { eventType: "ws.connect_failure" }),
-		requireAgentKey,
-		/* v8 ignore start — callback runs inside WebSocketPair upgrade; handler logic covered by test/ws/handler.test.ts */
-		upgradeWebSocket((ctx) => {
-			const principal = getAgentPrincipal(ctx);
-			let ipAddress = "unknown";
-			try {
-				ipAddress = getClientIp(ctx as unknown as Parameters<GetClientIpFn>[0]);
-			} catch {
-				// getConnInfo may not be available in all contexts
-			}
-			return createWsHandler(principal, {
-				env: ctx.env,
-				ipAddress,
-				ua: ctx.req.header("user-agent") ?? "",
-				createCacheClient: deps.createCacheClient,
-			});
-		}),
-		/* v8 ignore stop */
-	);
+				return next();
+			},
+			// ADR-009 Phase 0 step 4: adaptive PoW (triggers on ws.connect_failure history)
+			createAdaptiveChallenge(getClientIp, {
+				eventType: "ws.connect_failure",
+			}),
+			requireAgentKey,
+			/* v8 ignore start — callback runs inside WebSocketPair upgrade; handler logic covered by test/ws/handler.test.ts */
+			upgradeWebSocket((ctx) => {
+				const principal = getAgentPrincipal(ctx);
+				let ipAddress = "unknown";
+				try {
+					ipAddress = getClientIp(
+						ctx as unknown as Parameters<GetClientIpFn>[0],
+					);
+				} catch {
+					// getConnInfo may not be available in all contexts
+				}
+				return createWsHandler(principal, {
+					env: ctx.env,
+					ipAddress,
+					ua: ctx.req.header("user-agent") ?? "",
+					createCacheClient: deps.createCacheClient,
+				});
+			}),
+			/* v8 ignore stop */
+		);
+	}
 
-	return router;
+	return { router, mountAgentWs };
 }

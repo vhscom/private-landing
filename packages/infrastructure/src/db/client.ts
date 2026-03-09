@@ -21,7 +21,12 @@ export type DbClientFactory = (env: Env) => SqliteClient;
  * (file path or in-memory) that does not require an auth token.
  */
 function isLocalUrl(url: string): boolean {
-	return url.startsWith("file:") || url === ":memory:";
+	return (
+		url.startsWith("file:") ||
+		url === ":memory:" ||
+		url.startsWith("http://localhost") ||
+		url.startsWith("http://127.0.0.1")
+	);
 }
 
 export function createDbClient(env: Env): SqliteClient {

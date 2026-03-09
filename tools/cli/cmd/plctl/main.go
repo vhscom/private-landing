@@ -33,6 +33,8 @@ const (
 	stateEventStats
 	stateAgents
 	stateTailEvents
+	stateFrameInspector
+	stateFrameDetail
 )
 
 type action int
@@ -54,6 +56,13 @@ const (
 	actionProvisionAgent
 	actionRevokeAgent
 )
+
+type wsFrame struct {
+	Dir  string // "→" send, "←" recv
+	Type string
+	Raw  string
+	Time time.Time
+}
 
 type menuItem struct {
 	label    string
@@ -114,12 +123,14 @@ type tailChallengeMsg struct {
 }
 
 type tailConnectedMsg struct {
-	conn *websocket.Conn
-	err  error
+	conn   *websocket.Conn
+	err    error
+	frames []wsFrame
 }
 
 type tailEventMsg struct {
 	event api.Event
+	frame wsFrame
 }
 
 type tailErrorMsg struct {
@@ -160,6 +171,10 @@ type model struct {
 	tailConn          *websocket.Conn
 	tailChallenge     *api.ChallengeResult
 	tailKeepaliveStop chan struct{}
+
+	// frame inspector state
+	frames      []wsFrame
+	framesTable table.Model
 
 	// terminal dimensions
 	width int
@@ -235,11 +250,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.tailConn = msg.conn
+		m.frames = append(m.frames, msg.frames...)
 		m.tailKeepaliveStop = make(chan struct{})
 		go keepAlive(m.tailConn, m.tailKeepaliveStop)
 		m.state = stateTailEvents
 		return m, m.readNextEvent()
 	case tailEventMsg:
+		m.frames = append(m.frames, msg.frame)
+		if len(m.frames) > 500 {
+			m.frames = m.frames[len(m.frames)-500:]
+		}
+		if m.state == stateFrameInspector {
+			cursor := m.framesTable.Cursor()
+			m.framesTable = buildFramesTable(m.frames)
+			m.framesTable.SetCursor(cursor)
+		}
 		if msg.event.Type != "" {
 			m.tailEvents = append(m.tailEvents, msg.event)
 			if len(m.tailEvents) > 100 {
@@ -248,6 +273,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, m.readNextEvent()
 	case tailErrorMsg:
+		// Ignore read errors after intentional disconnect (Esc back to menu)
+		if m.tailConn == nil {
+			return m, nil
+		}
 		m.tailErr = msg.err
 		return m, nil
 	}
@@ -275,6 +304,10 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleEventDetail(msg)
 	case stateTailEvents:
 		return m.handleTailView(key)
+	case stateFrameInspector:
+		return m.handleFrameInspector(msg)
+	case stateFrameDetail:
+		return m.handleFrameDetail(msg)
 	case stateResult, stateSessions, stateEventStats, stateAgents:
 		return m.handleDataView(key)
 	}
@@ -598,6 +631,7 @@ func (m model) probeChallenge() tea.Cmd {
 func (m model) dialAndSubscribe() tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
+		var frames []wsFrame
 
 		conn, err := m.client.ConnectWS(ctx, m.tailChallenge)
 		if err != nil {
@@ -610,6 +644,7 @@ func (m model) dialAndSubscribe() tea.Cmd {
 			Capabilities: []string{"subscribe_events"},
 		}
 		data, _ := json.Marshal(capReq)
+		frames = append(frames, wsFrame{Dir: "→", Type: "capability.request", Raw: string(data), Time: time.Now()})
 		if err := conn.Write(ctx, websocket.MessageText, data); err != nil {
 			conn.Close(websocket.StatusNormalClosure, "")
 			return tailConnectedMsg{err: fmt.Errorf("write capabilities: %w", err)}
@@ -621,6 +656,7 @@ func (m model) dialAndSubscribe() tea.Cmd {
 			conn.Close(websocket.StatusNormalClosure, "")
 			return tailConnectedMsg{err: fmt.Errorf("read capabilities: %w", err)}
 		}
+		frames = append(frames, wsFrame{Dir: "←", Type: "capability.granted", Raw: string(capResp), Time: time.Now()})
 		var granted api.WSCapabilitiesGranted
 		if err := json.Unmarshal(capResp, &granted); err != nil {
 			conn.Close(websocket.StatusNormalClosure, "")
@@ -645,6 +681,7 @@ func (m model) dialAndSubscribe() tea.Cmd {
 			Payload: api.WSSubscribePayload{Types: m.tailFilter},
 		}
 		data, _ = json.Marshal(subReq)
+		frames = append(frames, wsFrame{Dir: "→", Type: "subscribe_events", Raw: string(data), Time: time.Now()})
 		if err := conn.Write(ctx, websocket.MessageText, data); err != nil {
 			conn.Close(websocket.StatusNormalClosure, "")
 			return tailConnectedMsg{err: fmt.Errorf("write subscribe: %w", err)}
@@ -656,13 +693,14 @@ func (m model) dialAndSubscribe() tea.Cmd {
 			conn.Close(websocket.StatusNormalClosure, "")
 			return tailConnectedMsg{err: fmt.Errorf("read subscribe ack: %w", err)}
 		}
+		frames = append(frames, wsFrame{Dir: "←", Type: "subscribe_events", Raw: string(subResp), Time: time.Now()})
 		var envelope api.WSEnvelope
 		if err := json.Unmarshal(subResp, &envelope); err != nil || (envelope.OK != nil && !*envelope.OK) {
 			conn.Close(websocket.StatusNormalClosure, "")
 			return tailConnectedMsg{err: fmt.Errorf("subscribe rejected")}
 		}
 
-		return tailConnectedMsg{conn: conn}
+		return tailConnectedMsg{conn: conn, frames: frames}
 	}
 }
 
@@ -679,6 +717,7 @@ func (m model) readNextEvent() tea.Cmd {
 		if err := json.Unmarshal(data, &envelope); err != nil {
 			return tailErrorMsg{err: fmt.Errorf("decode message: %w", err)}
 		}
+		frame := wsFrame{Dir: "←", Type: envelope.Type, Raw: string(data), Time: time.Now()}
 		switch envelope.Type {
 		case "credential.revoked":
 			return tailErrorMsg{err: fmt.Errorf("agent credential revoked")}
@@ -693,18 +732,21 @@ func (m model) readNextEvent() tea.Cmd {
 				s := string(*p.Detail)
 				detail = &s
 			}
-			return tailEventMsg{event: api.Event{
-				ID:        p.EventID,
-				Type:      p.EventType,
-				IPAddress: p.IPAddress,
-				UserID:    p.UserID,
-				Detail:    detail,
-				CreatedAt: p.CreatedAt,
-				ActorID:   p.ActorID,
-			}}
+			return tailEventMsg{
+				event: api.Event{
+					ID:        p.EventID,
+					Type:      p.EventType,
+					IPAddress: p.IPAddress,
+					UserID:    p.UserID,
+					Detail:    detail,
+					CreatedAt: p.CreatedAt,
+					ActorID:   p.ActorID,
+				},
+				frame: frame,
+			}
 		default:
-			// Protocol messages (heartbeat, pong) — skip and read next
-			return tailEventMsg{event: api.Event{Type: ""}}
+			// Protocol messages (heartbeat, pong) — captured in frame inspector
+			return tailEventMsg{event: api.Event{Type: ""}, frame: frame}
 		}
 	}
 }
@@ -751,11 +793,18 @@ func keepAlive(conn *websocket.Conn, stop <-chan struct{}) {
 
 func (m model) handleTailView(key string) (tea.Model, tea.Cmd) {
 	switch key {
+	case "f":
+		if len(m.frames) > 0 {
+			m.framesTable = buildFramesTable(m.frames)
+			m.state = stateFrameInspector
+		}
+		return m, nil
 	case "esc":
 		m.closeTail()
 		m.state = stateMenu
 		m.tailEvents = nil
 		m.tailErr = nil
+		m.frames = nil
 		return m, nil
 	case "q":
 		m.closeTail()
@@ -763,6 +812,81 @@ func (m model) handleTailView(key string) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 	return m, nil
+}
+
+func (m model) handleFrameInspector(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	key := msg.String()
+	switch key {
+	case "enter":
+		if len(m.frames) > 0 && m.framesTable.SelectedRow() != nil {
+			m.state = stateFrameDetail
+			return m, nil
+		}
+	case "f", "esc":
+		m.state = stateTailEvents
+		return m, nil
+	case "q":
+		m.closeTail()
+		m.quitting = true
+		return m, tea.Quit
+	}
+	var cmd tea.Cmd
+	m.framesTable, cmd = m.framesTable.Update(msg)
+	return m, cmd
+}
+
+func (m model) handleFrameDetail(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc", "enter":
+		m.state = stateFrameInspector
+	case "q":
+		m.closeTail()
+		m.quitting = true
+		return m, tea.Quit
+	}
+	return m, nil
+}
+
+func buildFramesTable(frames []wsFrame) table.Model {
+	columns := []table.Column{
+		{Title: "Dir", Width: 3},
+		{Title: "Type", Width: 28},
+		{Title: "Time", Width: 12},
+		{Title: "Size", Width: 6},
+	}
+
+	rows := make([]table.Row, len(frames))
+	for i, f := range frames {
+		ts := f.Time.Format("15:04:05.000")
+		rows[i] = table.Row{
+			f.Dir,
+			f.Type,
+			ts,
+			fmt.Sprintf("%d", len(f.Raw)),
+		}
+	}
+
+	s := table.DefaultStyles()
+	s.Header = s.Header.
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("8")).
+		BorderBottom(true).
+		Bold(true).
+		Foreground(lipgloss.Color("5"))
+	s.Selected = s.Selected.
+		Foreground(lipgloss.Color("0")).
+		Background(lipgloss.Color("6")).
+		Bold(false)
+
+	t := table.New(
+		table.WithColumns(columns),
+		table.WithRows(rows),
+		table.WithHeight(20),
+		table.WithFocused(true),
+		table.WithStyles(s),
+	)
+
+	return t
 }
 
 func (m model) executeAction() tea.Cmd {
@@ -842,6 +966,10 @@ func (m model) View() string {
 		b.WriteString(m.viewAgents())
 	case stateTailEvents:
 		b.WriteString(m.viewTailEvents())
+	case stateFrameInspector:
+		b.WriteString(m.viewFrameInspector())
+	case stateFrameDetail:
+		b.WriteString(m.viewFrameDetail())
 	}
 
 	b.WriteString("\n")
@@ -1208,7 +1336,70 @@ func (m model) viewTailEvents() string {
 		}
 	}
 
-	b.WriteString(ui.DimStyle.Render("\nesc stop • q quit"))
+	frameHint := ""
+	if len(m.frames) > 0 {
+		frameHint = fmt.Sprintf(" • f frames (%d)", len(m.frames))
+	}
+	b.WriteString(ui.DimStyle.Render(fmt.Sprintf("\nesc stop%s • q quit", frameHint)))
+	return b.String()
+}
+
+func (m model) viewFrameInspector() string {
+	var b strings.Builder
+
+	b.WriteString(ui.HeaderStyle.Render(fmt.Sprintf("WebSocket Frames (%d)", len(m.frames))))
+	b.WriteString("\n\n")
+	b.WriteString(m.framesTable.View())
+	b.WriteString(ui.DimStyle.Render("\n↑/↓ navigate • enter detail • f back • q quit"))
+	return b.String()
+}
+
+func (m model) viewFrameDetail() string {
+	var b strings.Builder
+
+	idx := m.framesTable.Cursor()
+	if idx < 0 || idx >= len(m.frames) {
+		b.WriteString(ui.DimStyle.Render("No frame selected."))
+		b.WriteString(ui.DimStyle.Render("\n\nesc back • q quit"))
+		return b.String()
+	}
+
+	f := m.frames[idx]
+
+	b.WriteString(ui.HeaderStyle.Render(fmt.Sprintf("Frame #%d", idx+1)))
+	b.WriteString("\n\n")
+
+	labels := []string{"Dir", "Type", "Time", "Size"}
+	values := []string{
+		f.Dir,
+		f.Type,
+		f.Time.Format("15:04:05.000"),
+		fmt.Sprintf("%d bytes", len(f.Raw)),
+	}
+
+	for i, label := range labels {
+		b.WriteString(fmt.Sprintf("  %s  %s\n", ui.HeaderStyle.Render(fmt.Sprintf("%-6s", label)), values[i]))
+	}
+
+	// Pretty-print JSON payload
+	b.WriteString(fmt.Sprintf("\n  %s\n", ui.HeaderStyle.Render("Payload")))
+	var pretty json.RawMessage
+	if err := json.Unmarshal([]byte(f.Raw), &pretty); err == nil {
+		indented, err := json.MarshalIndent(pretty, "  ", "  ")
+		if err == nil {
+			b.WriteString("  ")
+			b.WriteString(string(indented))
+		} else {
+			b.WriteString("  ")
+			b.WriteString(f.Raw)
+		}
+	} else {
+		b.WriteString("  ")
+		b.WriteString(f.Raw)
+	}
+	b.WriteString("\n")
+
+	b.WriteString(ui.DimStyle.Render("\nesc back • q quit"))
 	return b.String()
 }
 
@@ -1241,7 +1432,7 @@ func printUsage() {
 	fmt.Println("  " + label("-h, --help") + "    Show this help message")
 	fmt.Println()
 	fmt.Println(heading("Environment:"))
-	fmt.Println("  " + label("PLCTL_API_URL") + "              API base URL (required)")
+	fmt.Println("  " + label("PLCTL_API_URL") + "              Site root URL, e.g. http://localhost:8788 (required)")
 	fmt.Println("  " + label("PLCTL_API_KEY") + "              Agent API key for Bearer auth (required)")
 	fmt.Println("  " + label("PLCTL_PROVISIONING_SECRET") + "  Infrastructure secret for agent provisioning (optional)")
 	fmt.Println("  " + label("ENVIRONMENT") + "                Set to any non-production value to suppress safety prompt")
@@ -1259,7 +1450,7 @@ func printUsage() {
 	fmt.Println("    View recent events            " + dim("List security events (last 24h)"))
 	fmt.Println("    View events for user          " + dim("List events filtered by user ID"))
 	fmt.Println("    View event stats              " + dim("Aggregate event counts by type"))
-	fmt.Println("    Tail events (live)            " + dim("Stream security events in real time (supports filters: login.*, session.revoke)"))
+	fmt.Println("    Tail events (live)            " + dim("Stream security events in real time (f toggles frame inspector)"))
 	fmt.Println()
 	fmt.Println("  " + label("Agents"))
 	fmt.Println("    List agents                   " + dim("Show active agent credentials"))

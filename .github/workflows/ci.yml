@@ -23,7 +23,13 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build packages
-        run: bun run build
+        run: bun run build 2>&1 | tee /tmp/build.log
+
+      - name: Report bundle size
+        run: |
+          SIZE=$(grep 'Total Upload' /tmp/build.log || echo 'not found')
+          echo "### Bundle size (all plugins)" >> "$GITHUB_STEP_SUMMARY"
+          echo "$SIZE" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Typecheck
         run: bun run typecheck
@@ -33,6 +39,30 @@ jobs:
 
       - name: Test with coverage
         run: bun run test:coverage
+
+      - name: Start local DB for plugin tests
+        run: |
+          docker run -d --name sqld -p 8080:8080 ghcr.io/tursodatabase/libsql-server:latest
+          echo "Waiting for sqld..."
+          for i in $(seq 1 15); do
+            if curl -sf http://127.0.0.1:8080/health > /dev/null 2>&1; then
+              echo "sqld ready"
+              break
+            fi
+            sleep 1
+          done
+
+      - name: Write plugin test env
+        working-directory: apps/cloudflare-workers
+        run: |
+          echo 'AUTH_DB_URL="http://127.0.0.1:8080"' > .dev.vars
+          echo 'AUTH_DB_TOKEN="local"' >> .dev.vars
+          echo 'JWT_ACCESS_SECRET="${{ secrets.JWT_ACCESS_SECRET }}"' >> .dev.vars
+          echo 'JWT_REFRESH_SECRET="${{ secrets.JWT_REFRESH_SECRET }}"' >> .dev.vars
+          echo 'AGENT_PROVISIONING_SECRET="${{ secrets.AGENT_PROVISIONING_SECRET }}"' >> .dev.vars
+
+      - name: Integration tests (plugins)
+        run: bun run test:plugins
 
       - name: Create worker test env file
         working-directory: apps/cloudflare-workers
@@ -45,16 +75,13 @@ jobs:
       - name: Integration tests
         run: bun run test:integration
 
-      - name: Integration tests (plugins)
-        run: bun run test:plugins
-
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
           fail_ci_if_error: false
           token: "#{{ secrets.CODECOV_TOKEN }}"
 
-  plugin-removal:
+  remove-control:
     runs-on: ubuntu-latest
 
     steps:
@@ -69,26 +96,79 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Strip observability plugin
+      - name: Strip control plugin
         run: |
-          rm -rf packages/observability
-          sed -i '/obs-plugin 1\/2/,/observability/d' apps/cloudflare-workers/src/app.ts
-          sed -i '/obs-plugin 2\/2/,/}));/d' apps/cloudflare-workers/src/app.ts
+          rm -rf packages/control
+          sed -i '/ctl-plugin 1\/2/,+1d' apps/cloudflare-workers/src/app.ts
+          sed -i '/ctl-plugin 2\/2 begin/,/ctl-plugin 2\/2 end/d' apps/cloudflare-workers/src/app.ts
           node -e "
             const fs = require('fs');
             const pkg = JSON.parse(fs.readFileSync('apps/cloudflare-workers/package.json', 'utf8'));
-            delete pkg.dependencies['@private-landing/observability'];
+            delete pkg.dependencies['@private-landing/control'];
             fs.writeFileSync('apps/cloudflare-workers/package.json', JSON.stringify(pkg, null, '\t') + '\n');
           "
+          sed -i '/control/d' apps/cloudflare-workers/tsconfig.json
           bun install
 
       - name: Build packages
-        run: bun run build
+        run: bun run build 2>&1 | tee /tmp/build.log
+
+      - name: Report bundle size
+        run: |
+          SIZE=$(grep 'Total Upload' /tmp/build.log || echo 'not found')
+          echo "### Bundle size (without control)" >> "$GITHUB_STEP_SUMMARY"
+          echo "$SIZE" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Typecheck
         run: bun run typecheck
 
-      - name: Unit tests
+      - name: Unit tests (core still passes)
+        run: bun run test:unit
+
+  remove-all-plugins:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Strip observability and control plugins
+        run: |
+          rm -rf packages/observability packages/control
+          sed -i '/ctl-plugin 1\/2/,+1d' apps/cloudflare-workers/src/app.ts
+          sed -i '/obs-plugin 1\/2/,+1d' apps/cloudflare-workers/src/app.ts
+          sed -i '/obs-plugin 2\/2 begin/,/obs-plugin 2\/2 end/d' apps/cloudflare-workers/src/app.ts
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('apps/cloudflare-workers/package.json', 'utf8'));
+            delete pkg.dependencies['@private-landing/observability'];
+            delete pkg.dependencies['@private-landing/control'];
+            fs.writeFileSync('apps/cloudflare-workers/package.json', JSON.stringify(pkg, null, '\t') + '\n');
+          "
+          sed -i '/control/d' apps/cloudflare-workers/tsconfig.json
+          bun install
+
+      - name: Build packages
+        run: bun run build 2>&1 | tee /tmp/build.log
+
+      - name: Report bundle size
+        run: |
+          SIZE=$(grep 'Total Upload' /tmp/build.log || echo 'not found')
+          echo "### Bundle size (without plugins)" >> "$GITHUB_STEP_SUMMARY"
+          echo "$SIZE" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Unit tests (core still passes)
         run: bun run test:unit
 
   cli:
