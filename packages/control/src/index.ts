@@ -45,32 +45,20 @@ export function controlPlugin(
 
 	// Cloaked auth — convert auth failures to 404 so unauthenticated
 	// requests are indistinguishable from non-existent routes (ADR-010).
-	// When an expired session is detected (auth cookies present but invalid),
-	// HTML navigation requests redirect to the login page with a return URL
-	// instead of showing a confusing 404.
+	// Browser navigations to /control* redirect to login instead of 404;
+	// non-browser clients (scanners, curl) still see 404 (cloaked).
 	const cloakedAuth: MiddlewareHandler = async (ctx, next) => {
-		const cookie = ctx.req.header("cookie") ?? "";
-		const hadSession =
-			cookie.includes("access_token") || cookie.includes("refresh_token");
-
 		let authed = false;
 		await deps.requireAuth(ctx, async () => {
 			authed = true;
 		});
 		if (!authed) {
-			if (hadSession) {
-				const isWs = ctx.req.header("upgrade")?.toLowerCase() === "websocket";
-				const isNav =
-					ctx.req.header("sec-fetch-dest") === "document" ||
-					ctx.req.header("sec-fetch-mode") === "navigate" ||
-					(!isWs && ctx.req.method === "GET");
-				if (isNav) {
-					const returnPath = new URL(ctx.req.url).pathname;
-					return ctx.redirect(
-						`/?return=${encodeURIComponent(returnPath)}`,
-						302,
-					);
-				}
+			const isNav =
+				ctx.req.header("sec-fetch-dest") === "document" ||
+				ctx.req.header("sec-fetch-mode") === "navigate";
+			if (isNav) {
+				const returnPath = new URL(ctx.req.url).pathname;
+				return ctx.redirect(`/?return=${encodeURIComponent(returnPath)}`, 302);
 			}
 			return ctx.notFound();
 		}
