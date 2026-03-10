@@ -45,12 +45,28 @@ export function controlPlugin(
 
 	// Cloaked auth — convert auth failures to 404 so unauthenticated
 	// requests are indistinguishable from non-existent routes (ADR-010).
+	// When an expired session is detected (auth cookies present but invalid),
+	// HTML navigation requests redirect to the login page with a return URL
+	// instead of showing a confusing 404.
 	const cloakedAuth: MiddlewareHandler = async (ctx, next) => {
+		const cookie = ctx.req.header("cookie") ?? "";
+		const hadSession =
+			cookie.includes("access_token") || cookie.includes("refresh_token");
+
 		let authed = false;
 		await deps.requireAuth(ctx, async () => {
 			authed = true;
 		});
-		if (!authed) return ctx.notFound();
+		if (!authed) {
+			if (
+				hadSession &&
+				(ctx.req.header("accept") ?? "").includes("text/html")
+			) {
+				const returnPath = new URL(ctx.req.url).pathname;
+				return ctx.redirect(`/?return=${encodeURIComponent(returnPath)}`, 302);
+			}
+			return ctx.notFound();
+		}
 		return next();
 	};
 

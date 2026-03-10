@@ -677,6 +677,14 @@
             /* Clean up no-JS fallback artifacts */
             const fallbackTitle = document.querySelector('.no-js-title');
             if (fallbackTitle) fallbackTitle.hidden = true;
+
+            /* Capture return URL before clearing the address bar */
+            const params = new URLSearchParams(location.search);
+            const returnTo = params.get('return');
+            if (returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//')) {
+                this._returnTo = returnTo;
+            }
+
             if (location.search || location.hash) history.replaceState(null, '', location.pathname);
 
             const steps = Array.from(this.querySelectorAll('auth-step'));
@@ -836,6 +844,9 @@
                 this._statusEl.textContent = `-- ${newState}`;
                 this._statusEl.className = `auth-status ${newState}`;
 
+                if (newState === 'authenticated' && this._returnTo) {
+                    location.href = this._returnTo;
+                }
             }
         }
     }
