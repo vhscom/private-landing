@@ -29,7 +29,10 @@ export async function proxyToGateway(
 		target.protocol = gateway.protocol;
 		target.host = gateway.host;
 		target.port = gateway.port;
-		target.pathname = target.pathname.replace("/ops/control", "");
+		// Strip /ops/control prefix; also strip /ops for bare /ops/assets/* requests
+		target.pathname = target.pathname.startsWith("/ops/control")
+			? target.pathname.replace("/ops/control", "")
+			: target.pathname.replace(/^\/ops\//, "/");
 
 		const headers = new Headers(ctx.req.raw.headers);
 		headers.delete("cookie");

@@ -19,6 +19,7 @@ afterEach(() => {
 function createApp(gatewayUrl: string) {
 	const app = new Hono();
 	app.all("/ops/control/*", async (ctx) => proxyToGateway(ctx, gatewayUrl));
+	app.all("/ops/assets/*", async (ctx) => proxyToGateway(ctx, gatewayUrl));
 	return app;
 }
 
@@ -94,6 +95,23 @@ describe("proxyToGateway", () => {
 		expect(res.status).toBe(502);
 		expect(await res.json()).toEqual({ error: "Bad Gateway" });
 		expect(fetchSpy).not.toHaveBeenCalled();
+	});
+
+	it("rewrites /ops/assets/* to /assets/* on gateway", async () => {
+		fetchSpy.mockResolvedValueOnce(
+			new Response("js-content", {
+				status: 200,
+				headers: { "Content-Type": "application/javascript" },
+			}),
+		);
+
+		const app = createApp("http://gateway:18789");
+		const res = await app.request("/ops/assets/index-abc123.js");
+
+		expect(res.status).toBe(200);
+		const calledUrl = fetchSpy.mock.calls[0]?.[0] as string;
+		expect(calledUrl).toContain("/assets/index-abc123.js");
+		expect(calledUrl).not.toContain("/ops/");
 	});
 
 	it("does not leak gateway error details", async () => {

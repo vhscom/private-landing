@@ -76,31 +76,65 @@ export function controlPlugin(
 		});
 	});
 
-	// Static asset reverse proxy + WebSocket upgrade on /control path.
-	// The control UI derives its WebSocket URL from location.pathname,
-	// so upgrade requests arrive at /ops/control rather than /ops/ws.
+	// Redirect /control → /control/ for non-WebSocket requests so the
+	// browser resolves relative asset URLs correctly (trailing slash base).
+	const controlHandler: MiddlewareHandler = async (ctx, next) => {
+		const env = ctx.env as ControlBindings;
+		if (!env.GATEWAY_URL) {
+			return ctx.notFound();
+		}
+
+		// WebSocket upgrade → transparent proxy (same handler as /ws cookie path)
+		if (ctx.req.header("upgrade")?.toLowerCase() === "websocket") {
+			if (!env.GATEWAY_TOKEN) return ctx.notFound();
+			return proxyUpgrade(ctx, next);
+		}
+
+		deps.obsEmitEvent?.(ctx, {
+			type: "control.proxy",
+			detail: { path: ctx.req.path, method: ctx.req.method },
+		});
+
+		return proxyToGateway(ctx, env.GATEWAY_URL);
+	};
+
+	// /control (no trailing slash, no wildcard) — redirect HTTP, allow WS
+	opsRouter.all(
+		"/control",
+		cloakedAuth,
+		userOneGuard,
+		ipAllowlist,
+		async (ctx, next) => {
+			// Allow WebSocket upgrades at /ops/control (no redirect)
+			if (ctx.req.header("upgrade")?.toLowerCase() === "websocket") {
+				return controlHandler(ctx, next);
+			}
+			// HTTP requests: 308 → /ops/control/ so relative assets resolve correctly
+			const url = new URL(ctx.req.url);
+			url.pathname += "/";
+			return ctx.redirect(url.pathname + url.search, 308);
+		},
+	);
+
+	// /control/* — static assets + WS upgrade
 	opsRouter.all(
 		"/control/*",
 		cloakedAuth,
 		userOneGuard,
 		ipAllowlist,
-		async (ctx, next) => {
+		controlHandler,
+	);
+
+	// Defensive: proxy /assets/* for cases where the browser loads /ops/control
+	// without trailing slash before the redirect (cached HTML, preloaded links).
+	opsRouter.all(
+		"/assets/*",
+		cloakedAuth,
+		userOneGuard,
+		ipAllowlist,
+		async (ctx) => {
 			const env = ctx.env as ControlBindings;
-			if (!env.GATEWAY_URL) {
-				return ctx.notFound();
-			}
-
-			// WebSocket upgrade → transparent proxy (same handler as /ws cookie path)
-			if (ctx.req.header("upgrade")?.toLowerCase() === "websocket") {
-				if (!env.GATEWAY_TOKEN) return ctx.notFound();
-				return proxyUpgrade(ctx, next);
-			}
-
-			deps.obsEmitEvent?.(ctx, {
-				type: "control.proxy",
-				detail: { path: ctx.req.path, method: ctx.req.method },
-			});
-
+			if (!env.GATEWAY_URL) return ctx.notFound();
 			return proxyToGateway(ctx, env.GATEWAY_URL);
 		},
 	);
