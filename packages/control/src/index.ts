@@ -58,12 +58,19 @@ export function controlPlugin(
 			authed = true;
 		});
 		if (!authed) {
-			if (
-				hadSession &&
-				(ctx.req.header("accept") ?? "").includes("text/html")
-			) {
-				const returnPath = new URL(ctx.req.url).pathname;
-				return ctx.redirect(`/?return=${encodeURIComponent(returnPath)}`, 302);
+			if (hadSession) {
+				const isWs = ctx.req.header("upgrade")?.toLowerCase() === "websocket";
+				const isNav =
+					ctx.req.header("sec-fetch-dest") === "document" ||
+					ctx.req.header("sec-fetch-mode") === "navigate" ||
+					(!isWs && ctx.req.method === "GET");
+				if (isNav) {
+					const returnPath = new URL(ctx.req.url).pathname;
+					return ctx.redirect(
+						`/?return=${encodeURIComponent(returnPath)}`,
+						302,
+					);
+				}
 			}
 			return ctx.notFound();
 		}
