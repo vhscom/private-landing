@@ -5,7 +5,7 @@
 **Learn authentication by building it right.**
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue?style=for-the-badge)](https://opensource.org/licenses/Apache-2.0)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.8+-3178c6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6.0+-3178c6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-f38020?style=for-the-badge&logo=cloudflareworkers&logoColor=white)](https://workers.cloudflare.com/)
 <br>
 [![CI](https://img.shields.io/github/actions/workflow/status/vhscom/private-landing/ci.yml?style=for-the-badge&label=CI)](https://github.com/vhscom/private-landing/actions/workflows/ci.yml)

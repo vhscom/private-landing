@@ -12,7 +12,7 @@
     },
     "apps/cloudflare-workers": {
       "name": "@private-landing/cloudflare-workers",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "dependencies": {
         "@libsql/client": "^0.15.0",
         "@private-landing/core": "workspace:*",
@@ -30,14 +30,14 @@
         "@cloudflare/workers-types": "^4.20260124.0",
         "@types/bun": "^1.3.6",
         "@types/nanoid": "^3.0.0",
-        "typescript": "^5.8.2",
+        "typescript": "^6.0.2",
         "vitest": "~3.2.x",
         "wrangler": "^4.60.0",
       },
     },
     "packages/core": {
       "name": "@private-landing/core",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "dependencies": {
         "@libsql/client": "^0.15.0",
         "@private-landing/infrastructure": "workspace:*",
@@ -48,13 +48,13 @@
       },
       "devDependencies": {
         "bun-types": "^1.2.5",
-        "typescript": "^5.8.2",
+        "typescript": "^6.0.2",
         "vitest": "~3.2.x",
       },
     },
     "packages/infrastructure": {
       "name": "@private-landing/infrastructure",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "dependencies": {
         "@libsql/client": "^0.15.0",
         "@private-landing/types": "workspace:*",
@@ -62,12 +62,12 @@
       "devDependencies": {
         "@cloudflare/workers-types": "4.20250224.0",
         "bun-types": "^1.2.5",
-        "typescript": "^5.8.2",
+        "typescript": "^6.0.2",
       },
     },
     "packages/observability": {
       "name": "@private-landing/observability",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "dependencies": {
         "@private-landing/core": "workspace:*",
         "@private-landing/infrastructure": "workspace:*",
@@ -79,30 +79,30 @@
       "devDependencies": {
         "@cloudflare/workers-types": "^4.20260124.0",
         "bun-types": "^1.2.5",
-        "typescript": "^5.8.2",
+        "typescript": "^6.0.2",
       },
     },
     "packages/schemas": {
       "name": "@private-landing/schemas",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "dependencies": {
         "zod": "^4.3.5",
       },
       "devDependencies": {
         "bun-types": "^1.2.5",
-        "typescript": "^5.8.2",
+        "typescript": "^6.0.2",
         "vitest": "~3.2.x",
       },
     },
     "packages/types": {
       "name": "@private-landing/types",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "dependencies": {
         "hono": "^4.11.5",
       },
       "devDependencies": {
         "bun-types": "latest",
-        "typescript": "^5.8.2",
+        "typescript": "^6.0.2",
       },
     },
   },
@@ -577,7 +577,7 @@
 
     "tslib": ["tslib@2.8.1", "", {}, "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="],
 
-    "typescript": ["typescript@5.8.2", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-aJn6wq13/afZp/jT9QZmwEjDqqvSGp1VT5GVg+f/t6/oVyrgXM6BY1h9BRh/O5p3PlUPAe+WuiEZOmb/49RqoQ=="],
+    "typescript": ["typescript@6.0.2", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-bGdAIrZ0wiGDo5l8c++HWtbaNCWTS4UTv7RaTH/ThVIgjkveJt83m74bBHMJkuCbslY8ixgLBVZJIOiQlQTjfQ=="],
 
     "undici": ["undici@7.18.2", "", {}, "sha512-y+8YjDFzWdQlSE9N5nzKMT3g4a5UBX1HKowfdXh0uvAnTaqqwqB92Jt4UXBAeKekDs5IaDKyJFR4X1gYVCgXcw=="],
 
@@ -622,6 +622,8 @@
     "@poppinss/dumper/supports-color": ["supports-color@10.2.2", "", {}, "sha512-SS+jx45GF1QjgEXQx4NJZV9ImqmO2NPz5FNsIHrsDjh2YsHnawpan7SNQ1o8NuhrbHZy9AZhIoCUiCeaW/C80g=="],
 
     "@private-landing/infrastructure/@cloudflare/workers-types": ["@cloudflare/workers-types@4.20250224.0", "", {}, "sha512-j6ZwQ5G2moQRaEtGI2u5TBQhVXv/XwOS5jfBAheZHcpCM07zm8j0i8jZHHLq/6VA8e6VRjKohOyj5j6tZ1KHLQ=="],
+
+    "@private-landing/types/bun-types": ["bun-types@1.3.11", "", { "dependencies": { "@types/node": "*" } }, "sha512-1KGPpoxQWl9f6wcZh57LvrPIInQMn2TQ7jsgxqpRzg+l0QPOFvJVH7HmvHo/AiPgwXy+/Thf6Ov3EdVn1vOabg=="],
 
     "@types/bun/bun-types": ["bun-types@1.3.6", "", { "dependencies": { "@types/node": "*" } }, "sha512-OlFwHcnNV99r//9v5IIOgQ9Uk37gZqrNMCcqEaExdkVq3Avwqok1bJFmvGMCkCE0FqzdY8VMOZpfpR3lwI+CsQ=="],
 
