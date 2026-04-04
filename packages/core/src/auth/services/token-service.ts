@@ -5,7 +5,11 @@
  * @license Apache-2.0
  */
 
-import type { TokenConfig, TokenPayload } from "@private-landing/types";
+import {
+	ConfigurationError,
+	type TokenConfig,
+	type TokenPayload,
+} from "@private-landing/types";
 import type { Context } from "hono";
 import { sign } from "hono/jwt";
 import { tokenConfig as defaultTokenConfig } from "../config";
@@ -70,7 +74,7 @@ export function createTokenService(
 			sessionId: string,
 		): Promise<{ accessToken: string; refreshToken: string }> {
 			if (!ctx.env.JWT_ACCESS_SECRET || !ctx.env.JWT_REFRESH_SECRET) {
-				throw new Error("Missing token signing secrets");
+				throw new ConfigurationError("Missing token signing secrets");
 			}
 
 			// Generate refresh token
@@ -118,7 +122,7 @@ export function createTokenService(
 			payload: TokenPayload,
 		): Promise<string> {
 			if (!ctx.env.JWT_ACCESS_SECRET) {
-				throw new Error("Missing access token signing secret");
+				throw new ConfigurationError("Missing access token signing secret");
 			}
 
 			// Generate new access token with same session_id

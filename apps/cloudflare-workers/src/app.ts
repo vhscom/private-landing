@@ -21,6 +21,7 @@ import {
 // [obs-plugin 1/2] Remove this import and the override below to disable observability
 import { observabilityPlugin } from "@private-landing/observability";
 import {
+	AuthenticationError,
 	type Env,
 	ValidationError,
 	type Variables,
@@ -42,6 +43,7 @@ const sessions =
 		? createMirroredSessionService({
 				inner: auth.sessions,
 				getClientIp: defaultGetClientIp,
+				...auth.config.sessions,
 			})
 		: auth.sessions;
 
@@ -61,6 +63,24 @@ const userKey = (ctx: Context<AppEnv>) => String(ctx.get("jwtPayload").uid);
 type AppEnv = { Bindings: Env; Variables: Variables };
 
 const app = new Hono<AppEnv>();
+
+// Global error boundary — prevents leaking stack traces or internal details
+app.onError((err, ctx) => {
+	if (err instanceof AuthenticationError) {
+		return ctx.json(
+			{ error: err.message, code: err.code },
+			err.statusCode as 400,
+		);
+	}
+	if (err instanceof ValidationError) {
+		return ctx.json({ error: err.message, code: err.code }, 400);
+	}
+	console.error("Unhandled error:", err);
+	return ctx.json(
+		{ error: "Internal server error", code: "INTERNAL_ERROR" },
+		500,
+	);
+});
 
 // No-op defaults — active when observability plugin is not loaded
 const noop: MiddlewareHandler<AppEnv> = async (_, next) => next();
@@ -185,13 +205,18 @@ app.post("/auth/register", rateLimit(rateLimits.register), async (ctx) => {
 			type: "registration.failure",
 			detail: { email: domain },
 		});
+		const isConstraint =
+			error instanceof Error && error.message.includes("UNIQUE constraint");
 		if (json) {
-			if (error instanceof ValidationError) {
-				return ctx.json({ error: error.message, code: error.code }, 400);
+			if (error instanceof ValidationError || isConstraint) {
+				return ctx.json(
+					{ error: "Registration failed", code: "REGISTRATION_ERROR" },
+					400,
+				);
 			}
 			return ctx.json(
 				{ error: "Registration failed", code: "REGISTRATION_ERROR" },
-				400,
+				500,
 			);
 		}
 		return ctx.redirect("/#error");
@@ -287,7 +312,7 @@ app.post(
 				}
 				return ctx.json(
 					{ error: "Password change failed", code: "PASSWORD_CHANGE_ERROR" },
-					400,
+					500,
 				);
 			}
 			return ctx.redirect("/#error");

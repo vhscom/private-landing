@@ -14,14 +14,26 @@ import type {
 	AuthContext,
 	GetClientIpFn,
 	SessionConfig,
+	SessionTableConfig,
 } from "@private-landing/types";
 import { defaultSessionConfig } from "../config";
 import type { SessionService } from "./session-service";
 
+/** Default table/column names — matches session-service.ts defaults */
+const DEFAULT_TABLE_CONFIG: Required<SessionTableConfig> = {
+	tableName: "session",
+	idColumn: "id",
+	userIdColumn: "user_id",
+	userAgentColumn: "user_agent",
+	ipAddressColumn: "ip_address",
+	expiresAtColumn: "expires_at",
+	createdAtColumn: "created_at",
+};
+
 /**
  * Configuration for the mirrored session decorator.
  */
-export interface MirroredSessionServiceConfig {
+export interface MirroredSessionServiceConfig extends SessionTableConfig {
 	/** The inner session service to decorate (typically cache-backed) */
 	inner: SessionService;
 	/** Factory that creates a DB client for SQL writes */
@@ -41,7 +53,13 @@ export interface MirroredSessionServiceConfig {
 export function createMirroredSessionService(
 	config: MirroredSessionServiceConfig,
 ): SessionService {
-	const { inner, createDbClient = defaultCreateDbClient, getClientIp } = config;
+	const {
+		inner,
+		createDbClient = defaultCreateDbClient,
+		getClientIp,
+		...tableConfig
+	} = config;
+	const rc = { ...DEFAULT_TABLE_CONFIG, ...tableConfig };
 
 	return {
 		async createSession(
@@ -67,7 +85,7 @@ export function createMirroredSessionService(
 				const db = createDbClient(ctx.env);
 
 				await db.execute({
-					sql: `INSERT INTO session (id, user_id, user_agent, ip_address, expires_at, created_at)
+					sql: `INSERT INTO ${rc.tableName} (${rc.idColumn}, ${rc.userIdColumn}, ${rc.userAgentColumn}, ${rc.ipAddressColumn}, ${rc.expiresAtColumn}, ${rc.createdAtColumn})
 						  VALUES (?, ?, ?, ?, datetime('now', '+' || ? || ' seconds'), datetime('now'))`,
 					args: [
 						sessionId,
@@ -81,13 +99,13 @@ export function createMirroredSessionService(
 				// Mirror the session limit enforcement (expire oldest beyond maxSessions)
 				await db.execute({
 					sql: `WITH ranked AS (
-						    SELECT id, ROW_NUMBER() OVER (
-						      PARTITION BY user_id ORDER BY created_at DESC
-						    ) AS rn FROM session
-						    WHERE user_id = ? AND expires_at > datetime('now')
+						    SELECT ${rc.idColumn}, ROW_NUMBER() OVER (
+						      PARTITION BY ${rc.userIdColumn} ORDER BY ${rc.createdAtColumn} DESC
+						    ) AS rn FROM ${rc.tableName}
+						    WHERE ${rc.userIdColumn} = ? AND ${rc.expiresAtColumn} > datetime('now')
 						  )
-						  UPDATE session SET expires_at = datetime('now')
-						  WHERE id IN (SELECT id FROM ranked WHERE rn > ?)`,
+						  UPDATE ${rc.tableName} SET ${rc.expiresAtColumn} = datetime('now')
+						  WHERE ${rc.idColumn} IN (SELECT ${rc.idColumn} FROM ranked WHERE rn > ?)`,
 					args: [userId, sessionConfig.maxSessions],
 				});
 			} catch (error) {
@@ -107,7 +125,7 @@ export function createMirroredSessionService(
 				if (payload?.sid) {
 					const db = createDbClient(ctx.env);
 					await db.execute({
-						sql: "UPDATE session SET expires_at = datetime('now') WHERE id = ?",
+						sql: `UPDATE ${rc.tableName} SET ${rc.expiresAtColumn} = datetime('now') WHERE ${rc.idColumn} = ?`,
 						args: [payload.sid],
 					});
 				}
@@ -125,7 +143,7 @@ export function createMirroredSessionService(
 			try {
 				const db = createDbClient(ctx.env);
 				await db.execute({
-					sql: "UPDATE session SET expires_at = datetime('now') WHERE user_id = ? AND expires_at > datetime('now')",
+					sql: `UPDATE ${rc.tableName} SET ${rc.expiresAtColumn} = datetime('now') WHERE ${rc.userIdColumn} = ? AND ${rc.expiresAtColumn} > datetime('now')`,
 					args: [userId],
 				});
 			} catch (error) {

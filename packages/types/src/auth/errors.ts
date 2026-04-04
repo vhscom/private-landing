@@ -104,3 +104,17 @@ export class ValidationError extends Error {
 		Object.setPrototypeOf(this, ValidationError.prototype);
 	}
 }
+
+/**
+ * Error for missing or invalid service configuration.
+ * Thrown when required environment variables or secrets are absent at runtime.
+ */
+export class ConfigurationError extends Error {
+	readonly code = "CONFIGURATION_ERROR" as const;
+
+	constructor(message: string) {
+		super(message);
+		this.name = "ConfigurationError";
+		Object.setPrototypeOf(this, ConfigurationError.prototype);
+	}
+}
