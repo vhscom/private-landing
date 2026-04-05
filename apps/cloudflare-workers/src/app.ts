@@ -208,7 +208,10 @@ app.post("/auth/register", rateLimit(rateLimits.register), async (ctx) => {
 		const isConstraint =
 			error instanceof Error && error.message.includes("UNIQUE constraint");
 		if (json) {
-			if (error instanceof ValidationError || isConstraint) {
+			if (error instanceof ValidationError) {
+				return ctx.json({ error: error.message, code: error.code }, 400);
+			}
+			if (isConstraint) {
 				return ctx.json(
 					{ error: "Registration failed", code: "REGISTRATION_ERROR" },
 					400,
