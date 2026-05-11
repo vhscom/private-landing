@@ -15,7 +15,7 @@
 
 </div>
 
-> **Demo note:** The login endpoint is rate-limited and protected by adaptive PoW challenges. Repeated failures return increasing proof-of-work difficulty before `429 Too Many Requests`.
+> **Demo note:** The login endpoint is protected by adaptive PoW challenges — repeated failures return increasing proof-of-work difficulty. Cache-backed rate limiting is implemented and tested but not currently enabled on the live demo; flip `createCacheClient` in [`app.ts`](apps/cloudflare-workers/src/app.ts) to activate it.
 
 ---
 
